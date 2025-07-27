@@ -1,0 +1,57 @@
+.card {
+  background-color: white;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+}
+
+/* Variants */
+.card--default {
+  background-color: white;
+}
+
+.card--primary {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.card--secondary {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+}
+
+/* Shadow */
+.card--shadow {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card--shadow:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Padding */
+.card--padding-none {
+  padding: 0;
+}
+
+.card--padding-small {
+  padding: 12px;
+}
+
+.card--padding-medium {
+  padding: 20px;
+}
+
+.card--padding-large {
+  padding: 32px;
+}
+
+/* Clickable */
+.card--clickable {
+  cursor: pointer;
+}
+
+.card--clickable:hover {
+  transform: translateY(-2px);
+}

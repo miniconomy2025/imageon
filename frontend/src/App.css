@@ -1,0 +1,80 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: left;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e9ecef;
+  margin-bottom: 2rem;
+}
+
+.app__header h1 {
+  margin: 0;
+  color: #007bff;
+}
+
+.app__user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app__main {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 2rem;
+  flex: 1;
+}
+
+.app__feed {
+  max-width: 600px;
+}
+
+.app__sidebar {
+  position: sticky;
+  top: 2rem;
+  height: fit-content;
+}
+
+.demo-section {
+  margin: 1rem 0;
+}
+
+.demo-section h4 {
+  margin: 0.5rem 0;
+  color: #495057;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.demo-section .btn {
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.demo-section .avatar {
+  margin-right: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .app__main {
+    grid-template-columns: 1fr;
+  }
+  
+  .app__sidebar {
+    position: static;
+  }
+}
