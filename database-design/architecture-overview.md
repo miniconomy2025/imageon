@@ -1,53 +1,218 @@
-# Database Architecture Overview
+# Database Architecture Overview - MVP
 
 ## System Architecture Diagram
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   API Gateway   │    │   Backend       │
-│   (React)       │◄──►│   (Express.js)  │◄──►│   Services      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                       │
-                       ┌────────────────────────────────┼────────────────────────────────┐
-                       │                                │                                │
-                       ▼                                ▼                                ▼
-            ┌─────────────────┐              ┌─────────────────┐              ┌─────────────────┐
-            │   DynamoDB      │              │     Redis       │              │   S3 Bucket     │
-            │  (Primary DB)   │              │    (Cache)      │              │ (Media Files)   │
-            └─────────────────┘              └─────────────────┘              └─────────────────┘
+┌─────────────────┐    ┌────────────────────────────────────────┐    ┌─────────────────┐
+│   Frontend      │    │          Backend EC2                   │    │   AWS Services  │
+│   (React/TS)    │◄──►│  ┌─────────────────┐                   │◄──►│                 │
+│                 │    │  │   Backend API   │                   │    │                 │
+│   Frontend EC2  │    │  │   (Node.js/TS)  │                   │    │                 │
+└─────────────────┘    │  └─────────────────┘                   │    └─────────────────┘
+                       │            │                           │                │
+                       │  ┌─────────┼──────────┐                │                │
+                       │  │         │          │                │                │
+                       │  ▼         ▼          ▼                │                ▼
+                       │┌────────┐ ┌──────┐ ┌─────────┐         │     ┌─────────────────┐
+                       ││DynamoDB| │Redis │ │ Fedify  │         │     │   S3 Bucket     │
+                       ││Local   | │Queue │ │ Integration│      │     │ (Media Files)   │
+                       ││+Fedify | │Mgmt  │ │ Layer   │         │     └─────────────────┘
+                       │└────────┘ └──────┘ └─────────┘         │     
+                       └────────────────────────────────────────┘
 ```
 
-## Data Flow Architecture
+## MVP Data Flow
 
-### Write Operations
-1. **User creates post** → API validates → DynamoDB writes → Redis cache update → S3 media upload
-2. **User follows someone** → Transaction in DynamoDB → Redis cache invalidation → Feed regeneration
-3. **User likes post** → Redis immediate update → Background DynamoDB sync
+### Core Operations
+1. **Create Post** → Validate content → Store in DynamoDB Local → Fedify stores ActivityPub data in same DynamoDB → Upload media to S3
+2. **Follow User** → Transaction in DynamoDB Local → Update follower counts → Fedify stores ActivityPub data in DynamoDB
+3. **Like Post** → Store in DynamoDB Local → Update post like count → Fedify manages ActivityPub activities in DynamoDB
+4. **View Profile** → Query DynamoDB Local for both app data and Fedify data → Return ActivityPub-compatible data
 
-### Read Operations
-1. **Load feed** → Check Redis cache → If miss, query DynamoDB → Cache result
-2. **User profile** → Redis cache → Fallback to DynamoDB
-3. **Search users** → Redis autocomplete → Enhanced results from DynamoDB
-
----
-
-## Database Comparison Summary
-
-| Feature | DynamoDB | Redis | Recommendation |
-|---------|----------|-------|----------------|
-| **Primary Storage** | ✅ Perfect | ❌ Not suitable | Use DynamoDB |
-| **Caching** | ❌ Overkill | ✅ Ideal | Use Redis |
-| **Real-time Features** | ❌ Not optimal | ✅ Excellent | Use Redis |
-| **Complex Queries** | ⚠️ Limited | ❌ Very limited | Design around limitations |
-| **Scalability** | ✅ Unlimited | ✅ Very high | Both excellent |
-| **Cost at Scale** | ✅ Predictable | ✅ Cost-effective | Both good |
-| **ACID Transactions** | ⚠️ Limited | ❌ No | Design carefully |
+### Read Operations (Unified Database)
+1. **Load User Posts** → Single DynamoDB query (app data + Fedify data in same database)
+2. **User Profile** → Single DynamoDB query (unified storage)
+3. **Following/Followers Lists** → DynamoDB relationship queries
+4. **ActivityPub Federation** → DynamoDB stores remote actor data and activities
 
 ---
 
-## Implementation Priority
+## Single Table Design Benefits
 
-### Phase 1: MVP Core
+| Feature                | Benefit                                 | MVP Use Case 
+|------------------------|-----------------------------------------|--------------
+| **Unified Database**   | Single DynamoDB for app + Fedify data   | Simplified data management
+| **Cost Efficiency**    | No AWS DynamoDB costs                   | Perfect for school project budget
+| **Data Consistency**   | All data in one database                | No cache synchronization issues
+| **Fedify Integration** | Native DynamoDB storage for ActivityPub | Best performance and reliability
+
+---
+
+## MVP Implementation Phases
+
+### Phase 1: Core MVP (Current)
+- ✅ User profiles (ActivityPub Actor compatible)
+- ✅ Create posts with media
+- ✅ Follow/unfollow users
+- ✅ Like posts (no unlike)
+- ✅ View user profiles
+- ✅ Basic timeline
+
+### Phase 2: Future Enhancements (Post-MVP)
+- Comments on posts
+- Post analytics
+- Advanced search
+- Notifications
+- Direct messaging
+
+---
+
+## ActivityPub Integration
+
+The MVP is designed with ActivityPub compatibility in mind:
+
+### User Profiles (Actor Objects)
+- Support for Person and Group types
+- Public key storage for federation
+- Standard ActivityPub URLs (inbox, outbox, followers, following)
+
+### Posts (Note Objects)
+- Activity streams compatible
+- Public/private visibility
+- Mentions and hashtags support
+
+### Activities
+- Follow activities
+- Like activities  
+- Create activities for posts
+
+---
+
+## Data Storage Strategy (Unified DynamoDB + Minimal Redis)
+
+### What's Stored in DynamoDB Local (Primary Database)
+1. **Your Application Data**:
+   - User profiles, posts, likes, follows
+   - Authentication data, user sessions
+   
+2. **Fedify's ActivityPub Data** (same database, different key patterns):
+   - ActivityPub Objects (Actor, Note, Follow, Like activities) - `FEDIFY#` prefix
+   - Remote Federation Data (cached remote actor data and posts)
+   - Activity Streams (activity sequences)
+   - Signature Verification (cached public keys)
+   - Job Queue Storage (ActivityPub message processing jobs)
+
+### What Redis Handles (Minimal Usage)
+1. **Queue Notifications** - Redis pub/sub for immediate job processing
+2. **Rate Limiting** - API request counters (optional - could move to DynamoDB)
+3. **Real-time Features** - WebSocket sessions, live updates (if needed)
+
+### Database Key Patterns
+- **Your App Data**: `USER#123`, `POST#456`, `FOLLOW#123#456`
+- **Fedify Data**: `FEDIFY#actor:domain.com:username`, `FEDIFY#activity:12345`
+- **Fedify Jobs**: `QUEUE#activitypub`, `JOB#job_id_123`
+
+### Cache TTL Strategy
+- ActivityPub objects: TTL handled in DynamoDB (configurable per item)
+- User sessions: 24 hours (stored in DynamoDB with TTL)
+- Rate limiting counters: 1 hour (DynamoDB with TTL)
+- Job queue items: 24 hours (DynamoDB with automatic cleanup)
+- Remote federation data: Configurable TTL per ActivityPub object type
+
+---
+
+## Database Capacity Planning
+
+### MVP Estimated Load
+- **Users**: 1,000 active users
+- **Posts per day**: 500
+- **Likes per day**: 2,000
+- **Follow actions per day**: 100
+
+### Infrastructure Setup
+- **Frontend EC2**: Serves React application, handles routing
+- **Backend EC2**: API server, DynamoDB Local, Redis, Fedify integration
+
+### DynamoDB Local Capacity (Backend EC2) - Unified Storage
+- **Memory Allocation**: 3GB heap size recommended (more data now)
+- **Storage**: File-based persistence in `/home/dynamodblocal/data`
+- **Performance**: Limited by EC2 instance specs
+- **Concurrent Connections**: Recommended max 100
+- **Data Types**: Application data + Fedify ActivityPub data + Job queues
+
+### Redis Capacity (Backend EC2) - Minimal Usage
+- **Memory**: 256MB (much reduced - only for queue notifications)
+- **Connections**: 100 concurrent
+- **Primary Use**: Job queue notifications, optional rate limiting
+
+---
+
+## Security Considerations
+
+### Authentication
+- JWT tokens stored in DynamoDB with TTL
+- Token blacklisting for logout in DynamoDB
+- Secure cookie handling
+
+### Data Protection
+- DynamoDB Local file-based storage (no encryption at rest)
+- S3 bucket encryption
+- HTTPS only communication
+- **⚠️ Note**: DynamoDB Local doesn't provide encryption at rest
+
+### Rate Limiting
+- DynamoDB-based rate limiting with TTL
+- Per-user and per-IP limits stored in DynamoDB
+- API endpoint protection
+
+---
+
+## Monitoring & Health Checks
+
+### Key Metrics to Track
+1. **Frontend EC2** - Static file serving, routing performance
+2. **Backend API Responses** - Target <200ms
+3. **DynamoDB Local Performance** - Query response times, memory usage
+4. **Redis Performance** - Session storage, rate limiting counters
+5. **S3 Upload Success Rate** - Target >99%
+6. **Fedify Cache Performance** - ActivityPub object caching efficiency
+
+### Health Check Endpoints
+- **Frontend**: `/` - Application availability
+- **Backend**: `/health` - Basic service health
+- **Backend**: `/health/db` - DynamoDB Local connectivity
+- **Backend**: `/health/cache` - Redis connectivity
+- **Backend**: `/health/storage` - S3 connectivity
+- **Backend**: `/health/fedify` - Fedify service status
+
+This simplified architecture focuses on delivering your MVP features efficiently while maintaining the foundation for future growth and ActivityPub federation capabilities.
+
+---
+
+## Deployment Considerations
+
+### Backend EC2 Setup Requirements
+1. **Docker Installation**: Required for DynamoDB Local and Redis containers
+2. **Memory Requirements**: Minimum 4GB RAM (2GB for DynamoDB Local, 512MB for Redis, rest for Node.js)
+3. **Storage**: SSD recommended for DynamoDB Local performance
+4. **Service Startup Order**:
+   ```bash
+   1. Start DynamoDB Local container
+   2. Start Redis container  
+   3. Wait for services to be ready
+   4. Run database setup script
+   5. Start Node.js API server
+   ```
+
+### Production Limitations (Important for School Project)
+- **Data Loss Risk**: If EC2 instance restarts, all data in DynamoDB Local is lost unless properly persisted
+- **No Automatic Backups**: Manual backup strategy needed if data preservation is important
+- **Single Point of Failure**: No redundancy or failover capabilities
+- **Limited Scalability**: Cannot scale beyond single EC2 instance resources
+
+### Recommended EC2 Instance Types
+- **Development**: t3.medium (2 vCPU, 4GB RAM)
+- **Production**: t3.large (2 vCPU, 8GB RAM) for better performance
 1. **DynamoDB Setup**
    - Users table with GSI for username lookups
    - Posts table with GSI for user posts and timeline
@@ -89,15 +254,15 @@
 ```javascript
 // GET /api/users/:username
 // DynamoDB: Query GSI1 where GSI1PK = "USERNAME#john_doe"
-// Redis: Cache user profile for 1 hour
+// DynamoDB TTL: Cache frequently accessed profiles with TTL
 
 // POST /api/users/:id/follow
 // DynamoDB: Transaction to create follow relationship + update counters
-// Redis: Invalidate follower/following caches + trigger feed regeneration
+// Redis: Notify job queue for ActivityPub federation
 
 // GET /api/users/:id/followers
 // DynamoDB: Query PK = "USER#user123" SK begins_with "FOLLOWER#"
-// Redis: Cache results for 30 minutes
+// DynamoDB TTL: Cache follower lists with 30-minute TTL
 ```
 
 ### Post Operations
@@ -105,27 +270,27 @@
 // POST /api/posts
 // S3: Upload media files (if any)
 // DynamoDB: Create post record + update user post count
-// Redis: Add to author's cache + trigger follower feed updates
+// Redis: Queue ActivityPub federation job notification
 
 // GET /api/posts/:id
-// Redis: Check post cache first
-// DynamoDB: Fallback query + cache for 2 hours
+// DynamoDB: Direct query (fast local storage)
+// DynamoDB TTL: Popular posts cached with extended TTL
 
 // POST /api/posts/:id/like
-// Redis: Immediate SADD to like set + HINCRBY counter
-// DynamoDB: Background sync via queue processing
+// DynamoDB: Immediate write to likes table + update post counter
+// Redis: Queue ActivityPub federation job for remote servers
 ```
 
 ### Feed Operations
 ```javascript
 // GET /api/feed
-// Redis: ZREVRANGE from user's feed cache
-// DynamoDB: If cache miss, query feed table + cache results
-// Background: Continuous feed pre-computation via DynamoDB Streams
+// DynamoDB: Query user's feed table directly
+// DynamoDB TTL: Pre-computed feeds cached with TTL
+// Background: Feed updates via DynamoDB job queue
 
 // GET /api/timeline
 // DynamoDB: Query GSI2 for recent posts in timeframe
-// Redis: Cache popular posts with higher TTL
+// DynamoDB TTL: Popular timeline content cached with longer TTL
 ```
 
 ---

@@ -1,7 +1,11 @@
-# DynamoDB Schema Design for Social Media App
+# DynamoDB Schema Design for Social Media MVP
 
 ## Overview
-This design uses single-table design principles with DynamoDB, optimizing for access patterns and minimizing costs.
+This design uses single-table design principles with DynamoDB, optimized for the MVP features:
+- **Create posts**
+- **Follow/unfollow users**
+- **View user profiles (ActivityPub Actor Person/Group compatible)**
+- **Like posts** (no unlike functionality)
 
 ## Main Table: `SocialMediaApp`
 
@@ -14,20 +18,18 @@ This design uses single-table design principles with DynamoDB, optimizing for ac
 #### GSI1: User-Based Queries
 - **GSI1PK**: User-related groupings
 - **GSI1SK**: Time-based or type-based sorting
+- **Use case**: Get user's posts, user's likes, followers/following lists
 
-#### GSI2: Time-Based Queries
-- **GSI2PK**: Time-based partitioning
+#### GSI2: Timeline Queries
+- **GSI2PK**: Date-based partitioning
 - **GSI2SK**: Timestamp for chronological sorting
-
-#### GSI3: Content Discovery
-- **GSI3PK**: Content type groupings
-- **GSI3SK**: Popularity or engagement metrics
+- **Use case**: Public timeline posts, activity feeds
 
 ---
 
-## Entity Designs
+## Entity Designs (MVP Only)
 
-### 1. USER Entity
+### 1. USER Entity (ActivityPub Actor Compatible)
 ```
 PK: USER#user123
 SK: PROFILE
@@ -39,6 +41,292 @@ Attributes:
   - display_name: "John Doe"
   - bio: "Software developer and coffee enthusiast"
   - profile_image_url: "https://..."
+  - created_at: "2025-01-27T10:00:00Z"
+  - updated_at: "2025-01-27T10:00:00Z"
+  - followers_count: 150
+  - following_count: 200
+  - posts_count: 45
+  - is_verified: false
+  - is_private: false
+  - status: "active"
+  
+  # ActivityPub Actor fields
+  - actor_type: "Person" | "Group"
+  - public_key: "-----BEGIN PUBLIC KEY-----..."
+  - inbox_url: "https://your-domain.com/users/john_doe/inbox"
+  - outbox_url: "https://your-domain.com/users/john_doe/outbox"
+  - followers_url: "https://your-domain.com/users/john_doe/followers"
+  - following_url: "https://your-domain.com/users/john_doe/following"
+  - preferred_username: "john_doe"
+  - domain: "your-domain.com"  # null for local users
+```
+
+### 2. POST Entity
+```
+PK: POST#post456
+SK: METADATA
+GSI1PK: USER#user123
+GSI1SK: POST#2025-01-27T15:30:00Z#post456
+GSI2PK: TIMELINE#2025-01-27
+GSI2SK: 2025-01-27T15:30:00Z#post456
+Attributes:
+  - author_id: "user123"
+  - author_username: "john_doe"
+  - content: "Just launched my new project! 🚀"
+  - content_type: "text" | "image" | "video"
+  - media_urls: ["https://..."]
+  - created_at: "2025-01-27T15:30:00Z"
+  - updated_at: "2025-01-27T15:30:00Z"
+  - likes_count: 25
+  - visibility: "public" | "followers" | "private"
+  - is_deleted: false
+  - hashtags: ["#coding", "#startup"]
+  - mentions: ["@jane_doe"]
+  
+  # ActivityPub fields
+  - activity_id: "https://your-domain.com/posts/post456"
+  - activity_type: "Note"
+  - audience: ["https://www.w3.org/ns/activitystreams#Public"]
+```
+
+### 3. FOLLOW Relationship
+```
+PK: USER#user123
+SK: FOLLOWING#user456
+GSI1PK: USER#user456
+GSI1SK: FOLLOWER#user123
+GSI2PK: FOLLOW_ACTIVITY#2025-01-27
+GSI2SK: 2025-01-27T12:00:00Z#user123#user456
+Attributes:
+  - follower_id: "user123"
+  - followed_id: "user456"
+  - follower_username: "john_doe"
+  - followed_username: "jane_doe"
+  - created_at: "2025-01-27T12:00:00Z"
+  - status: "active"
+  
+  # ActivityPub fields
+  - activity_id: "https://your-domain.com/follows/follow123"
+  - activity_type: "Follow"
+```
+
+### 4. LIKE Entity (No Unlike - Permanent)
+```
+PK: POST#post456
+SK: LIKE#user123
+GSI1PK: USER#user123
+GSI1SK: LIKE#2025-01-27T16:00:00Z#post456
+Attributes:
+  - user_id: "user123"
+  - post_id: "post456"
+  - author_id: "user456"
+  - created_at: "2025-01-27T16:00:00Z"
+  
+  # ActivityPub fields
+  - activity_id: "https://your-domain.com/likes/like789"
+  - activity_type: "Like"
+```
+
+---
+
+## Access Patterns & Queries (MVP Only)
+
+### User Profile Queries
+```javascript
+// Get user profile (ActivityPub Actor)
+{
+  TableName: "SocialMediaApp",
+  Key: {
+    PK: "USER#user123",
+    SK: "PROFILE"
+  }
+}
+
+// Get user's posts
+{
+  TableName: "SocialMediaApp",
+  IndexName: "GSI1",
+  KeyConditionExpression: "GSI1PK = :pk AND begins_with(GSI1SK, :sk)",
+  ExpressionAttributeValues: {
+    ":pk": "USER#user123",
+    ":sk": "POST#"
+  },
+  ScanIndexForward: false,
+  Limit: 20
+}
+```
+
+### Follow/Unfollow Queries
+```javascript
+// Get user's following list
+{
+  TableName: "SocialMediaApp",
+  KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+  ExpressionAttributeValues: {
+    ":pk": "USER#user123",
+    ":sk": "FOLLOWING#"
+  }
+}
+
+// Get user's followers
+{
+  TableName: "SocialMediaApp",
+  IndexName: "GSI1",
+  KeyConditionExpression: "GSI1PK = :pk AND begins_with(GSI1SK, :sk)",
+  ExpressionAttributeValues: {
+    ":pk": "USER#user123",
+    ":sk": "FOLLOWER#"
+  }
+}
+
+// Check if user A follows user B
+{
+  TableName: "SocialMediaApp",
+  Key: {
+    PK: "USER#userA",
+    SK: "FOLLOWING#userB"
+  }
+}
+```
+
+### Post & Like Queries
+```javascript
+// Get post likes
+{
+  TableName: "SocialMediaApp",
+  KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+  ExpressionAttributeValues: {
+    ":pk": "POST#post456",
+    ":sk": "LIKE#"
+  }
+}
+
+// Get user's liked posts
+{
+  TableName: "SocialMediaApp",
+  IndexName: "GSI1",
+  KeyConditionExpression: "GSI1PK = :pk AND begins_with(GSI1SK, :sk)",
+  ExpressionAttributeValues: {
+    ":pk": "USER#user123",
+    ":sk": "LIKE#"
+  }
+}
+
+// Get timeline posts
+{
+  TableName: "SocialMediaApp",
+  IndexName: "GSI2",
+  KeyConditionExpression: "GSI2PK = :pk",
+  ExpressionAttributeValues: {
+    ":pk": "TIMELINE#2025-01-27"
+  },
+  ScanIndexForward: false,
+  Limit: 50
+}
+```
+
+---
+
+## MVP Capacity Planning
+
+### Read Capacity Units (RCU) Estimation
+- **User profile views**: 50 RCU/sec
+- **Timeline loading**: 100 RCU/sec  
+- **Post details**: 30 RCU/sec
+- **Follow/follower lists**: 20 RCU/sec
+- **Total**: ~200 RCU/sec
+
+### Write Capacity Units (WCU) Estimation
+- **New posts**: 15 WCU/sec
+- **Likes**: 25 WCU/sec
+- **Follow/unfollow**: 5 WCU/sec
+- **Profile updates**: 2 WCU/sec
+- **Total**: ~50 WCU/sec
+
+---
+
+## MVP Transaction Examples
+
+### Follow a User (Atomic Operation)
+```javascript
+const followUser = {
+  TransactItems: [
+    {
+      Put: {
+        TableName: "SocialMediaApp",
+        Item: {
+          PK: "USER#user123",
+          SK: "FOLLOWING#user456",
+          follower_id: "user123",
+          followed_id: "user456",
+          created_at: new Date().toISOString(),
+          status: "active"
+        }
+      }
+    },
+    {
+      Put: {
+        TableName: "SocialMediaApp", 
+        Item: {
+          PK: "USER#user456",
+          SK: "FOLLOWER#user123",
+          follower_id: "user123",
+          followed_id: "user456",
+          created_at: new Date().toISOString(),
+          status: "active"
+        }
+      }
+    },
+    {
+      Update: {
+        TableName: "SocialMediaApp",
+        Key: { PK: "USER#user123", SK: "PROFILE" },
+        UpdateExpression: "ADD following_count :inc",
+        ExpressionAttributeValues: { ":inc": 1 }
+      }
+    },
+    {
+      Update: {
+        TableName: "SocialMediaApp", 
+        Key: { PK: "USER#user456", SK: "PROFILE" },
+        UpdateExpression: "ADD followers_count :inc",
+        ExpressionAttributeValues: { ":inc": 1 }
+      }
+    }
+  ]
+};
+```
+
+### Like a Post (Permanent - No Unlike)
+```javascript
+const likePost = {
+  TransactItems: [
+    {
+      Put: {
+        TableName: "SocialMediaApp",
+        Item: {
+          PK: "POST#post456",
+          SK: "LIKE#user123",
+          user_id: "user123",
+          post_id: "post456",
+          created_at: new Date().toISOString()
+        },
+        ConditionExpression: "attribute_not_exists(PK)" // Prevent duplicate likes
+      }
+    },
+    {
+      Update: {
+        TableName: "SocialMediaApp",
+        Key: { PK: "POST#post456", SK: "METADATA" },
+        UpdateExpression: "ADD likes_count :inc",
+        ExpressionAttributeValues: { ":inc": 1 }
+      }
+    }
+  ]
+};
+```
+
+This simplified schema focuses exclusively on your MVP features while maintaining ActivityPub compatibility for future federation capabilities.
   - created_at: "2025-01-27T10:00:00Z"
   - updated_at: "2025-01-27T10:00:00Z"
   - followers_count: 150
