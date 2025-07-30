@@ -1,11 +1,13 @@
-# Database Architecture Overview
+# Database Architecture Overview - MVP
 
 ## System Architecture Diagram
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   API Gateway   │    │   Backend       │
-│   (React)       │◄──►│   (Express.js)  │◄──►│   Services      │
+│   Frontend      │    │   Backend API   │    │   AWS Services  │
+│   (React/TS)    │◄──►│   (Node.js/TS)  │◄──►│                 │
+│                 │    │                 │    │                 │
+│   Frontend EC2  │    │  Backend EC2    │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                                        │
                        ┌────────────────────────────────┼────────────────────────────────┐
@@ -13,41 +15,152 @@
                        ▼                                ▼                                ▼
             ┌─────────────────┐              ┌─────────────────┐              ┌─────────────────┐
             │   DynamoDB      │              │     Redis       │              │   S3 Bucket     │
-            │  (Primary DB)   │              │    (Cache)      │              │ (Media Files)   │
+            │ (Single Table)  │              │  (Cache/Auth)   │              │ (Media Files)   │
             └─────────────────┘              └─────────────────┘              └─────────────────┘
 ```
 
-## Data Flow Architecture
+## MVP Data Flow
 
-### Write Operations
-1. **User creates post** → API validates → DynamoDB writes → Redis cache update → S3 media upload
-2. **User follows someone** → Transaction in DynamoDB → Redis cache invalidation → Feed regeneration
-3. **User likes post** → Redis immediate update → Background DynamoDB sync
+### Core Operations
+1. **Create Post** → Validate content → Store in DynamoDB → Cache timeline → Upload media to S3
+2. **Follow User** → Transaction in DynamoDB → Update follower counts → Cache relationship
+3. **Like Post** → Store in DynamoDB → Update post like count → Cache user's likes
+4. **View Profile** → Check Redis cache → Query DynamoDB if needed → Return ActivityPub-compatible data
 
-### Read Operations
-1. **Load feed** → Check Redis cache → If miss, query DynamoDB → Cache result
-2. **User profile** → Redis cache → Fallback to DynamoDB
-3. **Search users** → Redis autocomplete → Enhanced results from DynamoDB
-
----
-
-## Database Comparison Summary
-
-| Feature | DynamoDB | Redis | Recommendation |
-|---------|----------|-------|----------------|
-| **Primary Storage** | ✅ Perfect | ❌ Not suitable | Use DynamoDB |
-| **Caching** | ❌ Overkill | ✅ Ideal | Use Redis |
-| **Real-time Features** | ❌ Not optimal | ✅ Excellent | Use Redis |
-| **Complex Queries** | ⚠️ Limited | ❌ Very limited | Design around limitations |
-| **Scalability** | ✅ Unlimited | ✅ Very high | Both excellent |
-| **Cost at Scale** | ✅ Predictable | ✅ Cost-effective | Both good |
-| **ACID Transactions** | ⚠️ Limited | ❌ No | Design carefully |
+### Read Operations (Optimized for MVP)
+1. **Load User Posts** → Redis cache → DynamoDB query with GSI1
+2. **User Profile** → Redis cache → DynamoDB user profile query
+3. **Following/Followers Lists** → DynamoDB relationship queries
 
 ---
 
-## Implementation Priority
+## Single Table Design Benefits
 
-### Phase 1: MVP Core
+| Feature | Benefit | MVP Use Case |
+|---------|---------|--------------|
+| **Cost Efficiency** | Single table = lower costs | Perfect for MVP budget |
+| **Simple Operations** | One table to manage | Faster development |
+| **Performance** | Optimized access patterns | Quick user experience |
+| **Scalability** | Built-in AWS scaling | Ready for growth |
+
+---
+
+## MVP Implementation Phases
+
+### Phase 1: Core MVP (Current)
+- ✅ User profiles (ActivityPub Actor compatible)
+- ✅ Create posts with media
+- ✅ Follow/unfollow users
+- ✅ Like posts (no unlike)
+- ✅ View user profiles
+- ✅ Basic timeline
+
+### Phase 2: Future Enhancements (Post-MVP)
+- Comments on posts
+- Post analytics
+- Advanced search
+- Notifications
+- Direct messaging
+
+---
+
+## ActivityPub Integration
+
+The MVP is designed with ActivityPub compatibility in mind:
+
+### User Profiles (Actor Objects)
+- Support for Person and Group types
+- Public key storage for federation
+- Standard ActivityPub URLs (inbox, outbox, followers, following)
+
+### Posts (Note Objects)
+- Activity streams compatible
+- Public/private visibility
+- Mentions and hashtags support
+
+### Activities
+- Follow activities
+- Like activities  
+- Create activities for posts
+
+---
+
+## Cache Strategy (Redis)
+
+### What We Cache
+1. **User Sessions** - JWT tokens and auth state
+2. **User Profiles** - Frequently accessed profile data
+3. **Recent Posts** - Timeline and user posts
+4. **Follow Relationships** - User connections for quick lookups
+
+### Cache TTL Strategy
+- User profiles: 1 hour
+- Recent posts: 30 minutes
+- Follow relationships: 2 hours
+- Session data: 24 hours
+
+---
+
+## Database Capacity Planning
+
+### MVP Estimated Load
+- **Users**: 1,000 active users
+- **Posts per day**: 500
+- **Likes per day**: 2,000
+- **Follow actions per day**: 100
+
+### Infrastructure Setup
+- **Frontend EC2**: Serves React application, handles routing
+- **Backend EC2**: API server, database connections, business logic
+
+### DynamoDB Capacity
+- **Read**: 50 RCU (burst to 200)
+- **Write**: 25 WCU (burst to 100)
+- **Storage**: ~10GB initially
+
+### Redis Capacity (Backend EC2)
+- **Memory**: 1GB
+- **Connections**: 1,000 concurrent
+- **Throughput**: 10,000 ops/sec
+
+---
+
+## Security Considerations
+
+### Authentication
+- JWT tokens stored in Redis
+- Token blacklisting for logout
+- Secure cookie handling
+
+### Data Protection
+- DynamoDB encryption at rest
+- S3 bucket encryption
+- HTTPS only communication
+
+### Rate Limiting
+- Redis-based rate limiting
+- Per-user and per-IP limits
+- API endpoint protection
+
+---
+
+## Monitoring & Health Checks
+
+### Key Metrics to Track
+1. **Frontend EC2** - Static file serving, routing performance
+2. **Backend API Responses** - Target <200ms
+3. **DynamoDB Throttling** - Should be 0
+4. **Redis Cache Hit Rate** - Target >80%
+5. **S3 Upload Success Rate** - Target >99%
+
+### Health Check Endpoints
+- **Frontend**: `/` - Application availability
+- **Backend**: `/health` - Basic service health
+- **Backend**: `/health/db` - DynamoDB connectivity
+- **Backend**: `/health/cache` - Redis connectivity
+- **Backend**: `/health/storage` - S3 connectivity
+
+This simplified architecture focuses on delivering your MVP features efficiently while maintaining the foundation for future growth and ActivityPub federation capabilities.
 1. **DynamoDB Setup**
    - Users table with GSI for username lookups
    - Posts table with GSI for user posts and timeline
