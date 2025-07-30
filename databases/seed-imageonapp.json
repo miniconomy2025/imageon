@@ -1,0 +1,364 @@
+{
+  "ImageonApp": [
+
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "USER#user1" },
+          "SK":            { "S": "PROFILE" },
+          "GSI1PK":        { "S": "USER#user1" },
+          "GSI1SK":        { "S": "PROFILE" },
+          "username":      { "S": "alice" },
+          "email":         { "S": "alice@example.com" },
+          "display_name":  { "S": "Alice" },
+          "created_at":    { "S": "2025-07-29T08:00:00Z" },
+          "updated_at":    { "S": "2025-07-29T08:00:00Z" },
+          "followers_count": { "N": "0" },
+          "following_count": { "N": "0" },
+          "posts_count":     { "N": "1" },
+          "actor_type":      { "S": "Person" },
+          "domain":          { "NULL": true }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "USER#user2" },
+          "SK":            { "S": "PROFILE" },
+          "GSI1PK":        { "S": "USER#user2" },
+          "GSI1SK":        { "S": "PROFILE" },
+          "username":      { "S": "bob" },
+          "email":         { "S": "bob@example.com" },
+          "display_name":  { "S": "Bob" },
+          "created_at":    { "S": "2025-07-29T08:05:00Z" },
+          "updated_at":    { "S": "2025-07-29T08:05:00Z" },
+          "followers_count": { "N": "0" },
+          "following_count": { "N": "0" },
+          "posts_count":     { "N": "1" },
+          "actor_type":      { "S": "Person" },
+          "domain":          { "NULL": true }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "USER#user3" },
+          "SK":            { "S": "PROFILE" },
+          "GSI1PK":        { "S": "USER#user3" },
+          "GSI1SK":        { "S": "PROFILE" },
+          "username":      { "S": "carol" },
+          "email":         { "S": "carol@example.com" },
+          "display_name":  { "S": "Carol" },
+          "created_at":    { "S": "2025-07-29T08:10:00Z" },
+          "updated_at":    { "S": "2025-07-29T08:10:00Z" },
+          "followers_count": { "N": "0" },
+          "following_count": { "N": "0" },
+          "posts_count":     { "N": "1" },
+          "actor_type":      { "S": "Person" },
+          "domain":          { "NULL": true }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "USER#user4" },
+          "SK":            { "S": "PROFILE" },
+          "GSI1PK":        { "S": "USER#user4" },
+          "GSI1SK":        { "S": "PROFILE" },
+          "username":      { "S": "dave" },
+          "email":         { "S": "dave@example.com" },
+          "display_name":  { "S": "Dave" },
+          "created_at":    { "S": "2025-07-29T08:15:00Z" },
+          "updated_at":    { "S": "2025-07-29T08:15:00Z" },
+          "followers_count": { "N": "0" },
+          "following_count": { "N": "0" },
+          "posts_count":     { "N": "1" },
+          "actor_type":      { "S": "Person" },
+          "domain":          { "NULL": true }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "USER#user5" },
+          "SK":            { "S": "PROFILE" },
+          "GSI1PK":        { "S": "USER#user5" },
+          "GSI1SK":        { "S": "PROFILE" },
+          "username":      { "S": "eve" },
+          "email":         { "S": "eve@example.com" },
+          "display_name":  { "S": "Eve" },
+          "created_at":    { "S": "2025-07-29T08:20:00Z" },
+          "updated_at":    { "S": "2025-07-29T08:20:00Z" },
+          "followers_count": { "N": "0" },
+          "following_count": { "N": "0" },
+          "posts_count":     { "N": "1" },
+          "actor_type":      { "S": "Person" },
+          "domain":          { "NULL": true }
+        }
+      }
+    },
+
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":              { "S": "POST#post1" },
+          "SK":              { "S": "METADATA" },
+          "GSI1PK":          { "S": "USER#user1" },
+          "GSI1SK":          { "S": "POST#2025-07-29T09:00:00Z#post1" },
+          "GSI2PK":          { "S": "TIMELINE#2025-07-29" },
+          "GSI2SK":          { "S": "2025-07-29T09:00:00Z#post1" },
+          "GSI3PK":          { "S": "POPULAR_POSTS" },
+          "GSI3SK":          { "S": "50#2025-07-29T09:00:00Z#post1" },
+          "author_id":       { "S": "user1" },
+          "author_username": { "S": "alice" },
+          "content":         { "S": "Hello from Alice!" },
+          "created_at":      { "S": "2025-07-29T09:00:00Z" },
+          "updated_at":      { "S": "2025-07-29T09:00:00Z" },
+          "likes_count":     { "N": "5" },
+          "engagement_score":{ "N": "50" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":              { "S": "POST#post2" },
+          "SK":              { "S": "METADATA" },
+          "GSI1PK":          { "S": "USER#user2" },
+          "GSI1SK":          { "S": "POST#2025-07-29T09:10:00Z#post2" },
+          "GSI2PK":          { "S": "TIMELINE#2025-07-29" },
+          "GSI2SK":          { "S": "2025-07-29T09:10:00Z#post2" },
+          "GSI3PK":          { "S": "POPULAR_POSTS" },
+          "GSI3SK":          { "S": "80#2025-07-29T09:10:00Z#post2" },
+          "author_id":       { "S": "user2" },
+          "author_username": { "S": "bob" },
+          "content":         { "S": "Bob's first post" },
+          "created_at":      { "S": "2025-07-29T09:10:00Z" },
+          "updated_at":      { "S": "2025-07-29T09:10:00Z" },
+          "likes_count":     { "N": "8" },
+          "engagement_score":{ "N": "80" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":              { "S": "POST#post3" },
+          "SK":              { "S": "METADATA" },
+          "GSI1PK":          { "S": "USER#user3" },
+          "GSI1SK":          { "S": "POST#2025-07-29T09:20:00Z#post3" },
+          "GSI2PK":          { "S": "TIMELINE#2025-07-29" },
+          "GSI2SK":          { "S": "2025-07-29T09:20:00Z#post3" },
+          "GSI3PK":          { "S": "POPULAR_POSTS" },
+          "GSI3SK":          { "S": "20#2025-07-29T09:20:00Z#post3" },
+          "author_id":       { "S": "user3" },
+          "author_username": { "S": "carol" },
+          "content":         { "S": "Carol's thoughts" },
+          "created_at":      { "S": "2025-07-29T09:20:00Z" },
+          "updated_at":      { "S": "2025-07-29T09:20:00Z" },
+          "likes_count":     { "N": "2" },
+          "engagement_score":{ "N": "20" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":              { "S": "POST#post4" },
+          "SK":              { "S": "METADATA" },
+          "GSI1PK":          { "S": "USER#user4" },
+          "GSI1SK":          { "S": "POST#2025-07-29T09:30:00Z#post4" },
+          "GSI2PK":          { "S": "TIMELINE#2025-07-29" },
+          "GSI2SK":          { "S": "2025-07-29T09:30:00Z#post4" },
+          "GSI3PK":          { "S": "POPULAR_POSTS" },
+          "GSI3SK":          { "S": "0#2025-07-29T09:30:00Z#post4" },
+          "author_id":       { "S": "user4" },
+          "author_username": { "S": "dave" },
+          "content":         { "S": "Dave shares a photo" },
+          "created_at":      { "S": "2025-07-29T09:30:00Z" },
+          "updated_at":      { "S": "2025-07-29T09:30:00Z" },
+          "likes_count":     { "N": "0" },
+          "engagement_score":{ "N": "0" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":              { "S": "POST#post5" },
+          "SK":              { "S": "METADATA" },
+          "GSI1PK":          { "S": "USER#user5" },
+          "GSI1SK":          { "S": "POST#2025-07-29T09:40:00Z#post5" },
+          "GSI2PK":          { "S": "TIMELINE#2025-07-29" },
+          "GSI2SK":          { "S": "2025-07-29T09:40:00Z#post5" },
+          "GSI3PK":          { "S": "POPULAR_POSTS" },
+          "GSI3SK":          { "S": "100#2025-07-29T09:40:00Z#post5" },
+          "author_id":       { "S": "user5" },
+          "author_username": { "S": "eve" },
+          "content":         { "S": "Eve writes something" },
+          "created_at":      { "S": "2025-07-29T09:40:00Z" },
+          "updated_at":      { "S": "2025-07-29T09:40:00Z" },
+          "likes_count":     { "N": "10" },
+          "engagement_score":{ "N": "100" }
+        }
+      }
+    },
+
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "USER#user1" },
+          "SK":            { "S": "FOLLOWING#user2" },
+          "GSI1PK":        { "S": "USER#user2" },
+          "GSI1SK":        { "S": "FOLLOWER#user1" },
+          "follower_id":   { "S": "user1" },
+          "followed_id":   { "S": "user2" },
+          "created_at":    { "S": "2025-07-29T10:00:00Z" },
+          "status":        { "S": "active" },
+          "activity_type": { "S": "Follow" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "USER#user2" },
+          "SK":            { "S": "FOLLOWING#user3" },
+          "GSI1PK":        { "S": "USER#user3" },
+          "GSI1SK":        { "S": "FOLLOWER#user2" },
+          "follower_id":   { "S": "user2" },
+          "followed_id":   { "S": "user3" },
+          "created_at":    { "S": "2025-07-29T10:05:00Z" },
+          "status":        { "S": "active" },
+          "activity_type": { "S": "Follow" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "USER#user3" },
+          "SK":            { "S": "FOLLOWING#user4" },
+          "GSI1PK":        { "S": "USER#user4" },
+          "GSI1SK":        { "S": "FOLLOWER#user3" },
+          "follower_id":   { "S": "user3" },
+          "followed_id":   { "S": "user4" },
+          "created_at":    { "S": "2025-07-29T10:10:00Z" },
+          "status":        { "S": "active" },
+          "activity_type": { "S": "Follow" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "USER#user4" },
+          "SK":            { "S": "FOLLOWING#user5" },
+          "GSI1PK":        { "S": "USER#user5" },
+          "GSI1SK":        { "S": "FOLLOWER#user4" },
+          "follower_id":   { "S": "user4" },
+          "followed_id":   { "S": "user5" },
+          "created_at":    { "S": "2025-07-29T10:15:00Z" },
+          "status":        { "S": "active" },
+          "activity_type": { "S": "Follow" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "USER#user5" },
+          "SK":            { "S": "FOLLOWING#user1" },
+          "GSI1PK":        { "S": "USER#user1" },
+          "GSI1SK":        { "S": "FOLLOWER#user5" },
+          "follower_id":   { "S": "user5" },
+          "followed_id":   { "S": "user1" },
+          "created_at":    { "S": "2025-07-29T10:20:00Z" },
+          "status":        { "S": "active" },
+          "activity_type": { "S": "Follow" }
+        }
+      }
+    },
+
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "POST#post2" },
+          "SK":            { "S": "LIKE#user1" },
+          "GSI1PK":        { "S": "USER#user1" },
+          "GSI1SK":        { "S": "LIKE#2025-07-29T11:00:00Z#post2" },
+          "user_id":       { "S": "user1" },
+          "post_id":       { "S": "post2" },
+          "author_id":     { "S": "user2" },
+          "created_at":    { "S": "2025-07-29T11:00:00Z" },
+          "activity_type": { "S": "Like" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "POST#post3" },
+          "SK":            { "S": "LIKE#user2" },
+          "GSI1PK":        { "S": "USER#user2" },
+          "GSI1SK":        { "S": "LIKE#2025-07-29T11:05:00Z#post3" },
+          "user_id":       { "S": "user2" },
+          "post_id":       { "S": "post3" },
+          "author_id":     { "S": "user3" },
+          "created_at":    { "S": "2025-07-29T11:05:00Z" },
+          "activity_type": { "S": "Like" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "POST#post4" },
+          "SK":            { "S": "LIKE#user3" },
+          "GSI1PK":        { "S": "USER#user3" },
+          "GSI1SK":        { "S": "LIKE#2025-07-29T11:10:00Z#post4" },
+          "user_id":       { "S": "user3" },
+          "post_id":       { "S": "post4" },
+          "author_id":     { "S": "user4" },
+          "created_at":    { "S": "2025-07-29T11:10:00Z" },
+          "activity_type": { "S": "Like" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "POST#post5" },
+          "SK":            { "S": "LIKE#user4" },
+          "GSI1PK":        { "S": "USER#user4" },
+          "GSI1SK":        { "S": "LIKE#2025-07-29T11:15:00Z#post5" },
+          "user_id":       { "S": "user4" },
+          "post_id":       { "S": "post5" },
+          "author_id":     { "S": "user5" },
+          "created_at":    { "S": "2025-07-29T11:15:00Z" },
+          "activity_type": { "S": "Like" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":            { "S": "POST#post1" },
+          "SK":            { "S": "LIKE#user5" },
+          "GSI1PK":        { "S": "USER#user5" },
+          "GSI1SK":        { "S": "LIKE#2025-07-29T11:20:00Z#post1" },
+          "user_id":       { "S": "user5" },
+          "post_id":       { "S": "post1" },
+          "author_id":     { "S": "user1" },
+          "created_at":    { "S": "2025-07-29T11:20:00Z" },
+          "activity_type": { "S": "Like" }
+        }
+      }
+    }
+
+  ]
+}
