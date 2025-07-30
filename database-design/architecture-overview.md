@@ -13,36 +13,38 @@
                        │  ┌─────────┼──────────┐                │                │
                        │  │         │          │                │                │
                        │  ▼         ▼          ▼                │                ▼
-                       │┌──────┐ ┌──────┐ ┌─────────┐           │     ┌─────────────────┐
-                       ││Dynamo│ │Redis │ │ Fedify  │           │     │   S3 Bucket     │
-                       ││Local │ │Cache │ │ +Cache  │           │     │ (Media Files)   │
-                       │└──────┘ └──────┘ └─────────┘           │     └─────────────────┘
+                       │┌────────┐ ┌──────┐ ┌─────────┐         │     ┌─────────────────┐
+                       ││DynamoDB| │Redis │ │ Fedify  │         │     │   S3 Bucket     │
+                       ││Local   | │Queue │ │ Integration│      │     │ (Media Files)   │
+                       ││+Fedify | │Mgmt  │ │ Layer   │         │     └─────────────────┘
+                       │└────────┘ └──────┘ └─────────┘         │     
                        └────────────────────────────────────────┘
 ```
 
 ## MVP Data Flow
 
 ### Core Operations
-1. **Create Post** → Validate content → Store in DynamoDB Local → Fedify handles caching → Upload media to S3
-2. **Follow User** → Transaction in DynamoDB Local → Update follower counts → Fedify cache update
-3. **Like Post** → Store in DynamoDB Local → Update post like count → Fedify cache management
-4. **View Profile** → Fedify checks cache → Query DynamoDB Local if needed → Return ActivityPub-compatible data
+1. **Create Post** → Validate content → Store in DynamoDB Local → Fedify stores ActivityPub data in same DynamoDB → Upload media to S3
+2. **Follow User** → Transaction in DynamoDB Local → Update follower counts → Fedify stores ActivityPub data in DynamoDB
+3. **Like Post** → Store in DynamoDB Local → Update post like count → Fedify manages ActivityPub activities in DynamoDB
+4. **View Profile** → Query DynamoDB Local for both app data and Fedify data → Return ActivityPub-compatible data
 
-### Read Operations (Optimized for MVP)
-1. **Load User Posts** → Fedify cache → DynamoDB Local query with GSI1
-2. **User Profile** → Fedify cache → DynamoDB Local user profile query
-3. **Following/Followers Lists** → DynamoDB Local relationship queries
+### Read Operations (Unified Database)
+1. **Load User Posts** → Single DynamoDB query (app data + Fedify data in same database)
+2. **User Profile** → Single DynamoDB query (unified storage)
+3. **Following/Followers Lists** → DynamoDB relationship queries
+4. **ActivityPub Federation** → DynamoDB stores remote actor data and activities
 
 ---
 
 ## Single Table Design Benefits
 
-| Feature | Benefit | MVP Use Case |
-|---------|---------|--------------|
-| **Cost Efficiency** | No AWS DynamoDB costs | Perfect for school project budget |
-| **Simple Setup** | Self-contained on EC2 | Easy development and deployment |
-| **Local Control** | Full control over database | No AWS service dependencies |
-| **Fedify Integration** | Built-in ActivityPub caching | Simplified cache management |
+| Feature                | Benefit                                 | MVP Use Case 
+|------------------------|-----------------------------------------|--------------
+| **Unified Database**   | Single DynamoDB for app + Fedify data   | Simplified data management
+| **Cost Efficiency**    | No AWS DynamoDB costs                   | Perfect for school project budget
+| **Data Consistency**   | All data in one database                | No cache synchronization issues
+| **Fedify Integration** | Native DynamoDB storage for ActivityPub | Best performance and reliability
 
 ---
 
@@ -86,29 +88,36 @@ The MVP is designed with ActivityPub compatibility in mind:
 
 ---
 
-## Cache Strategy (Fedify + Redis)
+## Data Storage Strategy (Unified DynamoDB + Minimal Redis)
 
-### What Fedify Handles (Built-in Redis Integration)
-1. **ActivityPub Objects** - Actor, Note, Follow, Like activities (stored in Redis db 1)
-2. **Federation Cache** - Remote actor data and posts (automatic caching)
-3. **Activity Streams** - Cached activity sequences for timelines
-4. **Signature Verification** - Cached public keys and verification results
-5. **Queue Management** - ActivityPub message processing queues
+### What's Stored in DynamoDB Local (Primary Database)
+1. **Your Application Data**:
+   - User profiles, posts, likes, follows
+   - Authentication data, user sessions
+   
+2. **Fedify's ActivityPub Data** (same database, different key patterns):
+   - ActivityPub Objects (Actor, Note, Follow, Like activities) - `FEDIFY#` prefix
+   - Remote Federation Data (cached remote actor data and posts)
+   - Activity Streams (activity sequences)
+   - Signature Verification (cached public keys)
+   - Job Queue Storage (ActivityPub message processing jobs)
 
-### What You Still Handle (Application Level - Redis db 0)
-1. **User Sessions** - JWT tokens and auth state 
-2. **API Rate Limiting** - Request counters per user/IP
-3. **Custom Application Cache** - Any app-specific caching needs
+### What Redis Handles (Minimal Usage)
+1. **Queue Notifications** - Redis pub/sub for immediate job processing
+2. **Rate Limiting** - API request counters (optional - could move to DynamoDB)
+3. **Real-time Features** - WebSocket sessions, live updates (if needed)
 
-### Redis Database Separation
-- **Database 0**: Your application (sessions, rate limiting, custom cache)
-- **Database 1**: Fedify's ActivityPub federation (automatic management)
+### Database Key Patterns
+- **Your App Data**: `USER#123`, `POST#456`, `FOLLOW#123#456`
+- **Fedify Data**: `FEDIFY#actor:domain.com:username`, `FEDIFY#activity:12345`
+- **Fedify Jobs**: `QUEUE#activitypub`, `JOB#job_id_123`
 
 ### Cache TTL Strategy
-- ActivityPub objects: Managed automatically by Fedify (Redis db 1)
-- User sessions: 24 hours (Redis db 0)
-- Rate limiting counters: 1 hour (Redis db 0)
-- Database connections: Connection pool managed
+- ActivityPub objects: TTL handled in DynamoDB (configurable per item)
+- User sessions: 24 hours (stored in DynamoDB with TTL)
+- Rate limiting counters: 1 hour (DynamoDB with TTL)
+- Job queue items: 24 hours (DynamoDB with automatic cleanup)
+- Remote federation data: Configurable TTL per ActivityPub object type
 
 ---
 
@@ -124,24 +133,25 @@ The MVP is designed with ActivityPub compatibility in mind:
 - **Frontend EC2**: Serves React application, handles routing
 - **Backend EC2**: API server, DynamoDB Local, Redis, Fedify integration
 
-### DynamoDB Local Capacity (Backend EC2)
-- **Memory Allocation**: 2GB heap size recommended
+### DynamoDB Local Capacity (Backend EC2) - Unified Storage
+- **Memory Allocation**: 3GB heap size recommended (more data now)
 - **Storage**: File-based persistence in `/home/dynamodblocal/data`
 - **Performance**: Limited by EC2 instance specs
 - **Concurrent Connections**: Recommended max 100
+- **Data Types**: Application data + Fedify ActivityPub data + Job queues
 
-### Redis Capacity (Backend EC2)
-- **Memory**: 512MB (reduced since Fedify handles most caching)
-- **Connections**: 500 concurrent
-- **Primary Use**: Sessions and rate limiting only
+### Redis Capacity (Backend EC2) - Minimal Usage
+- **Memory**: 256MB (much reduced - only for queue notifications)
+- **Connections**: 100 concurrent
+- **Primary Use**: Job queue notifications, optional rate limiting
 
 ---
 
 ## Security Considerations
 
 ### Authentication
-- JWT tokens stored in Redis
-- Token blacklisting for logout
+- JWT tokens stored in DynamoDB with TTL
+- Token blacklisting for logout in DynamoDB
 - Secure cookie handling
 
 ### Data Protection
@@ -151,8 +161,8 @@ The MVP is designed with ActivityPub compatibility in mind:
 - **⚠️ Note**: DynamoDB Local doesn't provide encryption at rest
 
 ### Rate Limiting
-- Redis-based rate limiting
-- Per-user and per-IP limits
+- DynamoDB-based rate limiting with TTL
+- Per-user and per-IP limits stored in DynamoDB
 - API endpoint protection
 
 ---
@@ -244,15 +254,15 @@ This simplified architecture focuses on delivering your MVP features efficiently
 ```javascript
 // GET /api/users/:username
 // DynamoDB: Query GSI1 where GSI1PK = "USERNAME#john_doe"
-// Redis: Cache user profile for 1 hour
+// DynamoDB TTL: Cache frequently accessed profiles with TTL
 
 // POST /api/users/:id/follow
 // DynamoDB: Transaction to create follow relationship + update counters
-// Redis: Invalidate follower/following caches + trigger feed regeneration
+// Redis: Notify job queue for ActivityPub federation
 
 // GET /api/users/:id/followers
 // DynamoDB: Query PK = "USER#user123" SK begins_with "FOLLOWER#"
-// Redis: Cache results for 30 minutes
+// DynamoDB TTL: Cache follower lists with 30-minute TTL
 ```
 
 ### Post Operations
@@ -260,27 +270,27 @@ This simplified architecture focuses on delivering your MVP features efficiently
 // POST /api/posts
 // S3: Upload media files (if any)
 // DynamoDB: Create post record + update user post count
-// Redis: Add to author's cache + trigger follower feed updates
+// Redis: Queue ActivityPub federation job notification
 
 // GET /api/posts/:id
-// Redis: Check post cache first
-// DynamoDB: Fallback query + cache for 2 hours
+// DynamoDB: Direct query (fast local storage)
+// DynamoDB TTL: Popular posts cached with extended TTL
 
 // POST /api/posts/:id/like
-// Redis: Immediate SADD to like set + HINCRBY counter
-// DynamoDB: Background sync via queue processing
+// DynamoDB: Immediate write to likes table + update post counter
+// Redis: Queue ActivityPub federation job for remote servers
 ```
 
 ### Feed Operations
 ```javascript
 // GET /api/feed
-// Redis: ZREVRANGE from user's feed cache
-// DynamoDB: If cache miss, query feed table + cache results
-// Background: Continuous feed pre-computation via DynamoDB Streams
+// DynamoDB: Query user's feed table directly
+// DynamoDB TTL: Pre-computed feeds cached with TTL
+// Background: Feed updates via DynamoDB job queue
 
 // GET /api/timeline
 // DynamoDB: Query GSI2 for recent posts in timeframe
-// Redis: Cache popular posts with higher TTL
+// DynamoDB TTL: Popular timeline content cached with longer TTL
 ```
 
 ---
