@@ -7,8 +7,8 @@ require("dotenv").config();
 const dynamoConfig = {
   region: "us-east-1",
   endpoint: "http://localhost:8000",
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  accessKeyId: "dummy",
+  secretAccessKey: "dummy",
 };
 
 const dynamoDB = new AWS.DynamoDB(dynamoConfig);

@@ -8,7 +8,6 @@
     "connect:ts": "ts-node connect-dynamodb.ts",
     "setup": "aws dynamodb create-table --cli-input-json file://create-imageonapp-table.json --endpoint-url http://localhost:8000",
     "setup:multi": "node setup-multi-tables.js",
-    "setup:cloud": "node setup-cloud-tables.js",
     "list-tables": "aws dynamodb list-tables --endpoint-url http://localhost:8000",
     "scan": "aws dynamodb scan --table-name ImageonApp --endpoint-url http://localhost:8000",
     "seed": "aws dynamodb batch-write-item --request-items file://seed-imageonapp.json --endpoint-url http://localhost:8000"
