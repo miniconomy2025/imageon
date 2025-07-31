@@ -1,0 +1,46 @@
+{
+  "TableName": "Follows",
+  "KeySchema": [
+    {
+      "AttributeName": "follower_id",
+      "KeyType": "HASH"
+    },
+    {
+      "AttributeName": "followed_id",
+      "KeyType": "RANGE"
+    }
+  ],
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "follower_id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "followed_id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "created_at",
+      "AttributeType": "S"
+    }
+  ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "GSI1",
+      "KeySchema": [
+        {
+          "AttributeName": "followed_id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "created_at",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}

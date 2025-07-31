@@ -1,0 +1,62 @@
+{
+  "TableName": "Likes",
+  "KeySchema": [
+    {
+      "AttributeName": "post_id",
+      "KeyType": "HASH"
+    },
+    {
+      "AttributeName": "user_id",
+      "KeyType": "RANGE"
+    }
+  ],
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "post_id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "user_id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "created_at",
+      "AttributeType": "S"
+    }
+  ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "GSI1",
+      "KeySchema": [
+        {
+          "AttributeName": "user_id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "created_at",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "GSI2",
+      "KeySchema": [
+        {
+          "AttributeName": "created_at",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "post_id",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}

@@ -1,0 +1,82 @@
+{
+  "TableName": "Posts",
+  "KeySchema": [
+    {
+      "AttributeName": "post_id",
+      "KeyType": "HASH"
+    },
+    {
+      "AttributeName": "author_id",
+      "KeyType": "RANGE"
+    }
+  ],
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "post_id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "author_id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "created_at",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "engagement_score",
+      "AttributeType": "N"
+    }
+  ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "GSI1",
+      "KeySchema": [
+        {
+          "AttributeName": "created_at",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "post_id",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "GSI2",
+      "KeySchema": [
+        {
+          "AttributeName": "author_id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "created_at",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "GSI3",
+      "KeySchema": [
+        {
+          "AttributeName": "engagement_score",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "created_at",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
