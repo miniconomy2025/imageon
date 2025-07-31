@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: fedify-social-network
+    env: node
+    buildCommand: npm install
+    startCommand: npm run prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: POSTS_TABLE
+        value: fedify-posts
+      - key: USERS_TABLE
+        value: fedify-users
+      - key: REDIS_URL
+        sync: false 
