@@ -11,11 +11,11 @@ const getDynamoConfig = () => {
     return {
       region: process.env.AWS_REGION || "us-east-1",
       endpoint: process.env.DYNAMODB_ENDPOINT || "http://localhost:8000",
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || "dummy",
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "dummy",
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "dummy",
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "dummy",
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       },
     };
   } else {
