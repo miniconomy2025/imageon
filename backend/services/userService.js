@@ -151,15 +151,17 @@ class UserService {
   async getUserById(userId) {
     try {
       const result = await dynamoClient
-        .get({
+        .query({
           TableName: this.tableName,
-          Key: {
-            user_id: userId,
+          KeyConditionExpression: "user_id = :userId",
+          ExpressionAttributeValues: {
+            ":userId": userId,
           },
+          Limit: 1,
         })
         .promise();
 
-      return result.Item || null;
+      return result.Items && result.Items.length > 0 ? result.Items[0] : null;
     } catch (error) {
       console.error("Error getting user by ID:", error);
       throw error;

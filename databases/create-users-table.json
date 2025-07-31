@@ -49,7 +49,7 @@
       "IndexName": "GSI2",
       "KeySchema": [
         {
-          "AttributeName": "ema 8i  8yhgc6il",
+          "AttributeName": "email",
           "KeyType": "HASH"
         },
         {
