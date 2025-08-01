@@ -96,6 +96,19 @@ The server will start on `http://localhost:3001`
 | `POST`   | `/api/posts/:postId/like` | Like a post          |
 | `DELETE` | `/api/posts/:postId/like` | Unlike a post        |
 
+### Likes
+
+| Method   | Endpoint                               | Description                  |
+| -------- | -------------------------------------- | ---------------------------- |
+| `POST`   | `/api/likes`                           | Create a new like            |
+| `GET`    | `/api/likes/post/:postId/user/:userId` | Get like by post and user    |
+| `GET`    | `/api/likes/post/:postId`              | Get likes by post ID         |
+| `GET`    | `/api/likes/user/:userId`              | Get likes by user ID         |
+| `GET`    | `/api/likes/check/:userId/:postId`     | Check if user liked post     |
+| `GET`    | `/api/likes/count/:postId`             | Get like count for post      |
+| `DELETE` | `/api/likes/post/:postId/user/:userId` | Delete like by post and user |
+| `DELETE` | `/api/likes/user/:userId/post/:postId` | Delete like by user and post |
+
 ### Health Check
 
 - `GET /health` - Server health status
@@ -126,6 +139,18 @@ curl -X POST http://localhost:3001/api/posts \
     "media_type": "image",
     "tags": ["coffee", "morning", "goodvibes"],
     "location": "San Francisco, CA"
+  }'
+```
+
+## 📝 Like Creation Example
+
+```bash
+curl -X POST http://localhost:3001/api/likes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "post_id": "post-123",
+    "user_id": "user-456",
+    "username": "johndoe"
   }'
 ```
 
@@ -221,6 +246,22 @@ npm test
 - `tags` (List) - Array of tags
 - `location` (String) - Location where post was created
 
+### Likes Table
+
+- **Primary Key**: `post_id` (String) - HASH key
+- **Sort Key**: `user_id` (String) - RANGE key
+- **GSI1**: User-based queries (user_id as hash key, created_at as range key)
+- **GSI2**: Time-based queries (created_at as hash key, post_id as range key)
+
+**Attributes**:
+
+- `post_id` (String) - ID of the post being liked (Primary Key - HASH)
+- `user_id` (String) - ID of the user who liked the post (Primary Key - RANGE)
+- `username` (String) - Username of the user who liked
+- `created_at` (String) - ISO timestamp
+- `updated_at` (String) - ISO timestamp
+- `status` (String) - Like status (active, removed)
+
 ## 🏗️ Architecture
 
 ```
@@ -229,18 +270,22 @@ backend/
 │   └── dynamodb.js          # DynamoDB configuration
 ├── controllers/
 │   ├── userController.js     # HTTP request handlers
-│   └── postController.js     # Post request handlers
+│   ├── postController.js     # Post request handlers
+│   └── likeController.js     # Like request handlers
 ├── routes/
 │   ├── userRoutes.js         # API route definitions
-│   └── postRoutes.js         # Post route definitions
+│   ├── postRoutes.js         # Post route definitions
+│   └── likeRoutes.js         # Like route definitions
 ├── services/
 │   ├── userService.js        # Business logic layer
-│   └── postService.js        # Post business logic
+│   ├── postService.js        # Post business logic
+│   └── likeService.js        # Like business logic
 ├── middlewares/              # Custom middleware
 ├── utils/                    # Utility functions
 ├── server.js                 # Express app setup
 ├── test-user-creation.js     # User creation tests
-└── test-post-creation.js     # Post creation tests
+├── test-post-creation.js     # Post creation tests
+└── test-like-creation.js     # Like creation tests
 ```
 
 ## 🔧 Development
@@ -264,6 +309,12 @@ npm run test:user
 
 ```bash
 npm run test:post
+```
+
+#### Like Tests
+
+```bash
+npm run test:like
 ```
 
 ### Database Operations
