@@ -1,0 +1,51 @@
+name: Secrets Detection
+
+on:
+  pull_request:
+  workflow_dispatch:  
+
+jobs:
+  gitleaks_secret_detection:
+    timeout-minutes: 60
+    name: GitLeaks Secret Detection
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.number }}/head
+
+      - name: Setup Gitleaks
+        run: |
+          # Enable debugging mode
+          set -x
+
+          # Get the latest version of Gitleaks
+          version=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | jq -r .tag_name)
+
+          # Remove the first 'v' character from the version string (if present)
+          version=${version#v}
+
+          # Test if latest version was pulled correctly
+          if [ "${version}" == "null" ]; then
+            echo "version is null which may indicate an issue with the GitHub API."
+            exit 1
+          fi
+
+          # Download and extract Gitleaks
+          echo "Downloading Gitleaks version ${version}"
+          wget -c -q https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz || { echo "Failed to download Gitleaks"; exit 1; }
+          tar -xf gitleaks_${version}_linux_x64.tar.gz gitleaks || { echo "Failed to extract Gitleaks"; exit 1; }
+
+          # Clean up the downloaded tarball
+          rm gitleaks_${version}_linux_x64.tar.gz
+
+      - name: Run Gitleaks Secrets Scanner
+        run: |
+          # Use gitleaks to scan the source code for secrets
+          # -n flag tells gitleaks how many commits to search through
+          # --redact flag redacts secret data from the output
+          ./gitleaks detect --source . --no-git --redact -v
