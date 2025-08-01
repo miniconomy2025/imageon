@@ -83,6 +83,19 @@ The server will start on `http://localhost:3001`
 | `PUT`    | `/api/users/:userId`            | Update user profile             |
 | `DELETE` | `/api/users/:userId`            | Delete user (soft delete)       |
 
+### Posts
+
+| Method   | Endpoint                  | Description          |
+| -------- | ------------------------- | -------------------- |
+| `POST`   | `/api/posts`              | Create a new post    |
+| `GET`    | `/api/posts`              | Get all posts (feed) |
+| `GET`    | `/api/posts/:postId`      | Get post by ID       |
+| `GET`    | `/api/posts/user/:userId` | Get posts by user ID |
+| `PUT`    | `/api/posts/:postId`      | Update post          |
+| `DELETE` | `/api/posts/:postId`      | Delete post          |
+| `POST`   | `/api/posts/:postId/like` | Like a post          |
+| `DELETE` | `/api/posts/:postId/like` | Unlike a post        |
+
 ### Health Check
 
 - `GET /health` - Server health status
@@ -97,6 +110,22 @@ curl -X POST http://localhost:3001/api/users \
     "email": "john@example.com",
     "display_name": "John Doe",
     "bio": "Software developer and coffee enthusiast"
+  }'
+```
+
+## 📝 Post Creation Example
+
+```bash
+curl -X POST http://localhost:3001/api/posts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user-123",
+    "username": "johndoe",
+    "content": "Just had an amazing cup of coffee! ☕",
+    "media_url": "https://example.com/coffee.jpg",
+    "media_type": "image",
+    "tags": ["coffee", "morning", "goodvibes"],
+    "location": "San Francisco, CA"
   }'
 ```
 
@@ -168,6 +197,30 @@ npm test
 - `is_private` (Boolean) - Privacy setting
 - `status` (String) - User status
 
+### Posts Table
+
+- **Primary Key**: `post_id` (String)
+- **Sort Key**: `user_id` (String)
+- **GSI1**: User-based queries (user_id as hash key)
+
+**Attributes**:
+
+- `post_id` (String) - Unique identifier
+- `user_id` (String) - ID of post creator
+- `username` (String) - Username of post creator
+- `content` (String) - Post content/text
+- `media_url` (String) - URL to attached media
+- `media_type` (String) - Type of media (image, video, etc.)
+- `created_at` (String) - ISO timestamp
+- `updated_at` (String) - ISO timestamp
+- `likes_count` (Number) - Number of likes
+- `comments_count` (Number) - Number of comments
+- `shares_count` (Number) - Number of shares
+- `is_public` (Boolean) - Whether post is public
+- `status` (String) - Post status (active, deleted, hidden)
+- `tags` (List) - Array of tags
+- `location` (String) - Location where post was created
+
 ## 🏗️ Architecture
 
 ```
@@ -175,15 +228,19 @@ backend/
 ├── config/
 │   └── dynamodb.js          # DynamoDB configuration
 ├── controllers/
-│   └── userController.js     # HTTP request handlers
+│   ├── userController.js     # HTTP request handlers
+│   └── postController.js     # Post request handlers
 ├── routes/
-│   └── userRoutes.js         # API route definitions
+│   ├── userRoutes.js         # API route definitions
+│   └── postRoutes.js         # Post route definitions
 ├── services/
-│   └── userService.js        # Business logic layer
+│   ├── userService.js        # Business logic layer
+│   └── postService.js        # Post business logic
 ├── middlewares/              # Custom middleware
 ├── utils/                    # Utility functions
 ├── server.js                 # Express app setup
-└── test-user-creation.js     # User creation tests
+├── test-user-creation.js     # User creation tests
+└── test-post-creation.js     # Post creation tests
 ```
 
 ## 🔧 Development
@@ -194,6 +251,20 @@ backend/
 2. **Controller Layer**: Add HTTP handlers in `controllers/`
 3. **Route Layer**: Define endpoints in `routes/`
 4. **Testing**: Add tests for new functionality
+
+### Testing
+
+#### User Tests
+
+```bash
+npm run test:user
+```
+
+#### Post Tests
+
+```bash
+npm run test:post
+```
 
 ### Database Operations
 

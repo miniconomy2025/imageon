@@ -6,6 +6,7 @@ require("dotenv").config();
 
 // Import routes
 const userRoutes = require("./routes/userRoutes");
+const postRoutes = require("./routes/postRoutes");
 
 // Create Express app
 const app = express();
@@ -30,6 +31,7 @@ app.get("/health", (req, res) => {
 
 // API routes
 app.use("/api/users", userRoutes);
+app.use("/api/posts", postRoutes);
 
 // Root endpoint
 app.get("/", (req, res) => {
@@ -40,6 +42,7 @@ app.get("/", (req, res) => {
     endpoints: {
       health: "/health",
       users: "/api/users",
+      posts: "/api/posts",
       docs: "/api/docs", // TODO: Add API documentation
     },
   });
@@ -71,6 +74,7 @@ app.listen(PORT, () => {
   console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
   console.log(`👥 Users API: http://localhost:${PORT}/api/users`);
+  console.log(`📝 Posts API: http://localhost:${PORT}/api/posts`);
 });
 
 module.exports = app;

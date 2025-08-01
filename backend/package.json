@@ -10,6 +10,7 @@
     "test": "jest --watchAll",
     "test:ci": "jest --ci --coverage",
     "test:user": "node test-user-creation.js",
+    "test:post": "node test-post-creation.js",
     "db:local:start": "docker run -d -p 8000:8000 --name dynamodb-local -v \"$PWD/local-dynamodb-data\":/home/dynamodblocal/data amazon/dynamodb-local -jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data",
     "db:local:stop": "docker stop dynamodb-local && docker rm dynamodb-local",
     "db:local:setup": "node scripts/setup-local-dynamodb.js",
