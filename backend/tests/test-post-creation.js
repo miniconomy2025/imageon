@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const postService = require("./services/postService");
+const postService = require("../services/postService");
 
 async function testPostCreation() {
   try {

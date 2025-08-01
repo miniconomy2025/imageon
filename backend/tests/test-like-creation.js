@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const likeService = require("./services/likeService");
+const likeService = require("../services/likeService");
 
 async function testLikeCreation() {
   try {

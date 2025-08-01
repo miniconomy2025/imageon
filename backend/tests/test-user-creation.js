@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const userService = require("./services/userService");
+const userService = require("../services/userService");
 
 async function testUserCreation() {
   console.log("🧪 Testing User Creation...\n");

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const followService = require("./services/followService");
+const followService = require("../services/followService");
 
 async function testFollowCreation() {
   try {
