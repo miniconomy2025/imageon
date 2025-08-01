@@ -8,6 +8,7 @@ require("dotenv").config();
 const userRoutes = require("./routes/userRoutes");
 const postRoutes = require("./routes/postRoutes");
 const likeRoutes = require("./routes/likeRoutes");
+const followRoutes = require("./routes/followRoutes");
 
 // Create Express app
 const app = express();
@@ -34,6 +35,7 @@ app.get("/health", (req, res) => {
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/likes", likeRoutes);
+app.use("/api/follows", followRoutes);
 
 // Root endpoint
 app.get("/", (req, res) => {
@@ -46,6 +48,7 @@ app.get("/", (req, res) => {
       users: "/api/users",
       posts: "/api/posts",
       likes: "/api/likes",
+      follows: "/api/follows",
       docs: "/api/docs", // TODO: Add API documentation
     },
   });
@@ -79,6 +82,7 @@ app.listen(PORT, () => {
   console.log(`👥 Users API: http://localhost:${PORT}/api/users`);
   console.log(`📝 Posts API: http://localhost:${PORT}/api/posts`);
   console.log(`❤️  Likes API: http://localhost:${PORT}/api/likes`);
+  console.log(`👥 Follows API: http://localhost:${PORT}/api/follows`);
 });
 
 module.exports = app;

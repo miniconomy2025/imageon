@@ -109,6 +109,20 @@ The server will start on `http://localhost:3001`
 | `DELETE` | `/api/likes/post/:postId/user/:userId` | Delete like by post and user |
 | `DELETE` | `/api/likes/user/:userId/post/:postId` | Delete like by user and post |
 
+### Follows
+
+| Method   | Endpoint                                                 | Description                        |
+| -------- | -------------------------------------------------------- | ---------------------------------- |
+| `POST`   | `/api/follows`                                           | Create a new follow relationship   |
+| `GET`    | `/api/follows/follower/:followerId/followed/:followedId` | Get follow relationship            |
+| `GET`    | `/api/follows/following/:userId`                         | Get users that a user is following |
+| `GET`    | `/api/follows/followers/:userId`                         | Get users following a user         |
+| `GET`    | `/api/follows/check/:followerId/:followedId`             | Check if user is following         |
+| `GET`    | `/api/follows/following/count/:userId`                   | Get following count for user       |
+| `GET`    | `/api/follows/followers/count/:userId`                   | Get followers count for user       |
+| `GET`    | `/api/follows/mutual/:userId`                            | Get mutual follows for user        |
+| `DELETE` | `/api/follows/follower/:followerId/followed/:followedId` | Delete follow relationship         |
+
 ### Health Check
 
 - `GET /health` - Server health status
@@ -151,6 +165,19 @@ curl -X POST http://localhost:3001/api/likes \
     "post_id": "post-123",
     "user_id": "user-456",
     "username": "johndoe"
+  }'
+```
+
+## 📝 Follow Creation Example
+
+```bash
+curl -X POST http://localhost:3001/api/follows \
+  -H "Content-Type: application/json" \
+  -d '{
+    "follower_id": "user-123",
+    "followed_id": "user-456",
+    "follower_username": "johndoe",
+    "followed_username": "janedoe"
   }'
 ```
 
@@ -262,6 +289,22 @@ npm test
 - `updated_at` (String) - ISO timestamp
 - `status` (String) - Like status (active, removed)
 
+### Follows Table
+
+- **Primary Key**: `follower_id` (String) - HASH key
+- **Sort Key**: `followed_id` (String) - RANGE key
+- **GSI1**: Followed-based queries (followed_id as hash key, created_at as range key)
+
+**Attributes**:
+
+- `follower_id` (String) - ID of the user who is following (Primary Key - HASH)
+- `followed_id` (String) - ID of the user being followed (Primary Key - RANGE)
+- `follower_username` (String) - Username of the follower
+- `followed_username` (String) - Username of the user being followed
+- `created_at` (String) - ISO timestamp
+- `updated_at` (String) - ISO timestamp
+- `status` (String) - Follow status (active, removed)
+
 ## 🏗️ Architecture
 
 ```
@@ -271,21 +314,25 @@ backend/
 ├── controllers/
 │   ├── userController.js     # HTTP request handlers
 │   ├── postController.js     # Post request handlers
-│   └── likeController.js     # Like request handlers
+│   ├── likeController.js     # Like request handlers
+│   └── followController.js   # Follow request handlers
 ├── routes/
 │   ├── userRoutes.js         # API route definitions
 │   ├── postRoutes.js         # Post route definitions
-│   └── likeRoutes.js         # Like route definitions
+│   ├── likeRoutes.js         # Like route definitions
+│   └── followRoutes.js       # Follow route definitions
 ├── services/
 │   ├── userService.js        # Business logic layer
 │   ├── postService.js        # Post business logic
-│   └── likeService.js        # Like business logic
+│   ├── likeService.js        # Like business logic
+│   └── followService.js      # Follow business logic
 ├── middlewares/              # Custom middleware
 ├── utils/                    # Utility functions
 ├── server.js                 # Express app setup
 ├── test-user-creation.js     # User creation tests
 ├── test-post-creation.js     # Post creation tests
-└── test-like-creation.js     # Like creation tests
+├── test-like-creation.js     # Like creation tests
+└── test-follow-creation.js   # Follow creation tests
 ```
 
 ## 🔧 Development
@@ -315,6 +362,12 @@ npm run test:post
 
 ```bash
 npm run test:like
+```
+
+#### Follow Tests
+
+```bash
+npm run test:follow
 ```
 
 ### Database Operations

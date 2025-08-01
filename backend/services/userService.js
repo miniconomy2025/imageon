@@ -236,7 +236,10 @@ class UserService {
 
       const params = {
         TableName: this.tableName,
-        Key: { user_id: userId },
+        Key: {
+          user_id: userId,
+          username: currentUser.username,
+        },
         UpdateExpression: `SET ${updateExpression.join(", ")}`,
         ExpressionAttributeNames: expressionAttributeNames,
         ExpressionAttributeValues: expressionAttributeValues,
@@ -259,9 +262,18 @@ class UserService {
    */
   async deleteUser(userId) {
     try {
+      // Get current user to get username
+      const currentUser = await this.getUserById(userId);
+      if (!currentUser) {
+        throw new Error("User not found");
+      }
+
       const params = {
         TableName: this.tableName,
-        Key: { user_id: userId },
+        Key: {
+          user_id: userId,
+          username: currentUser.username,
+        },
         UpdateExpression: "SET #status = :status, #updated_at = :updated_at",
         ExpressionAttributeNames: {
           "#status": "status",

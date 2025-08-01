@@ -8,9 +8,10 @@ async function testUserCreation() {
   try {
     // Test 1: Create a valid user
     console.log("📝 Test 1: Creating a valid user...");
+    const timestamp = Date.now();
     const userData = {
-      username: "testuser123",
-      email: "test@example.com",
+      username: `testuser${timestamp}`,
+      email: `test${timestamp}@example.com`,
       display_name: "Test User",
       bio: "This is a test user for API testing",
     };
@@ -28,7 +29,7 @@ async function testUserCreation() {
     console.log("📝 Test 2: Testing duplicate username...");
     try {
       await userService.createUser({
-        username: "testuser123", // Same username
+        username: userData.username, // Same username
         email: "different@example.com",
         display_name: "Different User",
       });
@@ -43,7 +44,7 @@ async function testUserCreation() {
     try {
       await userService.createUser({
         username: "differentuser",
-        email: "test@example.com", // Same email
+        email: userData.email, // Same email
         display_name: "Different User",
       });
       console.log("❌ Should have failed with duplicate email");
@@ -54,7 +55,7 @@ async function testUserCreation() {
 
     // Test 4: Get user by username
     console.log("📝 Test 4: Getting user by username...");
-    const foundUser = await userService.getUserByUsername("testuser123");
+    const foundUser = await userService.getUserByUsername(userData.username);
     if (foundUser) {
       console.log("✅ User found by username:");
       console.log(`   User ID: ${foundUser.user_id}`);
@@ -67,7 +68,7 @@ async function testUserCreation() {
 
     // Test 5: Get user by email
     console.log("📝 Test 5: Getting user by email...");
-    const foundByEmail = await userService.getUserByEmail("test@example.com");
+    const foundByEmail = await userService.getUserByEmail(userData.email);
     if (foundByEmail) {
       console.log("✅ User found by email:");
       console.log(`   User ID: ${foundByEmail.user_id}`);
