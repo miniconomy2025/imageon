@@ -1,0 +1,62 @@
+{
+  "name": "social-media-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Social Media Application",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "test": "jest --watchAll",
+    "test:ci": "jest --ci --coverage",
+    "db:local:start": "docker run -d -p 8000:8000 --name dynamodb-local -v \"$PWD/local-dynamodb-data\":/home/dynamodblocal/data amazon/dynamodb-local -jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data",
+    "db:local:stop": "docker stop dynamodb-local && docker rm dynamodb-local",
+    "db:local:setup": "node scripts/setup-local-dynamodb.js",
+    "db:local:reset": "npm run db:local:stop; npm run db:local:start; sleep 5; npm run db:local:setup",
+    "db:admin": "dynamodb-admin",
+    "redis:start": "docker run -d -p 6379:6379 --name redis-local redis:alpine",
+    "redis:stop": "docker stop redis-local && docker rm redis-local",
+    "setup:local": "npm run db:local:start && npm run redis:start && sleep 5 && npm run db:local:setup",
+    "cleanup:local": "npm run db:local:stop; npm run redis:stop",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1691.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.4.1",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^11.0.3",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "dynamodb-admin": "^4.6.1",
+    "eslint": "^9.18.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.9",
+    "supertest": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "social-media",
+    "api",
+    "express",
+    "dynamodb",
+    "redis",
+    "nodejs"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
