@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import Avatar from '../Avatar/Avatar'
 import Button from '../Button/Button'
 import './Post.css'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Pages } from '../../pages/pageRouting'
 
 interface Author {
   name: string
@@ -11,7 +13,7 @@ interface Author {
 interface PostProps extends React.HTMLAttributes<HTMLDivElement> {
   author: Author
   content: string
-  timestamp: Date
+  timestamp: string | Date
   likes?: number
   comments?: number
   shares?: number
@@ -37,13 +39,15 @@ const Post: React.FC<PostProps> = ({
   const [isLiked, setIsLiked] = useState<boolean>(false)
   const [likeCount, setLikeCount] = useState<number>(likes)
 
+  const navigate = useNavigate();
+
   const handleLike = (): void => {
     setIsLiked(!isLiked)
     setLikeCount(prev => isLiked ? prev - 1 : prev + 1)
     onLike && onLike(!isLiked)
   }
 
-  const formatTime = (date: Date): string => {
+  const formatTime = (date: Date | string): string => {
     const now = new Date()
     const diff = now.getTime() - new Date(date).getTime()
     const minutes = Math.floor(diff / 60000)
@@ -64,7 +68,7 @@ const Post: React.FC<PostProps> = ({
           size="medium"
         />
         <div className="post__author-info">
-          <h4 className="post__author-name">{author.name}</h4>
+          <h4 onClick={() => { navigate(Pages.profilePage.replace(':username', author.name)) }} className="post__author-name">{author.name}</h4>
           <span className="post__timestamp">{formatTime(timestamp)}</span>
         </div>
       </div>
@@ -81,15 +85,6 @@ const Post: React.FC<PostProps> = ({
           className={`post__action ${isLiked ? 'post__action--liked' : ''}`}
         >
           ❤️ {likeCount}
-        </Button>
-        
-        <Button
-          variant="outline"
-          size="small"
-          onClick={onComment}
-          className="post__action"
-        >
-          💬 {comments}
         </Button>
         
         <Button

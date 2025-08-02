@@ -1,0 +1,7 @@
+
+.main__feed {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
