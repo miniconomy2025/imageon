@@ -1,63 +1,36 @@
+import { PaginatedResult, PaginationOptions } from "../models/paginationModels";
+import { CreateUserInput, UpdateUserInput, User } from "../models/userModels";
+
 const { v4: uuidv4 } = require("uuid");
 const { dynamoClient, TABLE_CONFIG } = require("../config/dynamodb");
 
-// User interface (for reference)
-/**
- * @typedef {Object} User
- * @property {string} user_id - Unique user identifier
- * @property {string} username - Unique username
- * @property {string} email - User email address
- * @property {string} display_name - User's display name
- * @property {string} [bio] - User bio/description
- * @property {string} [profile_image_url] - Profile image URL
- * @property {string} created_at - ISO timestamp
- * @property {string} updated_at - ISO timestamp
- * @property {number} followers_count - Number of followers
- * @property {number} following_count - Number of users following
- * @property {number} posts_count - Number of posts
- * @property {boolean} is_verified - Whether user is verified
- * @property {boolean} is_private - Whether profile is private
- * @property {string} status - User status (active, suspended, deleted)
- */
-
 class UserService {
+  private readonly tableName: string;
+
   constructor() {
     this.tableName = TABLE_CONFIG.tables.users;
   }
 
-  /**
-   * Create a new user
-   * @param {Object} userData - User data
-   * @param {string} userData.username - Unique username
-   * @param {string} userData.email - User email
-   * @param {string} userData.display_name - Display name
-   * @param {string} [userData.bio] - User bio
-   * @returns {Promise<User>} Created user
-   */
-  async createUser(userData) {
+  async createUser(userData: CreateUserInput): Promise<User> {
     try {
       const { username, email, display_name, bio } = userData;
 
-      // Validate required fields
       if (!username || !email || !display_name) {
         throw new Error("Username, email, and display_name are required");
       }
 
-      // Check if username already exists
       const existingUser = await this.getUserByUsername(username);
       if (existingUser) {
         throw new Error("Username already exists");
       }
 
-      // Check if email already exists
       const existingEmail = await this.getUserByEmail(email);
       if (existingEmail) {
         throw new Error("Email already exists");
       }
 
-      // Create user object
       const now = new Date().toISOString();
-      const user = {
+      const user: User = {
         user_id: uuidv4(),
         username,
         email,
@@ -74,7 +47,6 @@ class UserService {
         status: "active",
       };
 
-      // Store in DynamoDB
       await dynamoClient
         .put({
           TableName: this.tableName,
@@ -91,12 +63,7 @@ class UserService {
     }
   }
 
-  /**
-   * Get user by username using GSI1
-   * @param {string} username - Username to search for
-   * @returns {Promise<User|null>} User object or null
-   */
-  async getUserByUsername(username) {
+  async getUserByUsername(username: string): Promise<User|null> {
     try {
       const result = await dynamoClient
         .query({
@@ -117,12 +84,7 @@ class UserService {
     }
   }
 
-  /**
-   * Get user by email using GSI2
-   * @param {string} email - Email to search for
-   * @returns {Promise<User|null>} User object or null
-   */
-  async getUserByEmail(email) {
+  async getUserByEmail(email: string): Promise<User|null> {
     try {
       const result = await dynamoClient
         .query({
@@ -143,12 +105,7 @@ class UserService {
     }
   }
 
-  /**
-   * Get user by user_id
-   * @param {string} userId - User ID
-   * @returns {Promise<User|null>} User object or null
-   */
-  async getUserById(userId) {
+  async getUserById(userId: string): Promise<User|null> {
     try {
       const result = await dynamoClient
         .query({
@@ -169,29 +126,22 @@ class UserService {
   }
 
   /**
-   * Get all users (with pagination)
-   * @param {Object} options - Query options
-   * @param {number} [options.limit=20] - Number of users to return
-   * @param {string} [options.lastEvaluatedKey] - Pagination token
    * @returns {Promise<Object>} Users and pagination info
    */
-  async getAllUsers(options = {}) {
+  async getAllUsers(options: PaginationOptions = {}): Promise<PaginatedResult<User>> {
     try {
       const { limit = 20, lastEvaluatedKey } = options;
 
       const params = {
         TableName: this.tableName,
         Limit: limit,
+        ...(lastEvaluatedKey && { ExclusiveStartKey: lastEvaluatedKey }),
       };
-
-      if (lastEvaluatedKey) {
-        params.ExclusiveStartKey = lastEvaluatedKey;
-      }
 
       const result = await dynamoClient.scan(params).promise();
 
       return {
-        users: result.Items || [],
+        items: result.Items || [],
         lastEvaluatedKey: result.LastEvaluatedKey,
         count: result.Count,
       };
@@ -201,26 +151,17 @@ class UserService {
     }
   }
 
-  /**
-   * Update user profile
-   * @param {string} userId - User ID
-   * @param {Object} updates - Fields to update
-   * @returns {Promise<User>} Updated user
-   */
-  async updateUser(userId, updates) {
+  async updateUser(userId: string, updates: UpdateUserInput): Promise<User> {
     try {
-      // Get current user
       const currentUser = await this.getUserById(userId);
       if (!currentUser) {
         throw new Error("User not found");
       }
 
-      // Prepare update expression
-      const updateExpression = [];
+      const updateExpression: string[] = [];
       const expressionAttributeNames = {};
       const expressionAttributeValues = {};
 
-      // Add fields to update
       Object.keys(updates).forEach((key) => {
         if (key !== "user_id" && key !== "username" && key !== "email") {
           updateExpression.push(`#${key} = :${key}`);
@@ -229,7 +170,6 @@ class UserService {
         }
       });
 
-      // Always update the updated_at timestamp
       updateExpression.push("#updated_at = :updated_at");
       expressionAttributeNames["#updated_at"] = "updated_at";
       expressionAttributeValues[":updated_at"] = new Date().toISOString();
@@ -255,14 +195,8 @@ class UserService {
     }
   }
 
-  /**
-   * Delete user (soft delete by setting status to 'deleted')
-   * @param {string} userId - User ID
-   * @returns {Promise<boolean>} Success status
-   */
-  async deleteUser(userId) {
+  async deleteUser(userId: string): Promise<boolean> {
     try {
-      // Get current user to get username
       const currentUser = await this.getUserById(userId);
       if (!currentUser) {
         throw new Error("User not found");

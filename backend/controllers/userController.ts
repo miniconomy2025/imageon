@@ -303,9 +303,16 @@ class UserController {
       const { userId } = req.params;
       const updates = req.body;
 
-      // Remove fields that shouldn't be updated
-      const { user_id, username, email, created_at, ...allowedUpdates } =
-        updates;
+      // Remove fields that shouldn't be updated.  Rename created_at to a throwaway
+      // variable so that it doesn't leak into the outer scope and shadow the
+      // `created_at` returned from the database.
+      const {
+        user_id,
+        username,
+        email,
+        created_at: _createdAt,
+        ...allowedUpdates
+      } = updates;
 
       if (Object.keys(allowedUpdates).length === 0) {
         return res.status(400).json({
@@ -344,7 +351,8 @@ class UserController {
           email: updatedEmail,
           bio,
           profile_image_url,
-          created_at,
+          // Use the created_at value returned from DynamoDB, not the one from the update request
+          created_at: userCreatedAt,
           updated_at,
           followers_count,
           following_count,

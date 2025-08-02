@@ -158,6 +158,7 @@ async function readTableItems(tableConfig) {
       const scanParams = {
         TableName: name,
         Limit: 100,
+        ExclusiveStartKey: null,
       };
 
       if (lastEvaluatedKey) {
