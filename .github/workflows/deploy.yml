@@ -31,7 +31,7 @@ jobs:
           
       - name: Install dependencies
         working-directory: ./backend
-        run: npm ci --only=production
+        run: npm i
         
       - name: Build TypeScript
         working-directory: ./backend
