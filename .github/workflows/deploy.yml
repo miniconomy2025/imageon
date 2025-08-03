@@ -76,22 +76,36 @@ jobs:
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
           
       - name: Deploy to EC2
+        timeout-minutes: 15
         run: |
           # Copy deployment package and scripts to EC2
           scp -i ~/.ssh/ec2-key.pem backend/imageon-backend.tar.gz ubuntu@${{ secrets.EC2_HOST }}:/tmp/
           scp -i ~/.ssh/ec2-key.pem scripts/deploy-to-ec2.sh ubuntu@${{ secrets.EC2_HOST }}:/tmp/
           scp -i ~/.ssh/ec2-key.pem scripts/health-check.sh ubuntu@${{ secrets.EC2_HOST }}:/tmp/
           
-          # Execute deployment script on EC2
-          ssh -i ~/.ssh/ec2-key.pem ubuntu@${{ secrets.EC2_HOST }} "chmod +x /tmp/deploy-to-ec2.sh && /tmp/deploy-to-ec2.sh '${{ env.APP_DIR }}' '${{ env.PM2_APP_NAME }}' '${{ secrets.FEDERATION_DOMAIN }}' '${{ secrets.AWS_REGION }}'"
+          # Execute deployment script on EC2 with timeout and proper SSH options
+          ssh -i ~/.ssh/ec2-key.pem \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=3 \
+              -o ConnectTimeout=30 \
+              ubuntu@${{ secrets.EC2_HOST }} \
+              "timeout 900 bash -c 'chmod +x /tmp/deploy-to-ec2.sh && /tmp/deploy-to-ec2.sh \"${{ env.APP_DIR }}\" \"${{ env.PM2_APP_NAME }}\" \"${{ secrets.FEDERATION_DOMAIN }}\" \"${{ secrets.AWS_REGION }}\"; echo \"Exit code: \$?\"'"
           
       - name: Health Check
+        timeout-minutes: 5
         run: |
           # Wait for application to start
-          sleep 30
+          sleep 15
           
-          # Perform health check using the remote script
-          ssh -i ~/.ssh/ec2-key.pem ubuntu@${{ secrets.EC2_HOST }} "chmod +x /tmp/health-check.sh && /tmp/health-check.sh '${{ env.PM2_APP_NAME }}'"
+          # Perform health check using the remote script with proper SSH options
+          ssh -i ~/.ssh/ec2-key.pem \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=3 \
+              -o ConnectTimeout=30 \
+              ubuntu@${{ secrets.EC2_HOST }} \
+              "chmod +x /tmp/health-check.sh && timeout 60 /tmp/health-check.sh '${{ env.PM2_APP_NAME }}'"
           
       - name: Cleanup
         if: always()
