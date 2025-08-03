@@ -5,11 +5,22 @@ echo "================================"
 
 # Check if Redis is running on port 6379
 echo "1. Checking port 6379..."
-if sudo netstat -tulpn | grep -q ":6379 "; then
-  echo "✅ Port 6379 is in use"
-  sudo netstat -tulpn | grep ":6379 "
+if command -v ss >/dev/null 2>&1; then
+  if ss -tulpn | grep -q ":6379 "; then
+    echo "✅ Port 6379 is in use"
+    ss -tulpn | grep ":6379 "
+  else
+    echo "❌ Port 6379 is not in use"
+  fi
+elif command -v netstat >/dev/null 2>&1; then
+  if netstat -tulpn | grep -q ":6379 "; then
+    echo "✅ Port 6379 is in use"
+    netstat -tulpn | grep ":6379 "
+  else
+    echo "❌ Port 6379 is not in use"
+  fi
 else
-  echo "❌ Port 6379 is not in use"
+  echo "⚠️ Neither ss nor netstat available, cannot check port usage"
 fi
 
 echo ""
