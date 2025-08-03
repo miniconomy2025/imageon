@@ -183,14 +183,6 @@ class LikeService {
     }
   }
 
-  async deleteLike(postId: string, userId: string): Promise<boolean> {
-    throw new Error('Unlike operation is not supported. Likes are permanent.');
-  }
-
-  async deleteLikeByUserAndPost(userId: string, postId: string): Promise<boolean> {
-    return this.deleteLike(postId, userId);
-  }
-
   async hasUserLikedPost(userId: string, postId: string): Promise<boolean> {
     try {
       const like = await this.getLikeByUserAndPost(userId, postId);

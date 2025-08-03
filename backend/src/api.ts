@@ -499,51 +499,6 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
             headers: { "Content-Type": "application/json" },
           });
         }
-        if (request.method === "DELETE") {
-          try {
-            await likeService.deleteLike(postId, userId);
-            return new Response(JSON.stringify({
-              success: true,
-              message: "Like deleted successfully",
-            }), {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            });
-          } catch (error) {
-            const msg = error instanceof Error ? error.message : String(error);
-            return new Response(JSON.stringify({
-              success: false,
-              message: msg || "Error deleting like",
-            }), {
-              status: 500,
-              headers: { "Content-Type": "application/json" },
-            });
-          }
-        }
-      }
-      // /api/likes/user/:userId/post/:postId (DELETE)
-      if (segments.length === 6 && segments[2] === "user" && segments[4] === "post" && request.method === "DELETE") {
-        const userId = segments[3];
-        const postId = segments[5];
-        try {
-          await likeService.deleteLikeByUserAndPost(userId, postId);
-          return new Response(JSON.stringify({
-            success: true,
-            message: "Like deleted successfully",
-          }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        } catch (error) {
-          const msg = error instanceof Error ? error.message : String(error);
-          return new Response(JSON.stringify({
-            success: false,
-            message: msg || "Error deleting like",
-          }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
       }
       // /api/likes/post/:postId (GET)
       if (segments.length === 4 && segments[2] === "post" && request.method === "GET") {

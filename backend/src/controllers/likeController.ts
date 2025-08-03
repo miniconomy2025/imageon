@@ -151,42 +151,6 @@ class LikeController {
     }
   }
 
-  async deleteLike(req: Request, res: Response) {
-    try {
-      res.status(405).json({
-        success: false,
-        message: "Unlike operation is not supported. Likes are permanent.",
-      });
-      return;
-    } catch (error) {
-      console.error("Error in deleteLike controller:", error);
-      const msg = error instanceof Error ? error.message : String(error); 
-      res.status(500).json({
-        success: false,
-        message: "Error deleting like",
-        error: msg,
-      });
-    }
-  }
-
-  async deleteLikeByUserAndPost(req: Request, res: Response) {
-    try {
-      res.status(405).json({
-        success: false,
-        message: "Unlike operation is not supported. Likes are permanent.",
-      });
-      return;
-    } catch (error) {
-      console.error("Error in deleteLikeByUserAndPost controller:", error);
-      const msg = error instanceof Error ? error.message : String(error); 
-      res.status(500).json({
-        success: false,
-        message: "Error deleting like",
-        error: msg,
-      });
-    }
-  }
-
   async checkUserLike(req: Request, res: Response) {
     try {
       const { userId, postId } = req.params;
