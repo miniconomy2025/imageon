@@ -84,32 +84,40 @@ fi
 
 # Stop existing application
 echo "⏹️ Stopping existing application..."
-pm2 stop "$PM2_APP_NAME" || true
-pm2 delete "$PM2_APP_NAME" || true
+if pm2 list | grep -q "$PM2_APP_NAME"; then
+  echo "Stopping PM2 process: $PM2_APP_NAME"
+  pm2 stop "$PM2_APP_NAME" || true
+  pm2 delete "$PM2_APP_NAME" || true
+else
+  echo "No existing PM2 process found for: $PM2_APP_NAME"
+fi
 
 # Start Redis if not running
 echo "🔴 Starting Redis..."
 
 # Check if Redis container exists and is running
-if docker ps --format "table {{.Names}}" | grep -q "^imageon-redis$"; then
+if sudo docker ps --format "table {{.Names}}" | grep -q "^imageon-redis$"; then
   echo "✅ Redis container is already running"
-elif docker ps -a --format "table {{.Names}}" | grep -q "^imageon-redis$"; then
+elif sudo docker ps -a --format "table {{.Names}}" | grep -q "^imageon-redis$"; then
   echo "📦 Starting existing Redis container..."
   sudo docker start imageon-redis
 else
-  # Check if port 6379 is already in use
-  if sudo netstat -tulpn | grep -q ":6379 "; then
-    echo "⚠️ Port 6379 is already in use. Checking if it's Redis..."
-    if sudo docker ps --format "table {{.Names}}\t{{.Ports}}" | grep -q "6379"; then
-      echo "✅ Another Redis container is already running on port 6379"
-    else
-      echo "❌ Port 6379 is occupied by another service. Please check your Redis configuration."
-      exit 1
+  # Check if port 6379 is already in use (using ss instead of netstat)
+  if command -v ss >/dev/null 2>&1; then
+    if ss -tulpn | grep -q ":6379 "; then
+      echo "⚠️ Port 6379 is already in use. Removing conflicting containers..."
+      # Remove any containers using port 6379
+      sudo docker ps -a --filter "publish=6379" --format "{{.Names}}" | xargs -r sudo docker rm -f
+      # Also remove imageon-redis if it exists but is conflicted
+      sudo docker rm -f imageon-redis 2>/dev/null || true
     fi
   else
-    echo "🚀 Creating new Redis container..."
-    sudo docker run --name imageon-redis -p 6379:6379 -d redis:7-alpine
+    echo "⚠️ Cannot check port usage (ss/netstat not available). Removing any existing imageon-redis container..."
+    sudo docker rm -f imageon-redis 2>/dev/null || true
   fi
+  
+  echo "🚀 Creating new Redis container..."
+  sudo docker run --name imageon-redis -p 6379:6379 -d redis:7-alpine
 fi
 
 # Wait for Redis to be ready
@@ -119,7 +127,7 @@ while [ $timeout -gt 0 ]; do
   if sudo docker exec imageon-redis redis-cli ping 2>/dev/null | grep -q "PONG"; then
     echo "✅ Redis is ready"
     break
-  elif redis-cli ping 2>/dev/null | grep -q "PONG"; then
+  elif command -v redis-cli >/dev/null 2>&1 && redis-cli ping 2>/dev/null | grep -q "PONG"; then
     echo "✅ Redis is ready (external instance)"
     break
   fi
@@ -129,6 +137,9 @@ done
 
 if [ $timeout -eq 0 ]; then
   echo "❌ Redis failed to be ready within 30 seconds"
+  # Show Redis container status for debugging
+  echo "Redis container status:"
+  sudo docker ps -a --filter "name=imageon-redis" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
   exit 1
 fi
 
