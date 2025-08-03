@@ -9,8 +9,9 @@ class LikeController {
       if (!likeData.post_id || !likeData.user_id || !likeData.username) {
         res.status(400).json({
           success: false,
-          message: "Post ID, user ID, and username are required",
+          message: "post_id, user_id, and username are required",
         });
+        return;
       }
 
       const like = await likeService.createLike(likeData);
@@ -38,8 +39,9 @@ class LikeController {
       if (!postId || !userId) {
         res.status(400).json({
           success: false,
-          message: "Post ID and User ID are required",
+          message: "postId and userId are required",
         });
+        return;
       }
 
       const like = await likeService.getLikeByPostAndUser(postId, userId);
@@ -49,6 +51,7 @@ class LikeController {
           success: false,
           message: "Like not found",
         });
+        return;
       }
 
       res.status(200).json({
@@ -74,8 +77,9 @@ class LikeController {
       if (!postId) {
         res.status(400).json({
           success: false,
-          message: "Post ID is required",
+          message: "postId is required",
         });
+        return;
       }
 
       const options = {
@@ -114,8 +118,9 @@ class LikeController {
       if (!userId) {
         res.status(400).json({
           success: false,
-          message: "User ID is required",
+          message: "userId is required",
         });
+        return;
       }
 
       const options = {
@@ -148,21 +153,11 @@ class LikeController {
 
   async deleteLike(req: Request, res: Response) {
     try {
-      const { postId, userId } = req.params;
-
-      if (!postId || !userId) {
-        res.status(400).json({
-          success: false,
-          message: "Post ID and User ID are required",
-        });
-      }
-
-      await likeService.deleteLike(postId, userId);
-
-      res.status(200).json({
-        success: true,
-        message: "Like deleted successfully",
+      res.status(405).json({
+        success: false,
+        message: "Unlike operation is not supported. Likes are permanent.",
       });
+      return;
     } catch (error) {
       console.error("Error in deleteLike controller:", error);
       const msg = error instanceof Error ? error.message : String(error); 
@@ -176,21 +171,11 @@ class LikeController {
 
   async deleteLikeByUserAndPost(req: Request, res: Response) {
     try {
-      const { userId, postId } = req.params;
-
-      if (!userId || !postId) {
-        res.status(400).json({
-          success: false,
-          message: "User ID and Post ID are required",
-        });
-      }
-
-      await likeService.deleteLikeByUserAndPost(userId, postId);
-
-      res.status(200).json({
-        success: true,
-        message: "Like deleted successfully",
+      res.status(405).json({
+        success: false,
+        message: "Unlike operation is not supported. Likes are permanent.",
       });
+      return;
     } catch (error) {
       console.error("Error in deleteLikeByUserAndPost controller:", error);
       const msg = error instanceof Error ? error.message : String(error); 
@@ -209,8 +194,9 @@ class LikeController {
       if (!userId || !postId) {
         res.status(400).json({
           success: false,
-          message: "User ID and Post ID are required",
+          message: "userId and postId are required",
         });
+        return;
       }
 
       const hasLiked = await likeService.hasUserLikedPost(userId, postId);
@@ -241,8 +227,9 @@ class LikeController {
       if (!postId) {
         res.status(400).json({
           success: false,
-          message: "Post ID is required",
+          message: "postId is required",
         });
+        return;
       }
 
       const count = await likeService.getLikeCountForPost(postId);

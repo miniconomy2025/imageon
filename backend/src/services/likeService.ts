@@ -1,9 +1,5 @@
 import { CreateLikeInput, Like, LikeCountResult, LikesResult } from "../models/likeModels";
 import { PaginatedResult, PaginationOptions } from "../models/paginationModels";
-// Use the shared DynamoDB document client and configuration. These come
-// from the single‑table database service rather than the deprecated
-// per‑entity configuration. We also import the necessary DynamoDB
-// command classes to perform CRUD operations.
 import { docClient } from "./database";
 import { config } from "../config/index.js";
 import {
@@ -18,7 +14,6 @@ class LikeService {
   private readonly tableName: string;
 
   constructor() {
-    // All like records are stored in the unified ImageonApp table
     this.tableName = config.dynamodb.tableName;
   }
 
@@ -35,11 +30,6 @@ class LikeService {
         throw new Error("User has already liked this post");
       }
       const now = new Date().toISOString();
-      // Compose the like record. The primary key (PK) is the post ID and
-      // the sort key (SK) stores the user ID prefixed with "LIKE#" so
-      // we can filter likes by post. We also set GSI1PK/GSI1SK to enable
-      // listing likes by user. Additional fields capture the original
-      // relationship data and timestamps.
       const item = {
         PK: post_id,
         SK: `LIKE#${user_id}`,
@@ -59,9 +49,6 @@ class LikeService {
           ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
         })
       );
-      // Increment the likes_count on the post itself. Posts are stored
-      // with SK equal to 'POST'. If the attribute doesn’t exist yet it is
-      // initialised to zero.
       await docClient.send(
         new UpdateCommand({
           TableName: this.tableName,
@@ -197,38 +184,7 @@ class LikeService {
   }
 
   async deleteLike(postId: string, userId: string): Promise<boolean> {
-    try {
-      // Delete the like record using the composite key. After removing
-      // the relationship we decrement the likes_count on the post.
-      await docClient.send(
-        new DeleteCommand({
-          TableName: this.tableName,
-          Key: {
-            PK: postId,
-            SK: `LIKE#${userId}`,
-          },
-        })
-      );
-      const now = new Date().toISOString();
-      await docClient.send(
-        new UpdateCommand({
-          TableName: this.tableName,
-          Key: { PK: postId, SK: "POST" },
-          UpdateExpression:
-            "SET likes_count = if_not_exists(likes_count, :zero) - :dec, updated_at = :updated",
-          ExpressionAttributeValues: {
-            ":dec": 1,
-            ":zero": 0,
-            ":updated": now,
-          },
-        })
-      );
-      console.log(`Like deleted: user ${userId} unliked post ${postId}`);
-      return true;
-    } catch (error) {
-      console.error("Error deleting like:", error);
-      throw error;
-    }
+    throw new Error('Unlike operation is not supported. Likes are permanent.');
   }
 
   async deleteLikeByUserAndPost(userId: string, postId: string): Promise<boolean> {

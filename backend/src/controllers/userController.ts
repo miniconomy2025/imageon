@@ -17,6 +17,7 @@ class UserController {
             display_name: !display_name ? "Display name is required" : null,
           },
         });
+        return;
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -25,6 +26,7 @@ class UserController {
           success: false,
           message: "Invalid email format",
         });
+        return;
       }
 
       const usernameRegex = /^[a-zA-Z0-9_-]{3,30}$/;
@@ -34,6 +36,7 @@ class UserController {
           message:
             "Username must be 3-30 characters long and contain only letters, numbers, underscores, and hyphens",
         });
+        return;
       }
 
       const user = await userService.createUser({
@@ -77,6 +80,7 @@ class UserController {
           success: false,
           message: msg,
         });
+        return;
       }
 
       res.status(500).json({
@@ -259,6 +263,7 @@ class UserController {
           success: false,
           message: "No valid fields to update",
         });
+        return;
       }
 
       const updatedUser = await userService.updateUser(userId, allowedUpdates);
@@ -309,6 +314,7 @@ class UserController {
           success: false,
           message: "User not found",
         });
+        return;
       }
 
       res.status(500).json({
@@ -339,6 +345,7 @@ class UserController {
           success: false,
           message: "User not found",
         });
+        return;
       }
 
       res.status(500).json({

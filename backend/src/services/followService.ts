@@ -14,10 +14,6 @@ class FollowService {
   private readonly tableName: string;
 
   constructor() {
-    // Use the single table defined in our configuration instead of the old
-    // per‑entity tables. The DatabaseService encapsulates the DynamoDB client
-    // and table configuration. Here we pull the table name directly from
-    // config so that all follow records reside in the unified ImageonApp table.
     this.tableName = config.dynamodb.tableName;
   }
 
@@ -36,11 +32,6 @@ class FollowService {
         throw new Error("Users cannot follow themselves");
       }
 
-      // Check if a follow relationship already exists between these users. We
-      // construct the composite key based on our single-table design: the
-      // primary key (PK) is the follower’s ID and the sort key (SK) is a
-      // prefixed string containing the followed user’s ID. This allows us to
-      // efficiently query all followings for a user by prefix.
       const existingFollow = await this.getFollowByFollowerAndFollowed(
         follower_id,
         followed_id
@@ -50,12 +41,6 @@ class FollowService {
       }
 
       const now = new Date().toISOString();
-      // Compose the item to insert into the single table. We store the
-      // relationship twice in the key schema: PK/SK for direct lookup,
-      // and GSI1PK/GSI1SK for follower lookup by followed user. The
-      // `SK` is prefixed with "FOLLOWING#" so we can filter follow
-      // relationships when querying by PK. The GSI1 fields are prefixed
-      // with "FOLLOWER#" to enable filtering followers by followed ID.
       const item = {
         PK: follower_id,
         SK: `FOLLOWING#${followed_id}`,
@@ -70,9 +55,6 @@ class FollowService {
         status: "active",
       };
 
-      // Perform a conditional put to avoid duplicate follow entries. If the
-      // primary key & sort key combination already exists, the condition
-      // fails and no new record is inserted.
       await docClient.send(
         new PutCommand({
           TableName: this.tableName,
@@ -81,11 +63,6 @@ class FollowService {
         })
       );
 
-      // Increment counts on the user profiles. We update the follower’s
-      // following_count and the followed user’s followers_count. If these
-      // attributes don’t exist yet, initialise them to zero. User records
-      // reside in the same table with PK equal to the user_id and SK
-      // equal to 'USER'.
       await Promise.all([
         docClient.send(
           new UpdateCommand({
@@ -118,8 +95,6 @@ class FollowService {
       console.log(
         `Follow created: ${follower_username} followed ${followed_username}`
       );
-      // Return only the follow fields without the PK/SK metadata to keep
-      // consistency with the Follow interface.
       return {
         follower_id,
         followed_id,
@@ -242,7 +217,6 @@ class FollowService {
 
   async deleteFollow(followerId: string, followedId: string): Promise<boolean> {
     try {
-      // Delete the follow relationship using the composite PK/SK design.
       await docClient.send(
         new DeleteCommand({
           TableName: this.tableName,
@@ -253,8 +227,6 @@ class FollowService {
         })
       );
       const now = new Date().toISOString();
-      // Decrement counts on both user profiles. Ensure we don't reduce
-      // counts below zero by using if_not_exists.
       await Promise.all([
         docClient.send(
           new UpdateCommand({

@@ -9,17 +9,11 @@ class RedisService {
     this.redis = createRedisInstance();
   }
 
-  /**
-   * Cache actor data
-   */
   async cacheActor(identifier: string, actorData: ActorData, ttl: number = 3600) {
     const key = `actor:${identifier}`;
     await this.redis.setex(key, ttl, JSON.stringify(actorData));
   }
 
-  /**
-   * Get cached actor data
-   */
   async getCachedActor(identifier: string): Promise<ActorData | null> {
     const key = `actor:${identifier}`;
     const cached = await this.redis.get(key);

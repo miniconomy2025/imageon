@@ -11,6 +11,7 @@ class PostController {
           success: false,
           message: "User ID, username, and content are required",
         });
+        return;
       }
 
       const post = await postService.createPost(postData);
@@ -40,6 +41,7 @@ class PostController {
           success: false,
           message: "Post ID is required",
         });
+        return;
       }
 
       const post = await postService.getPostById(postId);
@@ -49,6 +51,7 @@ class PostController {
           success: false,
           message: "Post not found",
         });
+        return;
       }
 
       res.status(200).json({
@@ -76,6 +79,7 @@ class PostController {
           success: false,
           message: "User ID is required",
         });
+        return;
       }
 
       const options = {
@@ -148,6 +152,7 @@ class PostController {
           success: false,
           message: "Post ID is required",
         });
+        return;
       }
 
       if (!updates || Object.keys(updates).length === 0) {
@@ -155,6 +160,7 @@ class PostController {
           success: false,
           message: "No updates provided",
         });
+        return;
       }
 
       const allowedUpdates = {
@@ -198,6 +204,7 @@ class PostController {
           success: false,
           message: "Post ID is required",
         });
+        return;
       }
 
       await postService.deletePost(postId);
@@ -227,6 +234,7 @@ class PostController {
           success: false,
           message: "Post ID is required",
         });
+        return;
       }
 
       if (!user_id) {
@@ -234,6 +242,7 @@ class PostController {
           success: false,
           message: "User ID is required",
         });
+        return;
       }
 
       const updatedPost = await postService.likePost(postId, user_id);
@@ -256,30 +265,11 @@ class PostController {
 
   async unlikePost(req: Request, res: Response) {
     try {
-      const { postId } = req.params;
-      const { user_id } = req.body;
-
-      if (!postId) {
-        res.status(400).json({
-          success: false,
-          message: "Post ID is required",
-        });
-      }
-
-      if (!user_id) {
-        res.status(400).json({
-          success: false,
-          message: "User ID is required",
-        });
-      }
-
-      const updatedPost = await postService.unlikePost(postId, user_id);
-
-      res.status(200).json({
-        success: true,
-        message: "Post unliked successfully",
-        data: updatedPost,
+      res.status(405).json({
+        success: false,
+        message: "Unlike operation is not supported. Likes are permanent.",
       });
+      return;
     } catch (error) {
       console.error("Error in unlikePost controller:", error);
       const msg = error instanceof Error ? error.message : String(error); 

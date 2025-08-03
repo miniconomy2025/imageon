@@ -3,26 +3,14 @@ import { postService } from "./services/postService.js";
 import { likeService } from "./services/likeService.js";
 import { followService } from "./services/followService.js";
 
-/**
- * Processes custom REST API routes under the `/api` namespace.
- *
- * This function returns a `Response` if the incoming request matches
- * a defined API route. Otherwise it returns `null` to indicate that
- * the request should be handled by other parts of the server (for
- * example, ActivityPub federation routes). The API layer avoids
- * dependencies on Express by working directly with the service layer
- * and the Fetch API request/response primitives.
- */
 export async function handleApiRequest(request: Request): Promise<Response | null> {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  // API endpoints live under the `/api/` prefix
   if (!path.startsWith("/api/")) {
     return null;
   }
 
-  // Break the path into segments, e.g. "/api/users/123" -> ["api","users","123"]
   const segments = path.substring(1).split("/").filter(Boolean);
   if (segments.length < 2) {
     return new Response(JSON.stringify({ success: false, message: "Not Found" }), {
@@ -33,8 +21,6 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
 
   const resource = segments[1];
 
-  // Helper to parse the JSON body. If parsing fails or the request has no body,
-  // return an empty object.
   const getBody = async (): Promise<any> => {
     try {
       return await request.clone().json();

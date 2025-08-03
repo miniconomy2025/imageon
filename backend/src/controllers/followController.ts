@@ -6,11 +6,12 @@ class FollowController {
     try {
       const followData = req.body;
 
-      if (!followData.follower_id || !followData.followed_username) {
+      if (!followData.follower_id || !followData.followed_id || !followData.follower_username || !followData.followed_username) {
         res.status(400).json({
           success: false,
-          message: "Follower ID, followed ID, and usernames are required",
+          message: "follower_id, followed_id, follower_username and followed_username are required",
         });
+        return;
       }
 
       const follow = await followService.createFollow(followData);
@@ -40,6 +41,7 @@ class FollowController {
           success: false,
           message: "Follower ID and Followed ID are required",
         });
+        return;
       }
 
       const follow = await followService.getFollowByFollowerAndFollowed(followerId, followedId);
@@ -49,6 +51,7 @@ class FollowController {
           success: false,
           message: "Follow relationship not found",
         });
+        return;
       }
 
       res.status(200).json({
@@ -76,6 +79,7 @@ class FollowController {
           success: false,
           message: "User ID is required",
         });
+        return;
       }
 
       const options = {
@@ -116,6 +120,7 @@ class FollowController {
           success: false,
           message: "User ID is required",
         });
+        return;
       }
 
       const options = {
@@ -155,6 +160,7 @@ class FollowController {
           success: false,
           message: "Follower ID and Followed ID are required",
         });
+        return;
       }
 
       await followService.deleteFollow(followerId, followedId);
@@ -183,6 +189,7 @@ class FollowController {
           success: false,
           message: "Follower ID and Followed ID are required",
         });
+        return;
       }
 
       const isFollowing = await followService.isUserFollowing(followerId, followedId);
@@ -215,6 +222,7 @@ class FollowController {
           success: false,
           message: "User ID is required",
         });
+        return;
       }
 
       const count = await followService.getFollowingCount(userId);
@@ -246,6 +254,7 @@ class FollowController {
           success: false,
           message: "User ID is required",
         });
+        return;
       }
 
       const count = await followService.getFollowersCount(userId);
@@ -278,6 +287,7 @@ class FollowController {
           success: false,
           message: "User ID is required",
         });
+        return;
       }
 
       const options = {
