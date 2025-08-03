@@ -6,6 +6,7 @@ import { config } from "./config/index.js";
 import { createRedisInstance } from "./config/redis.js";
 import { FederationHandlers } from "./handlers/federation.js";
 import { WebHandlers } from "./handlers/web.js";
+import { handleApiRequest } from "./api.js";
 
 // Create Redis instance
 const redis = createRedisInstance();
@@ -32,6 +33,21 @@ federation
 serve({
   fetch: async (request: Request) => {
     const url = new URL(request.url);
+
+    // Delegate REST API requests under /api to the custom handler
+    try {
+      const apiResponse = await handleApiRequest(request);
+      if (apiResponse) {
+        return apiResponse;
+      }
+    } catch (error) {
+      // In case of unexpected errors in API handling, return 500
+      console.error('Error handling API request:', error);
+      return new Response(JSON.stringify({ success: false, message: 'Internal server error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     
     // Health check endpoint
     if (url.pathname === "/health") {

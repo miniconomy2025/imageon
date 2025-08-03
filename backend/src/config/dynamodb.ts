@@ -1,88 +1,35 @@
-import * as AWS from "aws-sdk";
-require("dotenv").config();
+// src/config/dynamodb.ts
+import "dotenv/config";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { config } from "./index.js";
 
-// // DynamoDB Configuration
-// const getDynamoConfig = () => {
-//   const isLocal =
-//     process.env.NODE_ENV === "development" || process.env.DYNAMODB_ENDPOINT;
-
-//   if (isLocal) {
-//     // Local DynamoDB configuration
-//     return {
-//       region: process.env.AWS_REGION || "us-east-1",
-//       endpoint: process.env.DYNAMODB_ENDPOINT || "http://localhost:8000",
-//       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-//       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-//       credentials: {
-//         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-//         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-//       },
-//     };
-//   } else {
-//     // Production AWS configuration
-//     return {
-//       region: process.env.AWS_REGION || "us-east-1",
-//       credentials: {
-//         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-//         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-//       },
-//     };
-//   }
-// };
-
-export const buildAwsCredentials = (): AWS.Credentials | undefined => {
-  const { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY } = process.env;
-  if (AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY) {
-    return new AWS.Credentials(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY);
-  }
-  return undefined;
-};
-
-export const isLocal =
-  process.env.NODE_ENV === "development" || !!process.env.DYNAMODB_ENDPOINT;
-
-export const dynamoConfig: AWS.DynamoDB.ClientConfiguration = {
-  region: process.env.AWS_REGION || "us-east-1",
-  ...(isLocal && { endpoint: process.env.DYNAMODB_ENDPOINT || "http://localhost:8000" }),
-  // only attach credentials if both vars exist
-  ...(buildAwsCredentials() && { credentials: buildAwsCredentials() }),
-};
-
-export const dynamoDB = new AWS.DynamoDB(dynamoConfig);
-export const dynamoClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
-
-// Table configuration
-export const TABLE_CONFIG = {
-  name: process.env.DYNAMODB_TABLE_NAME || "ImageonApp",
-  localName: process.env.DYNAMODB_LOCAL_TABLE_NAME || "ImageonApp-Local",
-
-  // Get the appropriate table name based on environment
-  getTableName: () => {
-    const isLocal =
-      process.env.NODE_ENV === "development" || process.env.DYNAMODB_ENDPOINT;
-    return isLocal ? TABLE_CONFIG.localName : TABLE_CONFIG.name;
+// Base low-level client
+const rawClient = new DynamoDBClient({
+  region: config.dynamodb.region,
+  endpoint: process.env.DYNAMODB_ENDPOINT || undefined,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "test",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "test",
   },
+});
 
-  // Multi-table names
+// Convenience Document client (handles marshalling/unmarshalling)
+const dynamoClient = DynamoDBDocumentClient.from(rawClient, {
+  marshallOptions: {
+    // drop undefined values so they don't bloat items
+    removeUndefinedValues: true,
+  },
+});
+
+const TABLE_CONFIG = {
   tables: {
-    users: "Users",
-    posts: "Posts",
-    likes: "Likes",
-    follows: "Follows",
-  },
-
-  // GSI names
-  indexes: {
-    GSI1: "GSI1",
-    GSI2: "GSI2",
-    GSI3: "GSI3",
+    // These must match what your table creation JSON defines.
+    users: process.env.USERS_TABLE_NAME || "ImageonApp-Users",
+    posts: process.env.POSTS_TABLE_NAME || "ImageonApp-Posts",
+    likes: process.env.LIKES_TABLE_NAME || "ImageonApp-Likes",
+    follows: process.env.FOLLOWS_TABLE_NAME || "ImageonApp-Follows",
   },
 };
 
-// Export configuration and instances
-module.exports = {
-  dynamoDB,
-  dynamoClient,
-  // getDynamoConfig,
-  TABLE_CONFIG,
-};
+export { dynamoClient, TABLE_CONFIG };
