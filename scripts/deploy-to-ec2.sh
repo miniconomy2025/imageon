@@ -43,14 +43,13 @@ npm ci --only=production
 # Setup environment variables
 if [ ! -f ".env" ]; then
   echo "⚙️ Setting up environment file..."
-  cp .env.example .env 2>/dev/null || touch .env
   
   # Configure production environment variables
   echo "🔧 Configuring production environment..."
   cat > .env << 'ENV_VARS'
 NODE_ENV=production
 PORT=3000
-FEDERATION_PROTOCOL=https
+FEDERATION_PROTOCOL=http
 DYNAMODB_TABLE_NAME=imageonapp
 REDIS_HOST=localhost
 REDIS_PORT=6379
