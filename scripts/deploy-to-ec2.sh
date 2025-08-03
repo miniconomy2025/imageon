@@ -160,7 +160,13 @@ fi
 pm2 save
 
 # Setup PM2 startup script
-sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu
+echo "🔧 Setting up PM2 startup script..."
+PM2_PATH=$(which pm2)
+if [ -n "$PM2_PATH" ]; then
+  sudo env PATH=$PATH:$(dirname $PM2_PATH) $PM2_PATH startup systemd -u ubuntu --hp /home/ubuntu || echo "⚠️ PM2 startup script setup failed, but application is running"
+else
+  echo "⚠️ PM2 path not found, skipping startup script setup"
+fi
 
 echo "✅ Deployment completed successfully!"
 
