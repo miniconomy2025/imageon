@@ -12,6 +12,8 @@ import {
   UpdateCommand,
   DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { ReturnValue } from "@aws-sdk/client-dynamodb";
+
 
 type Allowed = keyof UpdatePostInput;
 
@@ -280,7 +282,7 @@ class PostService {
         UpdateExpression: `SET ${updateExpressionParts.join(', ')}`,
         ExpressionAttributeNames: expressionAttributeNames,
         ExpressionAttributeValues: expressionAttributeValues,
-        ReturnValues: 'ALL_NEW',
+        ReturnValues: 'ALL_NEW' as ReturnValue,
       };
       const result = await docClient.send(new UpdateCommand(params));
       console.log(`Post updated: ${postId}`);
@@ -366,7 +368,7 @@ class PostService {
           ':zero': 0,
           ':updated': now,
         },
-        ReturnValues: 'ALL_NEW',
+        ReturnValues: 'ALL_NEW' as ReturnValue,
       };
       const result = await docClient.send(new UpdateCommand(params));
       console.log(`Post liked: ${postId} by user ${userId}`);
@@ -415,7 +417,7 @@ class PostService {
           ':zero': 0,
           ':updated': now,
         },
-        ReturnValues: 'ALL_NEW',
+        ReturnValues: 'ALL_NEW' as ReturnValue,
       };
       const result = await docClient.send(new UpdateCommand(params));
       console.log(`Post unliked: ${postId} by user ${userId}`);
