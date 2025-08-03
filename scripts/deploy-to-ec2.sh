@@ -8,6 +8,18 @@ AWS_REGION="$4"
 
 echo "🚀 Starting deployment..."
 
+# Check Node.js version
+echo "📋 Checking Node.js version..."
+NODE_VERSION=$(node --version)
+echo "Node.js version: $NODE_VERSION"
+
+# Verify Node.js version is 20 or higher
+NODE_MAJOR=$(node --version | cut -d'.' -f1 | sed 's/v//')
+if [ "$NODE_MAJOR" -lt 20 ]; then
+  echo "⚠️ Warning: Node.js version $NODE_VERSION detected. Recommended version is 20 or higher."
+  echo "Consider updating Node.js on the EC2 instance for better compatibility."
+fi
+
 # Create application directory if it doesn't exist
 sudo mkdir -p "$APP_DIR"
 sudo chown ubuntu:ubuntu "$APP_DIR"
