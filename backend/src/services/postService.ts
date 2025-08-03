@@ -1,8 +1,8 @@
 import { PaginatedResult, PaginationOptions } from "../models/paginationModels";
 import { CreatePostInput, Post, PostsResult, UpdatePostInput } from "../models/postModels";
 
-const { v4: uuidv4 } = require("uuid");
-const { dynamoClient, TABLE_CONFIG } = require("../config/dynamodb");
+import { v4 as uuidv4 } from "uuid";
+import { dynamoClient, TABLE_CONFIG } from "../config/dynamodb";
 
 type Allowed = keyof UpdatePostInput;
 
@@ -77,7 +77,11 @@ class PostService {
         })
         .promise();
 
-      return result.Items && result.Items.length > 0 ? result.Items[0] : null;
+      if (!result.Items || result.Items.length <= 0) {
+        return null;
+      }
+
+      return result.Items[0] as Post;
     } catch (error) {
       console.error("Error getting post by ID:", error);
       throw error;
@@ -101,9 +105,10 @@ class PostService {
       };
 
       const result = await dynamoClient.query(params).promise();
+      const validatedItems = result.Items ?? [];
 
       return {
-        items: result.Items || [],
+        items: validatedItems as Post[],
         lastEvaluatedKey: result.LastEvaluatedKey,
         count: result.Items ? result.Items.length : 0,
       };
@@ -125,9 +130,10 @@ class PostService {
       };
 
       const result = await dynamoClient.scan(params).promise();
+      const validatedItems = result.Items ?? [];
 
       return {
-        items: result.Items || [],
+        items: validatedItems as Post[],
         lastEvaluatedKey: result.LastEvaluatedKey,
         count: result.Items ? result.Items.length : 0,
       };
@@ -174,7 +180,7 @@ class PostService {
 
       const result = await dynamoClient.update(params).promise();
       console.log(`Post updated: ${postId}`);
-      return result.Attributes;
+      return result.Attributes as Post;
     } catch (error) {
       console.error("Error updating post:", error);
       throw error;
@@ -228,7 +234,7 @@ class PostService {
 
       const result = await dynamoClient.update(params).promise();
       console.log(`Post liked: ${postId} by user ${userId}`);
-      return result.Attributes;
+      return result.Attributes as Post;
     } catch (error) {
       console.error("Error liking post:", error);
       throw error;
@@ -257,7 +263,7 @@ class PostService {
 
       const result = await dynamoClient.update(params).promise();
       console.log(`Post unliked: ${postId} by user ${userId}`);
-      return result.Attributes;
+      return result.Attributes as Post;
     } catch (error) {
       console.error("Error unliking post:", error);
       throw error;

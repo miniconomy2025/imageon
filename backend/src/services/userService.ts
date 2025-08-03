@@ -1,8 +1,8 @@
 import { PaginatedResult, PaginationOptions } from "../models/paginationModels";
 import { CreateUserInput, UpdateUserInput, User } from "../models/userModels";
 
-const { v4: uuidv4 } = require("uuid");
-const { dynamoClient, TABLE_CONFIG } = require("../config/dynamodb");
+import { v4 as uuidv4 } from "uuid";
+import { dynamoClient, TABLE_CONFIG } from "../config/dynamodb";
 
 type Allowed = keyof UpdateUserInput;
 
@@ -78,8 +78,12 @@ class UserService {
           Limit: 1,
         })
         .promise();
+      
+      if (!result.Items || result.Items.length <= 0) {
+        return null;
+      }
 
-      return result.Items && result.Items.length > 0 ? result.Items[0] : null;
+      return result.Items[0] as User;
     } catch (error) {
       console.error("Error getting user by username:", error);
       throw error;
@@ -99,8 +103,12 @@ class UserService {
           Limit: 1,
         })
         .promise();
+      
+      if (!result.Items || result.Items.length <= 0) {
+        return null;
+      }
 
-      return result.Items && result.Items.length > 0 ? result.Items[0] : null;
+      return result.Items[0] as User;
     } catch (error) {
       console.error("Error getting user by email:", error);
       throw error;
@@ -119,8 +127,12 @@ class UserService {
           Limit: 1,
         })
         .promise();
+      
+      if (!result.Items || result.Items.length <= 0) {
+        return null;
+      }
 
-      return result.Items && result.Items.length > 0 ? result.Items[0] : null;
+      return result.Items[0] as User;
     } catch (error) {
       console.error("Error getting user by ID:", error);
       throw error;
@@ -138,11 +150,12 @@ class UserService {
       };
 
       const result = await dynamoClient.scan(params).promise();
+      const validatedItems = result.Items ?? [];
 
       return {
-        items: result.Items || [],
+        items: validatedItems as User[],
         lastEvaluatedKey: result.LastEvaluatedKey,
-        count: result.Count,
+        count: result.Count as number,
       };
     } catch (error) {
       console.error("Error getting all users:", error);
@@ -187,7 +200,7 @@ class UserService {
 
       const result = await dynamoClient.update(params).promise();
       console.log(`User updated: ${userId}`);
-      return result.Attributes;
+      return result.Attributes as User;
     } catch (error) {
       console.error("Error updating user:", error);
       throw error;

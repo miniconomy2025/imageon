@@ -1,7 +1,7 @@
 import { CreateLikeInput, Like, LikeCountResult, LikesResult } from "../models/likeModels";
 import { PaginatedResult, PaginationOptions } from "../models/paginationModels";
-const { v4: uuidv4 } = require("uuid");
-const { dynamoClient, TABLE_CONFIG } = require("../config/dynamodb");
+import { v4 as uuidv4 } from "uuid";
+import { dynamoClient, TABLE_CONFIG } from "../config/dynamodb";
 
 class LikeService {
   private readonly tableName: string;
@@ -62,7 +62,11 @@ class LikeService {
         })
         .promise();
 
-      return result.Item || null;
+      if (!result.Item) {
+        return null;
+      }
+
+      return result.Item as Like;
     } catch (error) {
       console.error("Error getting like by post and user:", error);
       throw error;
@@ -89,9 +93,10 @@ class LikeService {
       };
 
       const result = await dynamoClient.query(params).promise();
+      const validatedItems = result.Items ?? [];
 
       return {
-        items: result.Items || [],
+        items: validatedItems as Like[],
         lastEvaluatedKey: result.LastEvaluatedKey,
         count: result.Items ? result.Items.length : 0,
       };
@@ -118,9 +123,10 @@ class LikeService {
       };
 
       const result = await dynamoClient.query(params).promise();
+      const validatedItems = result.Items ?? [];
 
       return {
-        items: result.Items || [],
+        items: validatedItems as Like[],
         lastEvaluatedKey: result.LastEvaluatedKey,
         count: result.Items ? result.Items.length : 0,
       };

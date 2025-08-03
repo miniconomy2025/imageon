@@ -1,7 +1,7 @@
 import { CreateFollowInput, Follow } from "../models/followModels";
 import { PaginatedResult, PaginationOptions } from "../models/paginationModels";
-const { v4: uuidv4 } = require("uuid");
-const { TABLE_CONFIG, dynamoClient } = require("../config/dynamodb");
+import { v4 as uuidv4 } from "uuid";
+import { TABLE_CONFIG, dynamoClient } from "../config/dynamodb";
 
 class FollowService {
   private readonly tableName: string;
@@ -75,7 +75,11 @@ class FollowService {
         })
         .promise();
 
-      return result.Item || null;
+      if (!result.Item) {
+        return null;
+      }
+
+      return result.Item as Follow;
     } catch (error) {
       console.error("Error getting follow by follower and followed:", error);
       throw error;
@@ -98,9 +102,10 @@ class FollowService {
       };
 
       const result = await dynamoClient.query(params).promise();
+      const validatedItems = result.Items ?? [];
 
       return {
-        items: result.Items || [],
+        items: validatedItems as Follow[],
         lastEvaluatedKey: result.LastEvaluatedKey,
         count: result.Items ? result.Items.length : 0,
       };
@@ -131,9 +136,10 @@ class FollowService {
       }
 
       const result = await dynamoClient.query(params).promise();
+      const validatedItems = result.Items ?? [];
 
       return {
-        items: result.Items || [],
+        items: result.Items as Follow[],
         lastEvaluatedKey: result.LastEvaluatedKey,
         count: result.Items ? result.Items.length : 0,
       };
