@@ -47,7 +47,6 @@ jobs:
           cp -r dist/* deploy/
           cp package.json deploy/
           cp package-lock.json deploy/
-          cp .env.example deploy/.env.example
           
           # Copy any additional files needed for production
           if [ -f "ecosystem.config.js" ]; then
