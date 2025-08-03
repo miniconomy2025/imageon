@@ -48,6 +48,18 @@ if [ $timeout -eq 0 ]; then
     exit 1
 fi
 
+# Check DynamoDB connectivity (for native AWS DynamoDB)
+echo "🗄️ Checking DynamoDB connectivity..."
+if [ -n "$AWS_REGION" ] && [ -z "$DYNAMO_ENDPOINT" ]; then
+    echo "✅ Using native AWS DynamoDB in region: ${AWS_REGION}"
+    echo "📋 Table: ${DYNAMODB_TABLE_NAME:-imageonapp}"
+    # Note: DynamoDB connectivity will be verified when the application starts
+elif [ -n "$DYNAMO_ENDPOINT" ]; then
+    echo "🏠 Using local DynamoDB at: ${DYNAMO_ENDPOINT}"
+else
+    echo "⚠️ DynamoDB configuration not found. Please check your environment variables."
+fi
+
 # Create logs directory
 mkdir -p logs
 

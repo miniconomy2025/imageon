@@ -1,0 +1,198 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches:
+      - main
+      - production
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  APP_DIR: '/home/ubuntu/imageon-backend'
+  PM2_APP_NAME: 'imageon-backend'
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci --only=production
+        
+      - name: Build TypeScript
+        working-directory: ./backend
+        run: npm run build
+        
+      - name: Create deployment package
+        working-directory: ./backend
+        run: |
+          # Create deployment directory
+          mkdir -p deploy
+          
+          # Copy built files and necessary config
+          cp -r dist/* deploy/
+          cp package.json deploy/
+          cp package-lock.json deploy/
+          cp .env.example deploy/.env.example
+          
+          # Copy any additional files needed for production
+          if [ -f "ecosystem.config.js" ]; then
+            cp ecosystem.config.js deploy/
+          fi
+          
+          # Create tarball
+          tar -czf imageon-backend.tar.gz -C deploy .
+          
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/ec2-key.pem
+          chmod 600 ~/.ssh/ec2-key.pem
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          
+      - name: Deploy to EC2
+        run: |
+          # Copy deployment package to EC2
+          scp -i ~/.ssh/ec2-key.pem backend/imageon-backend.tar.gz ubuntu@${{ secrets.EC2_HOST }}:/tmp/
+          
+          # Execute deployment script on EC2
+          ssh -i ~/.ssh/ec2-key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
+            
+            echo "🚀 Starting deployment..."
+            
+            # Create application directory if it doesn't exist
+            sudo mkdir -p ${{ env.APP_DIR }}
+            sudo chown ubuntu:ubuntu ${{ env.APP_DIR }}
+            
+            # Backup current deployment (if exists)
+            if [ -d "${{ env.APP_DIR }}/current" ]; then
+              echo "📦 Creating backup..."
+              sudo rm -rf ${{ env.APP_DIR }}/backup
+              sudo mv ${{ env.APP_DIR }}/current ${{ env.APP_DIR }}/backup
+            fi
+            
+            # Extract new deployment
+            mkdir -p ${{ env.APP_DIR }}/current
+            cd ${{ env.APP_DIR }}/current
+            tar -xzf /tmp/imageon-backend.tar.gz
+            
+            # Install production dependencies
+            echo "📚 Installing dependencies..."
+            npm ci --only=production
+            
+            # Setup environment variables
+            if [ ! -f ".env" ]; then
+              echo "⚙️ Setting up environment file..."
+              cp .env.example .env
+              echo "Please configure .env file with production values"
+            fi
+            
+            # Install PM2 globally if not installed
+            if ! command -v pm2 &> /dev/null; then
+              echo "📦 Installing PM2..."
+              sudo npm install -g pm2
+            fi
+            
+            # Stop existing application
+            echo "⏹️ Stopping existing application..."
+            pm2 stop ${{ env.PM2_APP_NAME }} || true
+            pm2 delete ${{ env.PM2_APP_NAME }} || true
+            
+            # Start Redis if not running
+            echo "🔴 Starting Redis..."
+            sudo docker start imageon-redis || sudo docker run --name imageon-redis -p 6379:6379 -d redis:7-alpine
+            
+            # Start application with PM2
+            echo "🚀 Starting application..."
+            pm2 start server.js --name ${{ env.PM2_APP_NAME }} --env production
+            
+            # Save PM2 configuration
+            pm2 save
+            
+            # Setup PM2 startup script
+            sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu
+            
+            echo "✅ Deployment completed successfully!"
+            
+            # Show application status
+            pm2 status
+            pm2 logs ${{ env.PM2_APP_NAME }} --lines 10
+          EOF
+          
+      - name: Health Check
+        run: |
+          # Wait for application to start
+          sleep 30
+          
+          # Perform health check
+          ssh -i ~/.ssh/ec2-key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            echo "🏥 Performing health check..."
+            
+            # Check if application is running
+            if pm2 status | grep -q "${{ env.PM2_APP_NAME }}.*online"; then
+              echo "✅ Application is running"
+            else
+              echo "❌ Application is not running"
+              pm2 logs ${{ env.PM2_APP_NAME }} --lines 20
+              exit 1
+            fi
+            
+            # Check HTTP health endpoint
+            sleep 5
+            if curl -f http://localhost:3000/health; then
+              echo "✅ Health check passed"
+            else
+              echo "❌ Health check failed"
+              pm2 logs ${{ env.PM2_APP_NAME }} --lines 20
+              exit 1
+            fi
+            
+            # Check Redis connectivity
+            if docker exec imageon-redis redis-cli ping | grep -q "PONG"; then
+              echo "✅ Redis is healthy"
+            else
+              echo "⚠️ Redis health check failed"
+            fi
+          EOF
+          
+      - name: Cleanup
+        if: always()
+        run: |
+          # Remove SSH key
+          rm -f ~/.ssh/ec2-key.pem
+          
+          # Remove deployment artifacts from EC2
+          ssh -i ~/.ssh/ec2-key.pem ubuntu@${{ secrets.EC2_HOST }} "rm -f /tmp/imageon-backend.tar.gz" || true
+
+      - name: Notify Deployment Status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "🎉 Deployment successful!"
+            echo "🌐 Application available at: http://${{ secrets.EC2_HOST }}:3000"
+          else
+            echo "❌ Deployment failed!"
+            echo "Check the logs above for details."
+          fi
