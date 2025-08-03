@@ -145,7 +145,13 @@ fi
 
 # Start application with PM2
 echo "🚀 Starting application..."
-pm2 start server.js --name "$PM2_APP_NAME" --env production
+if [ -f "ecosystem.config.js" ]; then
+  echo "Using ecosystem.config.js for PM2 configuration"
+  pm2 start ecosystem.config.js --env production
+else
+  echo "Using direct PM2 start"
+  pm2 start src/server.js --name "$PM2_APP_NAME" --env production
+fi
 
 # Save PM2 configuration
 pm2 save
