@@ -145,7 +145,10 @@ fi
 
 # Start application with PM2
 echo "🚀 Starting application..."
-if [ -f "ecosystem.config.js" ]; then
+if [ -f "ecosystem.config.cjs" ]; then
+  echo "Using ecosystem.config.cjs for PM2 configuration"
+  pm2 start ecosystem.config.cjs --env production
+elif [ -f "ecosystem.config.js" ]; then
   echo "Using ecosystem.config.js for PM2 configuration"
   pm2 start ecosystem.config.js --env production
 else
