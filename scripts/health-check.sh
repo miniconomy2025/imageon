@@ -25,9 +25,13 @@ fi
 
 # Check Redis connectivity
 if docker exec imageon-redis redis-cli ping 2>/dev/null | grep -q "PONG"; then
-  echo "✅ Redis is healthy"
+  echo "✅ Redis is healthy (imageon-redis container)"
+elif redis-cli ping 2>/dev/null | grep -q "PONG"; then
+  echo "✅ Redis is healthy (external instance)"
 else
   echo "⚠️ Redis health check failed"
+  echo "Checking Redis container status..."
+  docker ps --filter "name=imageon-redis" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 fi
 
 echo "✅ All health checks passed!"
