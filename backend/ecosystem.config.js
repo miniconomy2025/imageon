@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'imageon-backend',
-    script: 'server.js',
+    script: 'src/server.js',
     instances: 1,
     exec_mode: 'fork',
     env: {
