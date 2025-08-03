@@ -161,9 +161,11 @@ pm2 save
 
 # Setup PM2 startup script
 echo "🔧 Setting up PM2 startup script..."
-PM2_PATH=$(which pm2)
+PM2_PATH=$(which pm2 2>/dev/null)
 if [ -n "$PM2_PATH" ]; then
-  sudo env PATH=$PATH:$(dirname $PM2_PATH) $PM2_PATH startup systemd -u ubuntu --hp /home/ubuntu || echo "⚠️ PM2 startup script setup failed, but application is running"
+  echo "PM2 path found: $PM2_PATH"
+  # Use timeout to prevent hanging and redirect output
+  timeout 30 sudo env PATH=$PATH:$(dirname $PM2_PATH) $PM2_PATH startup systemd -u ubuntu --hp /home/ubuntu >/dev/null 2>&1 || echo "⚠️ PM2 startup script setup failed or timed out, but application is running"
 else
   echo "⚠️ PM2 path not found, skipping startup script setup"
 fi
@@ -172,4 +174,10 @@ echo "✅ Deployment completed successfully!"
 
 # Show application status
 pm2 status
-pm2 logs "$PM2_APP_NAME" --lines 10
+
+# Show recent logs (non-blocking)
+echo "📄 Recent application logs:"
+pm2 logs "$PM2_APP_NAME" --lines 10 --nostream
+
+echo "🎉 Deployment script completed successfully!"
+exit 0
