@@ -1,13 +1,25 @@
 import { CreateLikeInput, Like, LikeCountResult, LikesResult } from "../models/likeModels";
 import { PaginatedResult, PaginationOptions } from "../models/paginationModels";
-import { v4 as uuidv4 } from "uuid";
-import { dynamoClient, TABLE_CONFIG } from "../config/dynamodb";
+// Use the shared DynamoDB document client and configuration. These come
+// from the single‑table database service rather than the deprecated
+// per‑entity configuration. We also import the necessary DynamoDB
+// command classes to perform CRUD operations.
+import { docClient } from "./database";
+import { config } from "../config/index.js";
+import {
+  PutCommand,
+  GetCommand,
+  QueryCommand,
+  DeleteCommand,
+  UpdateCommand,
+} from "@aws-sdk/lib-dynamodb";
 
 class LikeService {
   private readonly tableName: string;
 
   constructor() {
-    this.tableName = TABLE_CONFIG.tables.likes;
+    // All like records are stored in the unified ImageonApp table
+    this.tableName = config.dynamodb.tableName;
   }
 
   async createLike(likeData: CreateLikeInput): Promise<Like> {
@@ -22,9 +34,17 @@ class LikeService {
       if (existingLike) {
         throw new Error("User has already liked this post");
       }
-
       const now = new Date().toISOString();
-      const like: Like = {
+      // Compose the like record. The primary key (PK) is the post ID and
+      // the sort key (SK) stores the user ID prefixed with "LIKE#" so
+      // we can filter likes by post. We also set GSI1PK/GSI1SK to enable
+      // listing likes by user. Additional fields capture the original
+      // relationship data and timestamps.
+      const item = {
+        PK: post_id,
+        SK: `LIKE#${user_id}`,
+        GSI1PK: user_id,
+        GSI1SK: `LIKE#${post_id}`,
         post_id,
         user_id,
         username,
@@ -32,18 +52,38 @@ class LikeService {
         updated_at: now,
         status: "active",
       };
-
-      await dynamoClient
-        .put({
+      await docClient.send(
+        new PutCommand({
           TableName: this.tableName,
-          Item: like,
-          ConditionExpression:
-            "attribute_not_exists(post_id) AND attribute_not_exists(user_id)",
+          Item: item,
+          ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
         })
-        .promise();
-
+      );
+      // Increment the likes_count on the post itself. Posts are stored
+      // with SK equal to 'POST'. If the attribute doesn’t exist yet it is
+      // initialised to zero.
+      await docClient.send(
+        new UpdateCommand({
+          TableName: this.tableName,
+          Key: { PK: post_id, SK: "POST" },
+          UpdateExpression:
+            "SET likes_count = if_not_exists(likes_count, :zero) + :inc, updated_at = :updated",
+          ExpressionAttributeValues: {
+            ":inc": 1,
+            ":zero": 0,
+            ":updated": now,
+          },
+        })
+      );
       console.log(`Like created: ${username} liked post ${post_id}`);
-      return like;
+      return {
+        post_id,
+        user_id,
+        username,
+        created_at: now,
+        updated_at: now,
+        status: "active",
+      };
     } catch (error) {
       console.error("Error creating like:", error);
       throw error;
@@ -52,21 +92,27 @@ class LikeService {
 
   async getLikeByPostAndUser(postId: string, userId: string): Promise<Like|null> {
     try {
-      const result = await dynamoClient
-        .get({
+      const result = await docClient.send(
+        new GetCommand({
           TableName: this.tableName,
           Key: {
-            post_id: postId,
-            user_id: userId,
+            PK: postId,
+            SK: `LIKE#${userId}`,
           },
         })
-        .promise();
-
+      );
       if (!result.Item) {
         return null;
       }
-
-      return result.Item as Like;
+      const item: any = result.Item;
+      return {
+        post_id: item.post_id,
+        user_id: item.user_id,
+        username: item.username,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        status: item.status,
+      };
     } catch (error) {
       console.error("Error getting like by post and user:", error);
       throw error;
@@ -80,25 +126,32 @@ class LikeService {
   async getLikesByPostId(postId: string, options: PaginationOptions = {}): Promise<PaginatedResult<Like>> {
     try {
       const { limit = 20, lastEvaluatedKey } = options;
-
-      const params = {
+      const queryParams: any = {
         TableName: this.tableName,
-        KeyConditionExpression: "post_id = :postId",
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :prefix)",
         ExpressionAttributeValues: {
-          ":postId": postId,
+          ":pk": postId,
+          ":prefix": "LIKE#",
         },
         ScanIndexForward: false,
         Limit: limit,
-        ...(lastEvaluatedKey && { ExclusiveStartKey: lastEvaluatedKey }),
       };
-
-      const result = await dynamoClient.query(params).promise();
-      const validatedItems = result.Items ?? [];
-
+      if (lastEvaluatedKey) {
+        queryParams.ExclusiveStartKey = lastEvaluatedKey;
+      }
+      const result = await docClient.send(new QueryCommand(queryParams));
+      const items = (result.Items || []).map((item: any) => ({
+        post_id: item.post_id,
+        user_id: item.user_id,
+        username: item.username,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        status: item.status,
+      }));
       return {
-        items: validatedItems as Like[],
+        items: items as Like[],
         lastEvaluatedKey: result.LastEvaluatedKey,
-        count: result.Items ? result.Items.length : 0,
+        count: items.length,
       };
     } catch (error) {
       console.error("Error getting likes by post ID:", error);
@@ -109,26 +162,33 @@ class LikeService {
   async getLikesByUserId(userId: string, options: PaginationOptions = {}): Promise<PaginatedResult<Like>> {
     try {
       const { limit = 20, lastEvaluatedKey } = options;
-
-      const params = {
+      const queryParams: any = {
         TableName: this.tableName,
         IndexName: "GSI1",
-        KeyConditionExpression: "user_id = :userId",
+        KeyConditionExpression: "GSI1PK = :pk AND begins_with(GSI1SK, :prefix)",
         ExpressionAttributeValues: {
-          ":userId": userId,
+          ":pk": userId,
+          ":prefix": "LIKE#",
         },
         ScanIndexForward: false,
         Limit: limit,
-        ...(lastEvaluatedKey && { ExclusiveStartKey: lastEvaluatedKey }),
       };
-
-      const result = await dynamoClient.query(params).promise();
-      const validatedItems = result.Items ?? [];
-
+      if (lastEvaluatedKey) {
+        queryParams.ExclusiveStartKey = lastEvaluatedKey;
+      }
+      const result = await docClient.send(new QueryCommand(queryParams));
+      const items = (result.Items || []).map((item: any) => ({
+        post_id: item.post_id,
+        user_id: item.user_id,
+        username: item.username,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        status: item.status,
+      }));
       return {
-        items: validatedItems as Like[],
+        items: items as Like[],
         lastEvaluatedKey: result.LastEvaluatedKey,
-        count: result.Items ? result.Items.length : 0,
+        count: items.length,
       };
     } catch (error) {
       console.error("Error getting likes by user ID:", error);
@@ -138,16 +198,31 @@ class LikeService {
 
   async deleteLike(postId: string, userId: string): Promise<boolean> {
     try {
-      await dynamoClient
-        .delete({
+      // Delete the like record using the composite key. After removing
+      // the relationship we decrement the likes_count on the post.
+      await docClient.send(
+        new DeleteCommand({
           TableName: this.tableName,
           Key: {
-            post_id: postId,
-            user_id: userId,
+            PK: postId,
+            SK: `LIKE#${userId}`,
           },
         })
-        .promise();
-
+      );
+      const now = new Date().toISOString();
+      await docClient.send(
+        new UpdateCommand({
+          TableName: this.tableName,
+          Key: { PK: postId, SK: "POST" },
+          UpdateExpression:
+            "SET likes_count = if_not_exists(likes_count, :zero) - :dec, updated_at = :updated",
+          ExpressionAttributeValues: {
+            ":dec": 1,
+            ":zero": 0,
+            ":updated": now,
+          },
+        })
+      );
       console.log(`Like deleted: user ${userId} unliked post ${postId}`);
       return true;
     } catch (error) {

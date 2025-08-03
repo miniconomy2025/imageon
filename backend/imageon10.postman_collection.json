@@ -1,0 +1,482 @@
+{
+  "info": {
+    "name": "ImageOn Federation Server",
+    "_postman_id": "d6c6f8d2-9f90-4d5f-8a5b-ea2e3f4f0c1a",
+    "description": "Collection for users, posts, likes, follows, and federation endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Web",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Home Page (HTML)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            }
+          }
+        },
+        {
+          "name": "Actor Profile (ActivityPub)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/activity+json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/alice",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "alice"]
+            }
+          }
+        },
+        {
+          "name": "Actor Outbox",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/activity+json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/alice/outbox",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "alice", "outbox"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"alice\",\n  \"email\": \"alice@example.com\",\n  \"display_name\": \"Alice\",\n  \"bio\": \"Hello from Alice!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get User by Username",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/username/alice",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "username", "alice"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Updated bio\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Posts",
+      "item": [
+        {
+          "name": "List All Posts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts"]
+            }
+          }
+        },
+        {
+          "name": "Create Post",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"username\": \"alice\",\n  \"content\": \"Hello world from post\",\n  \"tags\": [\"test\"],\n  \"location\": \"Earth\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/posts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts"]
+            }
+          }
+        },
+        {
+          "name": "Get Post by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{postId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Posts by User",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "user", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Like Post",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{postId}}/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{postId}}", "like"]
+            }
+          }
+        },
+        {
+          "name": "Unlike Post",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{postId}}/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{postId}}", "like"]
+            }
+          }
+        },
+        {
+          "name": "Update Post",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Edited content\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{postId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Post",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{postId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Likes",
+      "item": [
+        {
+          "name": "Create Like",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"post_id\": \"{{postId}}\",\n  \"user_id\": \"{{userId}}\",\n  \"username\": \"alice\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/likes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "likes"]
+            }
+          }
+        },
+        {
+          "name": "Get Like by Post and User",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/likes/post/{{postId}}/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "likes", "post", "{{postId}}", "user", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Like by Post and User",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/likes/post/{{postId}}/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "likes", "post", "{{postId}}", "user", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Like by User then Post",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/likes/user/{{userId}}/post/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "likes", "user", "{{userId}}", "post", "{{postId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Likes by Post",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/likes/post/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "likes", "post", "{{postId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Likes by User",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/likes/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "likes", "user", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Check If User Liked Post",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/likes/check/{{userId}}/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "likes", "check", "{{userId}}", "{{postId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Like Count for Post",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/likes/count/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "likes", "count", "{{postId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Follows",
+      "item": [
+        {
+          "name": "Create Follow",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"follower_id\": \"{{userId}}\",\n  \"followed_id\": \"other-user-id\",\n  \"follower_username\": \"alice\",\n  \"followed_username\": \"bob\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/follows",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "follows"]
+            }
+          }
+        },
+        {
+          "name": "Get Follow Relationship",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/follows/follower/{{userId}}/followed/other-user-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "follows", "follower", "{{userId}}", "followed", "other-user-id"]
+            }
+          }
+        },
+        {
+          "name": "Delete Follow",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/follows/follower/{{userId}}/followed/other-user-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "follows", "follower", "{{userId}}", "followed", "other-user-id"]
+            }
+          }
+        },
+        {
+          "name": "Get Following By User",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/follows/following/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "follows", "following", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Followers By User",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/follows/followers/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "follows", "followers", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Check Following",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/follows/check/{{userId}}/other-user-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "follows", "check", "{{userId}}", "other-user-id"]
+            }
+          }
+        },
+        {
+          "name": "Get Following Count",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/follows/following/count/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "follows", "following", "count", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Followers Count",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/follows/followers/count/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "follows", "followers", "count", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Mutual Follows",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/follows/mutual/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "follows", "mutual", "{{userId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

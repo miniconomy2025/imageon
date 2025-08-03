@@ -1,13 +1,24 @@
 import { CreateFollowInput, Follow } from "../models/followModels";
 import { PaginatedResult, PaginationOptions } from "../models/paginationModels";
-import { v4 as uuidv4 } from "uuid";
-import { TABLE_CONFIG, dynamoClient } from "../config/dynamodb";
+import { docClient } from "./database";
+import { config } from "../config/index.js";
+import {
+  PutCommand,
+  GetCommand,
+  QueryCommand,
+  DeleteCommand,
+  UpdateCommand,
+} from "@aws-sdk/lib-dynamodb";
 
 class FollowService {
   private readonly tableName: string;
 
   constructor() {
-    this.tableName = TABLE_CONFIG.tables.follows;
+    // Use the single table defined in our configuration instead of the old
+    // per‑entity tables. The DatabaseService encapsulates the DynamoDB client
+    // and table configuration. Here we pull the table name directly from
+    // config so that all follow records reside in the unified ImageonApp table.
+    this.tableName = config.dynamodb.tableName;
   }
 
   async createFollow(followData: CreateFollowInput): Promise<Follow> {
@@ -25,6 +36,11 @@ class FollowService {
         throw new Error("Users cannot follow themselves");
       }
 
+      // Check if a follow relationship already exists between these users. We
+      // construct the composite key based on our single-table design: the
+      // primary key (PK) is the follower’s ID and the sort key (SK) is a
+      // prefixed string containing the followed user’s ID. This allows us to
+      // efficiently query all followings for a user by prefix.
       const existingFollow = await this.getFollowByFollowerAndFollowed(
         follower_id,
         followed_id
@@ -34,7 +50,17 @@ class FollowService {
       }
 
       const now = new Date().toISOString();
-      const follow: Follow = {
+      // Compose the item to insert into the single table. We store the
+      // relationship twice in the key schema: PK/SK for direct lookup,
+      // and GSI1PK/GSI1SK for follower lookup by followed user. The
+      // `SK` is prefixed with "FOLLOWING#" so we can filter follow
+      // relationships when querying by PK. The GSI1 fields are prefixed
+      // with "FOLLOWER#" to enable filtering followers by followed ID.
+      const item = {
+        PK: follower_id,
+        SK: `FOLLOWING#${followed_id}`,
+        GSI1PK: followed_id,
+        GSI1SK: `FOLLOWER#${follower_id}`,
         follower_id,
         followed_id,
         follower_username,
@@ -44,19 +70,65 @@ class FollowService {
         status: "active",
       };
 
-      await dynamoClient
-        .put({
+      // Perform a conditional put to avoid duplicate follow entries. If the
+      // primary key & sort key combination already exists, the condition
+      // fails and no new record is inserted.
+      await docClient.send(
+        new PutCommand({
           TableName: this.tableName,
-          Item: follow,
-          ConditionExpression:
-            "attribute_not_exists(follower_id) AND attribute_not_exists(followed_id)",
+          Item: item,
+          ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
         })
-        .promise();
+      );
+
+      // Increment counts on the user profiles. We update the follower’s
+      // following_count and the followed user’s followers_count. If these
+      // attributes don’t exist yet, initialise them to zero. User records
+      // reside in the same table with PK equal to the user_id and SK
+      // equal to 'USER'.
+      await Promise.all([
+        docClient.send(
+          new UpdateCommand({
+            TableName: this.tableName,
+            Key: { PK: follower_id, SK: "USER" },
+            UpdateExpression:
+              "SET following_count = if_not_exists(following_count, :zero) + :inc, updated_at = :updated",
+            ExpressionAttributeValues: {
+              ":inc": 1,
+              ":zero": 0,
+              ":updated": now,
+            },
+          })
+        ),
+        docClient.send(
+          new UpdateCommand({
+            TableName: this.tableName,
+            Key: { PK: followed_id, SK: "USER" },
+            UpdateExpression:
+              "SET followers_count = if_not_exists(followers_count, :zero) + :inc, updated_at = :updated",
+            ExpressionAttributeValues: {
+              ":inc": 1,
+              ":zero": 0,
+              ":updated": now,
+            },
+          })
+        ),
+      ]);
 
       console.log(
         `Follow created: ${follower_username} followed ${followed_username}`
       );
-      return follow;
+      // Return only the follow fields without the PK/SK metadata to keep
+      // consistency with the Follow interface.
+      return {
+        follower_id,
+        followed_id,
+        follower_username,
+        followed_username,
+        created_at: now,
+        updated_at: now,
+        status: "active",
+      };
     } catch (error) {
       console.error("Error creating follow:", error);
       throw error;
@@ -65,21 +137,28 @@ class FollowService {
 
   async getFollowByFollowerAndFollowed(followerId: string, followedId: string): Promise<Follow|null> {
     try {
-      const result = await dynamoClient
-        .get({
+      const result = await docClient.send(
+        new GetCommand({
           TableName: this.tableName,
           Key: {
-            follower_id: followerId,
-            followed_id: followedId,
+            PK: followerId,
+            SK: `FOLLOWING#${followedId}`,
           },
         })
-        .promise();
-
+      );
       if (!result.Item) {
         return null;
       }
-
-      return result.Item as Follow;
+      const item: any = result.Item;
+      return {
+        follower_id: item.follower_id,
+        followed_id: item.followed_id,
+        follower_username: item.follower_username,
+        followed_username: item.followed_username,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        status: item.status,
+      };
     } catch (error) {
       console.error("Error getting follow by follower and followed:", error);
       throw error;
@@ -89,25 +168,33 @@ class FollowService {
   async getFollowingByUserId(followerId: string, options: PaginationOptions = {}): Promise<PaginatedResult<Follow>> {
     try {
       const { limit = 20, lastEvaluatedKey } = options;
-
-      let params = {
+      const queryParams: any = {
         TableName: this.tableName,
-        KeyConditionExpression: "follower_id = :followerId",
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
         ExpressionAttributeValues: {
-          ":followerId": followerId,
+          ":pk": followerId,
+          ":skPrefix": "FOLLOWING#",
         },
-        ScanIndexForward: false, 
+        ScanIndexForward: false,
         Limit: limit,
-        ...(lastEvaluatedKey && { ExclusiveStartKey: lastEvaluatedKey }),
       };
-
-      const result = await dynamoClient.query(params).promise();
-      const validatedItems = result.Items ?? [];
-
+      if (lastEvaluatedKey) {
+        queryParams.ExclusiveStartKey = lastEvaluatedKey;
+      }
+      const result = await docClient.send(new QueryCommand(queryParams));
+      const items = (result.Items || []).map((item: any) => ({
+        follower_id: item.follower_id,
+        followed_id: item.followed_id,
+        follower_username: item.follower_username,
+        followed_username: item.followed_username,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        status: item.status,
+      }));
       return {
-        items: validatedItems as Follow[],
+        items: items as Follow[],
         lastEvaluatedKey: result.LastEvaluatedKey,
-        count: result.Items ? result.Items.length : 0,
+        count: items.length,
       };
     } catch (error) {
       console.error("Error getting following by user ID:", error);
@@ -118,30 +205,34 @@ class FollowService {
   async getFollowersByUserId(followedId: string, options: PaginationOptions = {}): Promise<PaginatedResult<Follow>> {
     try {
       const { limit = 20, lastEvaluatedKey } = options;
-
-      const params = {
+      const queryParams: any = {
         TableName: this.tableName,
         IndexName: "GSI1",
-        KeyConditionExpression: "followed_id = :followedId",
+        KeyConditionExpression: "GSI1PK = :pk AND begins_with(GSI1SK, :skPrefix)",
         ExpressionAttributeValues: {
-          ":followedId": followedId,
+          ":pk": followedId,
+          ":skPrefix": "FOLLOWER#",
         },
         ScanIndexForward: false,
         Limit: limit,
-        ...(lastEvaluatedKey && { ExclusiveStartKey: lastEvaluatedKey }),
       };
-
       if (lastEvaluatedKey) {
-        params.ExclusiveStartKey = lastEvaluatedKey;
+        queryParams.ExclusiveStartKey = lastEvaluatedKey;
       }
-
-      const result = await dynamoClient.query(params).promise();
-      const validatedItems = result.Items ?? [];
-
+      const result = await docClient.send(new QueryCommand(queryParams));
+      const items = (result.Items || []).map((item: any) => ({
+        follower_id: item.follower_id,
+        followed_id: item.followed_id,
+        follower_username: item.follower_username,
+        followed_username: item.followed_username,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        status: item.status,
+      }));
       return {
-        items: result.Items as Follow[],
+        items: items as Follow[],
         lastEvaluatedKey: result.LastEvaluatedKey,
-        count: result.Items ? result.Items.length : 0,
+        count: items.length,
       };
     } catch (error) {
       console.error("Error getting followers by user ID:", error);
@@ -151,16 +242,47 @@ class FollowService {
 
   async deleteFollow(followerId: string, followedId: string): Promise<boolean> {
     try {
-      await dynamoClient
-        .delete({
+      // Delete the follow relationship using the composite PK/SK design.
+      await docClient.send(
+        new DeleteCommand({
           TableName: this.tableName,
           Key: {
-            follower_id: followerId,
-            followed_id: followedId,
+            PK: followerId,
+            SK: `FOLLOWING#${followedId}`,
           },
         })
-        .promise();
-
+      );
+      const now = new Date().toISOString();
+      // Decrement counts on both user profiles. Ensure we don't reduce
+      // counts below zero by using if_not_exists.
+      await Promise.all([
+        docClient.send(
+          new UpdateCommand({
+            TableName: this.tableName,
+            Key: { PK: followerId, SK: "USER" },
+            UpdateExpression:
+              "SET following_count = if_not_exists(following_count, :zero) - :dec, updated_at = :updated",
+            ExpressionAttributeValues: {
+              ":dec": 1,
+              ":zero": 0,
+              ":updated": now,
+            },
+          })
+        ),
+        docClient.send(
+          new UpdateCommand({
+            TableName: this.tableName,
+            Key: { PK: followedId, SK: "USER" },
+            UpdateExpression:
+              "SET followers_count = if_not_exists(followers_count, :zero) - :dec, updated_at = :updated",
+            ExpressionAttributeValues: {
+              ":dec": 1,
+              ":zero": 0,
+              ":updated": now,
+            },
+          })
+        ),
+      ]);
       console.log(
         `Follow deleted: user ${followerId} unfollowed user ${followedId}`
       );
