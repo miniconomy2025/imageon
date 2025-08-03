@@ -53,7 +53,9 @@ jobs:
           cp package-lock.json deploy/
           
           # Copy any additional files needed for production
-          if [ -f "ecosystem.config.js" ]; then
+          if [ -f "ecosystem.config.cjs" ]; then
+            cp ecosystem.config.cjs deploy/
+          elif [ -f "ecosystem.config.js" ]; then
             cp ecosystem.config.js deploy/
           fi
           
