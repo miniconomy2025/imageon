@@ -1,11 +1,12 @@
 import "dotenv/config";
 import { serve } from "@hono/node-server";
-import { createFederation, Follow } from "@fedify/fedify";
+import { createFederation, Follow, Accept, Like, Undo } from "@fedify/fedify";
 import { RedisKvStore } from "@fedify/redis";
 import { config } from "./config/index.js";
 import { createRedisInstance } from "./config/redis.js";
 import { FederationHandlers } from "./handlers/federation.js";
 import { WebHandlers } from "./handlers/web.js";
+import { ActorModel } from "./models/Actor.js";
 
 // Create Redis instance
 const redis = createRedisInstance();
@@ -26,7 +27,13 @@ federation.setOutboxDispatcher("/users/{identifier}/outbox", FederationHandlers.
 // Configure inbox listeners
 federation
   .setInboxListeners("/users/{identifier}/inbox", "/inbox")
-  .on(Follow, FederationHandlers.handleFollowActivity);
+  .on(Follow, FederationHandlers.handleFollowActivity)
+  // Handle Accept activities from remote servers
+  .on(Accept, FederationHandlers.handleAcceptActivity)
+  // Handle Like activities from remote servers
+  .on(Like, FederationHandlers.handleLikeActivity)
+  // Handle Undo activities (e.g. unfollow) from remote servers
+  .on(Undo, FederationHandlers.handleUndoActivity);
 
 // Main server
 serve({
@@ -41,6 +48,89 @@ serve({
     // Home page
     if (url.pathname === "/") {
       return await WebHandlers.handleHomePage(url);
+    }
+
+    // WebFinger actor discovery endpoint
+    // Responds with JRD (JSON Resource Descriptor) object describing the actor
+    if (url.pathname === "/.well-known/webfinger") {
+      try {
+        const resource = url.searchParams.get("resource");
+        if (!resource) {
+          return new Response(
+            JSON.stringify({ error: "Missing 'resource' query parameter" }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        // Expect resource in the form acct:username@domain
+        const match = resource.match(/^acct:([^@]+)@(.+)$/);
+        if (!match) {
+          return new Response(
+            JSON.stringify({ error: "Invalid resource format" }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        }
+        const [, identifier, domain] = match;
+        // Ensure the domain matches our configured domain
+        const expectedDomain = config.federation.domain;
+        if (domain !== expectedDomain) {
+          // For other domains we cannot serve WebFinger
+          return new Response(
+            JSON.stringify({ error: "Requested resource not served by this domain" }),
+            {
+              status: 404,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        }
+        // Look up the actor
+        const actor = await ActorModel.getActor(identifier);
+        if (!actor) {
+          return new Response(
+            JSON.stringify({ error: "Actor not found" }),
+            {
+              status: 404,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        }
+        const actorUrl = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
+        const jrd = {
+          subject: resource,
+          aliases: [actorUrl],
+          links: [
+            {
+              rel: "self",
+              type: "application/activity+json",
+              href: actorUrl,
+            },
+            {
+              rel: "http://webfinger.net/rel/profile-page",
+              type: "text/html",
+              href: actorUrl,
+            },
+          ],
+        };
+        return new Response(JSON.stringify(jrd), {
+          status: 200,
+          headers: { "Content-Type": "application/jrd+json" },
+        });
+      } catch (error) {
+        console.error("Error processing WebFinger request:", error);
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
     }
     
     // Handle outbox requests manually

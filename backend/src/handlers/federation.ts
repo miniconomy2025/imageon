@@ -1,4 +1,4 @@
-import { Follow, Accept } from "@fedify/fedify";
+import { Follow, Accept, Like, Undo } from "@fedify/fedify";
 import { ActorModel } from "../models/Actor.js";
 import { crypto } from "../services/cryptography.js";
 import { activityPub } from "../services/activitypub.js";
@@ -129,6 +129,82 @@ export class FederationHandlers {
       console.log(`✅ Follow accepted: ${follow.actorId.href} -> ${follow.objectId.href}`);
     } catch (error) {
       console.error('Error processing follow activity:', error);
+    }
+  }
+
+  /**
+   * Accept activity handler
+   * Handles incoming Accept activities which acknowledge a follow request
+   */
+  static async handleAcceptActivity(ctx: any, accept: Accept) {
+    try {
+      if (!accept || !accept.id || !accept.actorId || !accept.object) {
+        console.log('Invalid Accept activity: missing required fields');
+        return;
+      }
+      // Save the Accept activity in our database for audit purposes
+      const activityId = accept.id.href ?? String(accept.id);
+      const actorId = accept.actorId.href ?? String(accept.actorId);
+      // The object of an Accept is usually the Follow activity being accepted
+      const objectId = accept.object.id?.href ?? accept.objectId?.href ?? String(accept.object);
+      await activityPub.saveActivity(activityId, 'Accept', actorId, objectId);
+      console.log(`✅ Accept processed: ${actorId} accepted ${objectId}`);
+    } catch (error) {
+      console.error('Error processing Accept activity:', error);
+    }
+  }
+
+  /**
+   * Like activity handler
+   * Handles incoming Like activities on our posts
+   */
+  static async handleLikeActivity(ctx: any, like: any) {
+    try {
+      if (!like || !like.id || !like.actorId || !like.objectId) {
+        console.log('Invalid Like activity: missing required fields');
+        return;
+      }
+      const activityId = like.id.href ?? String(like.id);
+      const actorId = like.actorId.href ?? String(like.actorId);
+      const objectId = like.objectId.href ?? String(like.objectId);
+      await activityPub.saveActivity(activityId, 'Like', actorId, objectId);
+      console.log(`👍 Like received from ${actorId} on ${objectId}`);
+    } catch (error) {
+      console.error('Error processing Like activity:', error);
+    }
+  }
+
+  /**
+   * Undo activity handler
+   * Handles incoming Undo activities (e.g. unfollow)
+   */
+  static async handleUndoActivity(ctx: any, undo: any) {
+    try {
+      if (!undo || !undo.id || !undo.actorId || !undo.object) {
+        console.log('Invalid Undo activity: missing required fields');
+        return;
+      }
+      // Determine what is being undone. Most commonly a Follow.
+      const object = undo.object;
+      // If the object is a Follow, remove the follower relationship
+      if (object.type === 'Follow' && object.actor && object.object) {
+        const followerId = object.actor.href ?? String(object.actor);
+        const targetId = object.object.href ?? String(object.object);
+        await activityPub.removeFollower(followerId, targetId);
+        console.log(`👋 Unfollow processed: ${followerId} -> ${targetId}`);
+        // Save the Undo activity
+        const activityId = undo.id.href ?? String(undo.id);
+        await activityPub.saveActivity(activityId, 'Undo', followerId, targetId);
+      } else {
+        // Other undo types can simply be recorded
+        const activityId = undo.id.href ?? String(undo.id);
+        const actorId = undo.actorId.href ?? String(undo.actorId);
+        const objectId = object.id?.href ?? object.objectId?.href ?? String(object);
+        await activityPub.saveActivity(activityId, 'Undo', actorId, objectId);
+        console.log(`🔁 Undo received for unsupported type: ${JSON.stringify(object)}`);
+      }
+    } catch (error) {
+      console.error('Error processing Undo activity:', error);
     }
   }
 

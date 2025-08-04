@@ -111,6 +111,25 @@ export class ActivityPubService {
   }
 
   /**
+   * Remove a follower relationship (used when processing an Undo of Follow)
+   */
+  async removeFollower(actorId: string, targetActorId: string) {
+    const followerIdentifier = this.extractIdentifierFromUri(actorId);
+    const targetIdentifier = this.extractIdentifierFromUri(targetActorId);
+    if (!followerIdentifier || !targetIdentifier) {
+      console.error('Could not extract identifiers from URIs for removeFollower:', { actorId, targetActorId });
+      return false;
+    }
+    const pk = `FOLLOWER#${targetIdentifier}`;
+    const sk = `ACTOR#${followerIdentifier}`;
+    const deleted = await db.deleteItem(pk, sk as any);
+    if (deleted) {
+      console.log(`🗑️ Removed follower ${followerIdentifier} from ${targetIdentifier}`);
+    }
+    return deleted;
+  }
+
+  /**
    * Extract actor identifier from ActivityPub URI
    */
   private extractIdentifierFromUri(uri: string): string | null {
