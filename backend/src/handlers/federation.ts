@@ -1,8 +1,9 @@
-import { Follow, Accept } from "@fedify/fedify";
+import { Follow, Accept, Like } from "@fedify/fedify";
 import { ActorModel } from "../models/Actor.js";
 import { crypto } from "../services/cryptography.js";
 import { activityPub } from "../services/activitypub.js";
 import { redis } from "../services/redis.js";
+import { db } from "../services/database.js";
 
 export class FederationHandlers {
   /**
@@ -11,19 +12,24 @@ export class FederationHandlers {
   static async handleActorRequest(ctx: any, identifier: string) {
     try {
       // Rate limiting check
-      const clientIp = ctx.request?.headers?.get?.('x-forwarded-for') || 
-                      ctx.request?.headers?.get?.('x-real-ip') || 
-                      'unknown';
+      const clientIp =
+        ctx.request?.headers?.get?.("x-forwarded-for") ||
+        ctx.request?.headers?.get?.("x-real-ip") ||
+        "unknown";
       const rateLimitKey = `rate_limit:actor:${clientIp}`;
       const rateLimit = await redis.checkRateLimit(rateLimitKey, 100, 3600); // 100 requests per hour
 
       if (!rateLimit.allowed) {
-        console.log(`⚠️ Rate limit exceeded for actor request: ${clientIp} (${identifier})`);
+        console.log(
+          `⚠️ Rate limit exceeded for actor request: ${clientIp} (${identifier})`
+        );
         return null; // This will result in a 404, which is better than exposing rate limiting
       }
 
-      console.log(`🔍 Actor request for identifier: ${identifier} (remaining: ${rateLimit.remaining})`);
-      
+      console.log(
+        `🔍 Actor request for identifier: ${identifier} (remaining: ${rateLimit.remaining})`
+      );
+
       // Check if actor exists in our database
       const actorData = await ActorModel.getActor(identifier);
       if (!actorData) {
@@ -36,16 +42,21 @@ export class FederationHandlers {
       // Get key pairs for the actor
       const keyPairs = await crypto.getOrGenerateKeyPairs(identifier);
       console.log(`🔑 Key pairs retrieved for: ${identifier}`);
-      
+
       // Create and return the Person object
-      const person = ActorModel.createPersonObject(ctx, identifier, actorData, keyPairs);
+      const person = ActorModel.createPersonObject(
+        ctx,
+        identifier,
+        actorData,
+        keyPairs
+      );
       console.log(`👤 Person object created for: ${identifier}`);
-      
+
       return person;
     } catch (error) {
       console.error(`❌ Error in handleActorRequest for ${identifier}:`, error);
       if (error instanceof Error) {
-        console.error('Stack trace:', error.stack);
+        console.error("Stack trace:", error.stack);
       }
       return null;
     }
@@ -70,15 +81,19 @@ export class FederationHandlers {
    * Follow activity handler
    */
   static async handleFollowActivity(ctx: any, follow: Follow) {
-    if (follow.id == null || follow.actorId == null || follow.objectId == null) {
-      console.log('Invalid follow activity: missing required fields');
+    if (
+      follow.id == null ||
+      follow.actorId == null ||
+      follow.objectId == null
+    ) {
+      console.log("Invalid follow activity: missing required fields");
       return;
     }
 
     // Parse the target actor from the follow object
     const parsed = ctx.parseUri(follow.objectId);
     if (parsed?.type !== "actor") {
-      console.log('Follow target is not an actor:', follow.objectId);
+      console.log("Follow target is not an actor:", follow.objectId);
       return;
     }
 
@@ -92,22 +107,22 @@ export class FederationHandlers {
     // Get the follower actor information
     const follower = await follow.getActor(ctx);
     if (follower == null) {
-      console.log('Could not retrieve follower actor');
+      console.log("Could not retrieve follower actor");
       return;
     }
 
     try {
       // Store the follower relationship
       await activityPub.saveFollower(
-        follow.id.href, 
-        follow.actorId.href, 
+        follow.id.href,
+        follow.actorId.href,
         follow.objectId.href
       );
 
       // Save the follow activity
       await activityPub.saveActivity(
         follow.id.href,
-        'Follow',
+        "Follow",
         follow.actorId.href,
         follow.objectId.href,
         {
@@ -120,37 +135,48 @@ export class FederationHandlers {
       await ctx.sendActivity(
         { identifier: parsed.identifier },
         follower,
-        new Accept({ 
-          actor: follow.objectId, 
-          object: follow 
-        }),
+        new Accept({
+          actor: follow.objectId,
+          object: follow,
+        })
       );
 
-      console.log(`✅ Follow accepted: ${follow.actorId.href} -> ${follow.objectId.href}`);
+      console.log(
+        `✅ Follow accepted: ${follow.actorId.href} -> ${follow.objectId.href}`
+      );
     } catch (error) {
-      console.error('Error processing follow activity:', error);
+      console.error("Error processing follow activity:", error);
     }
   }
 
   /**
    * Outbox dispatcher - handles requests for actor outboxes
    */
-  static async handleOutboxRequest(ctx: any, identifier: string, cursor?: string | null) {
+  static async handleOutboxRequest(
+    ctx: any,
+    identifier: string,
+    cursor?: string | null
+  ) {
     try {
       // Rate limiting check
-      const clientIp = ctx?.request?.headers?.get?.('x-forwarded-for') || 
-                      ctx?.request?.headers?.get?.('x-real-ip') || 
-                      'unknown';
+      const clientIp =
+        ctx?.request?.headers?.get?.("x-forwarded-for") ||
+        ctx?.request?.headers?.get?.("x-real-ip") ||
+        "unknown";
       const rateLimitKey = `rate_limit:outbox:${clientIp}`;
       const rateLimit = await redis.checkRateLimit(rateLimitKey, 50, 3600); // 50 requests per hour
 
       if (!rateLimit.allowed) {
-        console.log(`⚠️ Rate limit exceeded for outbox request: ${clientIp} (${identifier})`);
+        console.log(
+          `⚠️ Rate limit exceeded for outbox request: ${clientIp} (${identifier})`
+        );
         return null;
       }
 
-      console.log(`📤 Outbox request for identifier: ${identifier}, cursor: ${cursor} (remaining: ${rateLimit.remaining})`);
-      
+      console.log(
+        `📤 Outbox request for identifier: ${identifier}, cursor: ${cursor} (remaining: ${rateLimit.remaining})`
+      );
+
       // Check if actor exists
       const exists = await ActorModel.exists(identifier);
       if (!exists) {
@@ -160,7 +186,7 @@ export class FederationHandlers {
 
       // Get activities for this actor from the database (with caching)
       const activities = await activityPub.getActorActivities(identifier);
-      
+
       // Convert database activities to Fedify Activity objects
       const activityItems = activities.map((activity: any) => ({
         id: activity.id,
@@ -168,7 +194,7 @@ export class FederationHandlers {
         actor: activity.actor,
         published: activity.published,
         object: activity.object,
-        ...activity.additionalData
+        ...activity.additionalData,
       }));
 
       // Return PageItems format expected by Fedify
@@ -177,11 +203,95 @@ export class FederationHandlers {
         next: null, // No pagination for now
       };
     } catch (error) {
-      console.error(`❌ Error in handleOutboxRequest for ${identifier}:`, error);
+      console.error(
+        `❌ Error in handleOutboxRequest for ${identifier}:`,
+        error
+      );
       if (error instanceof Error) {
-        console.error('Stack trace:', error.stack);
+        console.error("Stack trace:", error.stack);
       }
       return null;
+    }
+  }
+
+  /**
+   * Like activity handler - handles incoming Like activities from other servers
+   */
+  static async handleLikeActivity(ctx: any, like: Like) {
+    if (like.id == null || like.actorId == null || like.objectId == null) {
+      console.log("Invalid like activity: missing required fields");
+      return;
+    }
+
+    console.log(
+      `📥 Received Like activity: ${like.actorId.href} likes ${like.objectId.href}`
+    );
+
+    try {
+      // Extract post ID from the object URI
+      const objectUri = like.objectId.href;
+      const postIdMatch = objectUri.match(/\/objects\/(.+)$/);
+      if (!postIdMatch) {
+        console.log("Like object is not a post:", objectUri);
+        return;
+      }
+
+      const postId = postIdMatch[1];
+
+      // Check if the post exists
+      const post = await db.getItem(`OBJECT#${postId}`, "NOTE");
+      if (!post) {
+        console.log(`Like target post not found: ${postId}`);
+        return;
+      }
+
+      // Extract actor identifier from the like actor URI
+      const actorIdentifier = activityPub.extractIdentifierFromUri(
+        like.actorId.href
+      );
+      if (!actorIdentifier) {
+        console.log(
+          "Could not extract actor identifier from:",
+          like.actorId.href
+        );
+        return;
+      }
+
+      // Check if this is a duplicate like
+      const existingLike = await activityPub.checkUserLikedPost(
+        actorIdentifier,
+        postId
+      );
+      if (existingLike) {
+        console.log(`Actor ${actorIdentifier} already liked post ${postId}`);
+        return;
+      }
+
+      // Store the like activity using the existing saveActivity method
+      const success = await activityPub.saveActivity(
+        like.id.href,
+        "Like",
+        like.actorId.href,
+        like.objectId.href,
+        {
+          // Additional data for the like activity
+          published: new Date().toISOString(),
+          federated: true, // Mark as federated activity
+        }
+      );
+
+      if (success) {
+        // Update post like count
+        await activityPub.incrementPostLikeCount(postId);
+
+        console.log(
+          `✅ Federated like processed: ${like.actorId.href} liked ${objectUri}`
+        );
+      } else {
+        console.error("Failed to store federated like activity");
+      }
+    } catch (error) {
+      console.error("Error processing like activity:", error);
     }
   }
 }

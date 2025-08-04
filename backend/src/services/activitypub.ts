@@ -124,7 +124,7 @@ export class ActivityPubService {
   /**
    * Extract actor identifier from ActivityPub URI
    */
-  private extractIdentifierFromUri(uri: string): string | null {
+  extractIdentifierFromUri(uri: string): string | null {
     try {
       const url = new URL(uri);
       const pathParts = url.pathname.split("/");
@@ -154,14 +154,14 @@ export class ActivityPubService {
   /**
    * Create a like activity
    */
-  async createLike(actorIdentifier: string, postId: string) {
+  async createLike(actorIdentifier: string, postId: string, url: string) {
     try {
       const timestamp = new Date().toISOString();
       const likeId = `like-${Date.now()}-${actorIdentifier}`;
 
-      const actorUri = `http://localhost:3000/users/${actorIdentifier}`;
-      const postUri = `http://localhost:3000/objects/${postId}`;
-      const likeUri = `http://localhost:3000/activities/${likeId}`;
+      const actorUri = new URL(`${url}/users/${actorIdentifier}`);
+      const postUri = new URL(`${url}/objects/${postId}`);
+      const likeUri = new URL(`${url}/activities/${likeId}`);
 
       // Check if user already liked this post
       const existingLike = await this.checkUserLikedPost(

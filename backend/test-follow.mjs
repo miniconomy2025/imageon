@@ -2,19 +2,19 @@
 
 const testActor = {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Person",
-  "id": "https://example.com/users/testfollower",
-  "preferredUsername": "testfollower",
-  "name": "Test Follower",
-  "inbox": "https://example.com/users/testfollower/inbox"
+  type: "Person",
+  id: "https://example.com/users/testfollower",
+  preferredUsername: "testfollower",
+  name: "Test Follower",
+  inbox: "https://example.com/users/testfollower/inbox",
 };
 
 const followActivity = {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Follow",
-  "id": "https://example.com/activities/follow-1",
-  "actor": "https://example.com/users/testfollower",
-  "object": "http://localhost:3000/users/me"
+  type: "Follow",
+  id: "https://example.com/activities/follow-1",
+  actor: "https://example.com/users/testfollower",
+  object: "http://localhost:3000/users/me",
 };
 
 console.log("Sending follow request...");
@@ -25,14 +25,17 @@ try {
     method: "POST",
     headers: {
       "Content-Type": "application/activity+json",
-      "Accept": "application/activity+json"
+      Accept: "application/activity+json",
     },
-    body: JSON.stringify(followActivity)
+    body: JSON.stringify(followActivity),
   });
 
   console.log("Response status:", response.status);
-  console.log("Response headers:", Object.fromEntries(response.headers.entries()));
-  
+  console.log(
+    "Response headers:",
+    Object.fromEntries(response.headers.entries())
+  );
+
   if (response.ok) {
     console.log("Follow request sent successfully!");
   } else {
