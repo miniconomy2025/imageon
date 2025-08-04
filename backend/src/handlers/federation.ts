@@ -4,6 +4,8 @@ import { crypto } from "../services/cryptography.js";
 import { activityPub } from "../services/activitypub.js";
 import { redis } from "../services/redis.js";
 
+const OUTBOX_PAGE_SIZE = 10;
+
 export class FederationHandlers {
   /**
    * Actor dispatcher - handles requests for actor profiles
@@ -234,23 +236,41 @@ export class FederationHandlers {
         return null;
       }
 
-      // Get activities for this actor from the database (with caching)
-      const activities = await activityPub.getActorActivities(identifier);
-      
-      // Convert database activities to Fedify Activity objects
-      const activityItems = activities.map((activity: any) => ({
+      const allActivities = await activityPub.getActorActivities(identifier);
+
+      const sortedActivities = allActivities
+        .slice()
+        .sort((a: any, b: any) => {
+          const aTime = a?.published ? new Date(a.published).getTime() : 0;
+          const bTime = b?.published ? new Date(b.published).getTime() : 0;
+          return bTime - aTime;
+        });
+
+      let offset = 0;
+      if (typeof cursor === 'string' && cursor.trim() !== '') {
+        const parsed = parseInt(cursor, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed < sortedActivities.length) {
+          offset = parsed;
+        }
+      }
+
+      const endIndex = Math.min(offset + OUTBOX_PAGE_SIZE, sortedActivities.length);
+      const pageActivities = sortedActivities.slice(offset, endIndex);
+
+      const activityItems = pageActivities.map((activity: any) => ({
         id: activity.id,
         type: activity.type,
         actor: activity.actor,
         published: activity.published,
         object: activity.object,
-        ...activity.additionalData
+        ...(activity.additionalData || {})
       }));
 
-      // Return PageItems format expected by Fedify
+      const nextCursor = endIndex < sortedActivities.length ? String(endIndex) : null;
+
       return {
         items: activityItems,
-        next: null, // No pagination for now
+        next: nextCursor,
       };
     } catch (error) {
       console.error(`❌ Error in handleOutboxRequest for ${identifier}:`, error);
@@ -261,3 +281,7 @@ export class FederationHandlers {
     }
   }
 }
+
+export const handleAcceptActivity = FederationHandlers.handleAcceptActivity;
+export const handleLikeActivity = FederationHandlers.handleLikeActivity;
+export const handleUndoActivity = FederationHandlers.handleUndoActivity;

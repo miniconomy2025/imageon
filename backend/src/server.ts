@@ -12,6 +12,8 @@ import { activityPub } from "./services/activitypub.js";
 // Import randomUUID for generating unique IDs for activities and posts
 import { randomUUID } from "crypto";
 
+import { db } from "./services/database.js";
+
 // Create Redis instance
 const redis = createRedisInstance();
 
@@ -249,8 +251,16 @@ serve({
         const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
         // Generate unique IDs for the activity and the post object
         const postId = randomUUID();
-        const objectId = `${actorUri}/posts/${postId}`;
+        const objectId = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
         const activityId = `${actorUri}/activities/${postId}`;
+        await db.putItem({
+          PK: `POST#${postId}`,
+          SK: 'OBJECT',
+          id: objectId,
+          actor: actorUri,
+          content,
+          created_at: new Date().toISOString(),
+        });
         // Save the Create activity
         await activityPub.saveActivity(activityId, "Create", actorUri, objectId, { content });
         return new Response(
@@ -279,7 +289,8 @@ serve({
     const likeMatch = /^\/posts\/([^/]+)\/like$/.exec(url.pathname);
     if (likeMatch) {
       const postId = likeMatch[1];
-      // Determine full post URI
+      // Determine full post URI.  Posts are stored under `/posts/{id}` and
+      // persisted with a POST#<id> partition key (see the Create post handler).
       const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
       if (request.method === "POST") {
         try {
@@ -317,6 +328,13 @@ serve({
               status: 404,
               headers: { "Content-Type": "application/json" },
             });
+          }
+          const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
+          if (!postItem) {
+            return new Response(
+              JSON.stringify({ error: 'Post not found' }),
+              { status: 404, headers: { 'Content-Type': 'application/json' } },
+            );
           }
           const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
           const likeId = randomUUID();
@@ -371,6 +389,13 @@ serve({
               status: 404,
               headers: { "Content-Type": "application/json" },
             });
+          }
+          const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
+          if (!postItem) {
+            return new Response(
+              JSON.stringify({ error: 'Post not found' }),
+              { status: 404, headers: { 'Content-Type': 'application/json' } },
+            );
           }
           const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
           const undoId = randomUUID();
@@ -446,6 +471,30 @@ serve({
             headers: { "Content-Type": "application/json" },
           });
         }
+        if (targetId && followerId === targetId) {
+          return new Response(
+            JSON.stringify({ error: "Cannot follow yourself" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        try {
+          const targetHost = new URL(targetUri).hostname;
+          const localHost = config.federation.domain.split(':')[0];
+          if (targetHost === localHost) {
+            const targetExists = await ActorModel.exists(targetId);
+            if (!targetExists) {
+              return new Response(JSON.stringify({ error: "Target actor not found" }), {
+                status: 404,
+                headers: { "Content-Type": "application/json" },
+              });
+            }
+          }
+        } catch {
+          return new Response(
+            JSON.stringify({ error: "Invalid target URI" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
         const followerUri = `${config.federation.protocol}://${config.federation.domain}/users/${followerId}`;
         const followId = randomUUID();
         const activityId = `${followerUri}/activities/${followId}`;
@@ -481,7 +530,8 @@ serve({
     if (outboxMatch) {
       const identifier = outboxMatch[1];
       try {
-        const outboxData = await FederationHandlers.handleOutboxRequest(null, identifier);
+        const cursor = url.searchParams.get('cursor');
+        const outboxData = await FederationHandlers.handleOutboxRequest(null, identifier, cursor);
         if (outboxData) {
           return new Response(JSON.stringify(outboxData), {
             status: 200,

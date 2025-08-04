@@ -1,5 +1,9 @@
 import { db } from "./database.js";
 import { redis } from "./redis.js";
+// Import configuration and DynamoDB client so we can perform custom queries
+import { config } from "../config/index.js";
+import { docClient } from "./database.js";
+import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 
 export class ActivityPubService {
   /**
@@ -42,14 +46,18 @@ export class ActivityPubService {
    */
   async getFollowing(identifier: string) {
     try {
-      const following = await db.queryItems('', {
-        sortKeyExpression: 'GSI2PK = :gsi2pk AND GSI2SK = :gsi2sk',
-        attributeValues: {
-          ':gsi2pk': `ACTOR#${identifier}`,
-          ':gsi2sk': 'FOLLOWING',
+      const params = {
+        TableName: config.dynamodb.tableName,
+        IndexName: 'GSI2',
+        KeyConditionExpression: 'GSI2PK = :pk AND GSI2SK = :sk',
+        ExpressionAttributeValues: {
+          ':pk': `ACTOR#${identifier}`,
+          ':sk': 'FOLLOWING',
         },
-      });
-      return following.map((item: any) => item.following_id);
+      };
+      const result = await docClient.send(new QueryCommand(params));
+      const items = result.Items ?? [];
+      return items.map((item: any) => item.following_id);
     } catch (error) {
       console.error(`Error getting following for ${identifier}:`, error);
       return [];
@@ -66,7 +74,7 @@ export class ActivityPubService {
       return false;
     }
 
-    return await db.putItem({
+    const item: Record<string, any> = {
       PK: `ACTIVITY#${activityId}`,
       SK: activityType.toUpperCase(),
       GSI1PK: `ACTOR#${identifier}`,
@@ -78,8 +86,11 @@ export class ActivityPubService {
       actor: actorId,
       object: objectId,
       published: new Date().toISOString(),
-      ...additionalData,
-    });
+    };
+    if (additionalData && Object.keys(additionalData).length > 0) {
+      item.additionalData = additionalData;
+    }
+    return await db.putItem(item);
   }
 
   /**
@@ -153,7 +164,9 @@ export class ActivityPubService {
   isLocalActor(actorUri: string): boolean {
     try {
       const url = new URL(actorUri);
-      return url.hostname === 'localhost' || url.hostname.includes('localhost');
+      // Strip port from federation domain for comparison
+      const expectedHost = config.federation.domain.split(':')[0];
+      return url.hostname === expectedHost;
     } catch {
       return false;
     }
