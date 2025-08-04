@@ -1,0 +1,128 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+  APP_DIR: '/home/ubuntu/imageon-backend'
+  PM2_APP_NAME: 'imageon-backend'
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm i
+        
+      - name: Build TypeScript
+        working-directory: ./backend
+        run: npm run build
+        
+      - name: Create deployment package
+        working-directory: ./backend
+        run: |
+          # Create deployment directory
+          mkdir -p deploy
+          
+          # Copy built files and necessary config
+          cp -r dist/* deploy/
+          cp package.json deploy/
+          cp package-lock.json deploy/
+          
+          # Copy any additional files needed for production
+          if [ -f "ecosystem.config.cjs" ]; then
+            cp ecosystem.config.cjs deploy/
+          elif [ -f "ecosystem.config.js" ]; then
+            cp ecosystem.config.js deploy/
+          fi
+          
+          # Create tarball
+          tar -czf imageon-backend.tar.gz -C deploy .
+          
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/ec2-key.pem
+          chmod 600 ~/.ssh/ec2-key.pem
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          
+      - name: Deploy to EC2
+        timeout-minutes: 15
+        run: |
+          # Copy deployment package and scripts to EC2
+          scp -i ~/.ssh/ec2-key.pem backend/imageon-backend.tar.gz ubuntu@${{ secrets.EC2_HOST }}:/tmp/
+          scp -i ~/.ssh/ec2-key.pem scripts/deploy-to-ec2.sh ubuntu@${{ secrets.EC2_HOST }}:/tmp/
+          scp -i ~/.ssh/ec2-key.pem scripts/health-check.sh ubuntu@${{ secrets.EC2_HOST }}:/tmp/
+          
+          # Execute deployment script on EC2 with timeout and proper SSH options
+          ssh -i ~/.ssh/ec2-key.pem \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=3 \
+              -o ConnectTimeout=30 \
+              ubuntu@${{ secrets.EC2_HOST }} \
+              "timeout 900 bash -c 'chmod +x /tmp/deploy-to-ec2.sh && /tmp/deploy-to-ec2.sh \"${{ env.APP_DIR }}\" \"${{ env.PM2_APP_NAME }}\" \"${{ secrets.FEDERATION_DOMAIN }}\" \"${{ secrets.AWS_REGION }}\"; echo \"Exit code: \$?\"'"
+          
+      - name: Health Check
+        timeout-minutes: 5
+        run: |
+          # Wait for application to start
+          sleep 15
+          
+          # Perform health check using the remote script with proper SSH options
+          ssh -i ~/.ssh/ec2-key.pem \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=3 \
+              -o ConnectTimeout=30 \
+              ubuntu@${{ secrets.EC2_HOST }} \
+              "chmod +x /tmp/health-check.sh && timeout 60 /tmp/health-check.sh '${{ env.PM2_APP_NAME }}'"
+          
+      - name: Cleanup
+        if: always()
+        run: |
+          # Remove SSH key
+          rm -f ~/.ssh/ec2-key.pem
+          
+          # Remove deployment artifacts from EC2
+          ssh -i ~/.ssh/ec2-key.pem ubuntu@${{ secrets.EC2_HOST }} "rm -f /tmp/imageon-backend.tar.gz /tmp/deploy-to-ec2.sh /tmp/health-check.sh" 2>/dev/null || true
+
+      - name: Notify Deployment Status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "🎉 Deployment successful!"
+            echo "🌐 Application available at: http://${{ secrets.EC2_HOST }}:3000"
+          else
+            echo "❌ Deployment failed!"
+            echo "Check the logs above for details."
+          fi
