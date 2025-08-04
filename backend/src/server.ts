@@ -152,6 +152,73 @@ serve({
       }
     }
 
+    // Like a post endpoint
+    if (
+      request.method === "POST" &&
+      url.pathname.match(/^\/api\/posts\/[^\/]+\/like$/)
+    ) {
+      const userHeader = request.headers.get("X-User-ID");
+      if (!userHeader) {
+        return new Response(
+          JSON.stringify({ error: "Authentication required" }),
+          {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Extract post ID from URL
+      const postIdMatch = url.pathname.match(/^\/api\/posts\/([^\/]+)\/like$/);
+      const postId = postIdMatch?.[1];
+
+      if (!postId) {
+        return new Response(JSON.stringify({ error: "Invalid post ID" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      try {
+        const result = await activityPub.createLike(userHeader, postId);
+
+        if (result.success) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              like: result,
+            }),
+            {
+              status: 201,
+              headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+              },
+            }
+          );
+        } else if (result.existing) {
+          return new Response(JSON.stringify({ error: result.error }), {
+            status: 409, // Conflict - already liked
+            headers: { "Content-Type": "application/json" },
+          });
+        } else {
+          return new Response(JSON.stringify({ error: result.error }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      } catch (error) {
+        console.error("Error liking post:", error);
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+    }
+
     // Handle CORS preflight requests
     if (request.method === "OPTIONS") {
       return new Response(null, {
@@ -182,4 +249,7 @@ console.log(
 );
 console.log(
   `📝 Create posts: POST ${config.federation.protocol}://${config.federation.domain}/api/posts`
+);
+console.log(
+  `❤️ Like posts: POST ${config.federation.protocol}://${config.federation.domain}/api/posts/{postId}/like`
 );

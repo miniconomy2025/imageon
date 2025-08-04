@@ -152,6 +152,140 @@ export class ActivityPubService {
   }
 
   /**
+   * Create a like activity
+   */
+  async createLike(actorIdentifier: string, postId: string) {
+    try {
+      const timestamp = new Date().toISOString();
+      const likeId = `like-${Date.now()}-${actorIdentifier}`;
+
+      const actorUri = `http://localhost:3000/users/${actorIdentifier}`;
+      const postUri = `http://localhost:3000/objects/${postId}`;
+      const likeUri = `http://localhost:3000/activities/${likeId}`;
+
+      // Check if user already liked this post
+      const existingLike = await this.checkUserLikedPost(
+        actorIdentifier,
+        postId
+      );
+      if (existingLike) {
+        return { error: "User already liked this post", existing: true };
+      }
+
+      // Check if post exists
+      const post = await db.getItem(`OBJECT#${postId}`, "NOTE");
+      if (!post) {
+        return { error: "Post not found" };
+      }
+
+      // Create the like activity
+      const likeData = {
+        PK: `ACTIVITY#${likeId}`,
+        SK: "LIKE",
+        GSI1PK: `OBJECT#${postId}`, // ← For querying likes on this post
+        GSI1SK: timestamp, // ← Chronological order
+        GSI2PK: "LIKE_ACTIVITIES", // ← For querying all likes
+        GSI2SK: timestamp,
+
+        // ActivityPub Like fields
+        id: likeUri,
+        type: "Like",
+        actor: actorUri,
+        object: postUri,
+        published: timestamp,
+      };
+
+      // Save like and update post like count atomically
+      const likeSuccess = await db.putItem(likeData);
+
+      if (likeSuccess) {
+        // Update post like count
+        await this.incrementPostLikeCount(postId);
+
+        // Invalidate caches
+        await redis.invalidateActor(actorIdentifier);
+
+        console.log(`✅ Like created: ${actorUri} liked ${postUri}`);
+        return {
+          success: true,
+          likeId,
+          likeUri,
+          actor: actorUri,
+          object: postUri,
+        };
+      }
+
+      return { error: "Failed to create like" };
+    } catch (error) {
+      console.error("Error creating like:", error);
+      return { error: "Internal error" };
+    }
+  }
+
+  /**
+   * Check if a user already liked a specific post
+   */
+  async checkUserLikedPost(
+    actorIdentifier: string,
+    postId: string
+  ): Promise<boolean> {
+    try {
+      // Query all likes for this post and check if this user is among them
+      const likes = await db.queryItemsByGSI1(`OBJECT#${postId}`);
+      const actorUri = `http://localhost:3000/users/${actorIdentifier}`;
+
+      return likes.some(
+        (like: any) => like.SK === "LIKE" && like.actor === actorUri
+      );
+    } catch (error) {
+      console.error("Error checking if user liked post:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Get all likes for a specific post
+   */
+  async getPostLikes(postId: string) {
+    try {
+      const likes = await db.queryItemsByGSI1(`OBJECT#${postId}`, {
+        sortKeyExpression: "SK = :sk",
+        attributeValues: {
+          ":sk": "LIKE",
+        },
+      });
+
+      return likes.map((like: any) => ({
+        id: like.id,
+        actor: like.actor,
+        published: like.published,
+      }));
+    } catch (error) {
+      console.error(`Error getting likes for post ${postId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Increment post like count
+   */
+  async incrementPostLikeCount(postId: string) {
+    try {
+      const post = await db.getItem(`OBJECT#${postId}`, "NOTE");
+      if (post) {
+        const updatedPost = {
+          ...post,
+          likes_count: (post.likes_count || 0) + 1,
+          updated_at: new Date().toISOString(),
+        };
+        await db.putItem(updatedPost);
+      }
+    } catch (error) {
+      console.error("Error incrementing like count:", error);
+    }
+  }
+
+  /**
    * Create a new post (Note) and associated Create activity
    */
   async createPost(
