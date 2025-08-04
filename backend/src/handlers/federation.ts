@@ -1,8 +1,10 @@
-import { Follow, Accept } from "@fedify/fedify";
+import { Follow, Accept, Like, Undo } from "@fedify/fedify";
 import { ActorModel } from "../models/Actor.js";
 import { crypto } from "../services/cryptography.js";
 import { activityPub } from "../services/activitypub.js";
 import { redis } from "../services/redis.js";
+
+const OUTBOX_PAGE_SIZE = 10;
 
 export class FederationHandlers {
   /**
@@ -133,6 +135,82 @@ export class FederationHandlers {
   }
 
   /**
+   * Accept activity handler
+   * Handles incoming Accept activities which acknowledge a follow request
+   */
+  static async handleAcceptActivity(ctx: any, accept: Accept) {
+    try {
+      if (!accept || !accept.id || !accept.actorId || !accept.object) {
+        console.log('Invalid Accept activity: missing required fields');
+        return;
+      }
+      // Save the Accept activity in our database for audit purposes
+      const activityId = accept.id.href ?? String(accept.id);
+      const actorId = accept.actorId.href ?? String(accept.actorId);
+      // The object of an Accept is usually the Follow activity being accepted
+      const objectId = accept.object.id?.href ?? accept.objectId?.href ?? String(accept.object);
+      await activityPub.saveActivity(activityId, 'Accept', actorId, objectId);
+      console.log(`✅ Accept processed: ${actorId} accepted ${objectId}`);
+    } catch (error) {
+      console.error('Error processing Accept activity:', error);
+    }
+  }
+
+  /**
+   * Like activity handler
+   * Handles incoming Like activities on our posts
+   */
+  static async handleLikeActivity(ctx: any, like: any) {
+    try {
+      if (!like || !like.id || !like.actorId || !like.objectId) {
+        console.log('Invalid Like activity: missing required fields');
+        return;
+      }
+      const activityId = like.id.href ?? String(like.id);
+      const actorId = like.actorId.href ?? String(like.actorId);
+      const objectId = like.objectId.href ?? String(like.objectId);
+      await activityPub.saveActivity(activityId, 'Like', actorId, objectId);
+      console.log(`👍 Like received from ${actorId} on ${objectId}`);
+    } catch (error) {
+      console.error('Error processing Like activity:', error);
+    }
+  }
+
+  /**
+   * Undo activity handler
+   * Handles incoming Undo activities (e.g. unfollow)
+   */
+  static async handleUndoActivity(ctx: any, undo: any) {
+    try {
+      if (!undo || !undo.id || !undo.actorId || !undo.object) {
+        console.log('Invalid Undo activity: missing required fields');
+        return;
+      }
+      // Determine what is being undone. Most commonly a Follow.
+      const object = undo.object;
+      // If the object is a Follow, remove the follower relationship
+      if (object.type === 'Follow' && object.actor && object.object) {
+        const followerId = object.actor.href ?? String(object.actor);
+        const targetId = object.object.href ?? String(object.object);
+        await activityPub.removeFollower(followerId, targetId);
+        console.log(`👋 Unfollow processed: ${followerId} -> ${targetId}`);
+        // Save the Undo activity
+        const activityId = undo.id.href ?? String(undo.id);
+        await activityPub.saveActivity(activityId, 'Undo', followerId, targetId);
+      } else {
+        // Other undo types can simply be recorded
+        const activityId = undo.id.href ?? String(undo.id);
+        const actorId = undo.actorId.href ?? String(undo.actorId);
+        const objectId = object.id?.href ?? object.objectId?.href ?? String(object);
+        await activityPub.saveActivity(activityId, 'Undo', actorId, objectId);
+        console.log(`🔁 Undo received for unsupported type: ${JSON.stringify(object)}`);
+      }
+    } catch (error) {
+      console.error('Error processing Undo activity:', error);
+    }
+  }
+
+  /**
    * Outbox dispatcher - handles requests for actor outboxes
    */
   static async handleOutboxRequest(ctx: any, identifier: string, cursor?: string | null) {
@@ -158,23 +236,41 @@ export class FederationHandlers {
         return null;
       }
 
-      // Get activities for this actor from the database (with caching)
-      const activities = await activityPub.getActorActivities(identifier);
-      
-      // Convert database activities to Fedify Activity objects
-      const activityItems = activities.map((activity: any) => ({
+      const allActivities = await activityPub.getActorActivities(identifier);
+
+      const sortedActivities = allActivities
+        .slice()
+        .sort((a: any, b: any) => {
+          const aTime = a?.published ? new Date(a.published).getTime() : 0;
+          const bTime = b?.published ? new Date(b.published).getTime() : 0;
+          return bTime - aTime;
+        });
+
+      let offset = 0;
+      if (typeof cursor === 'string' && cursor.trim() !== '') {
+        const parsed = parseInt(cursor, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed < sortedActivities.length) {
+          offset = parsed;
+        }
+      }
+
+      const endIndex = Math.min(offset + OUTBOX_PAGE_SIZE, sortedActivities.length);
+      const pageActivities = sortedActivities.slice(offset, endIndex);
+
+      const activityItems = pageActivities.map((activity: any) => ({
         id: activity.id,
         type: activity.type,
         actor: activity.actor,
         published: activity.published,
         object: activity.object,
-        ...activity.additionalData
+        ...(activity.additionalData || {})
       }));
 
-      // Return PageItems format expected by Fedify
+      const nextCursor = endIndex < sortedActivities.length ? String(endIndex) : null;
+
       return {
         items: activityItems,
-        next: null, // No pagination for now
+        next: nextCursor,
       };
     } catch (error) {
       console.error(`❌ Error in handleOutboxRequest for ${identifier}:`, error);
@@ -185,3 +281,7 @@ export class FederationHandlers {
     }
   }
 }
+
+export const handleAcceptActivity = FederationHandlers.handleAcceptActivity;
+export const handleLikeActivity = FederationHandlers.handleLikeActivity;
+export const handleUndoActivity = FederationHandlers.handleUndoActivity;
