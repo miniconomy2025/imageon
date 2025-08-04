@@ -8,6 +8,7 @@ import {
   QueryCommand,
   DeleteCommand,
   UpdateCommand,
+  TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
 
 class LikeService {
@@ -42,25 +43,30 @@ class LikeService {
         updated_at: now,
         status: "active",
       };
-      await docClient.send(
-        new PutCommand({
-          TableName: this.tableName,
-          Item: item,
-          ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
-        })
-      );
-      await docClient.send(
-        new UpdateCommand({
-          TableName: this.tableName,
-          Key: { PK: post_id, SK: "POST" },
-          UpdateExpression:
-            "SET likes_count = if_not_exists(likes_count, :zero) + :inc, updated_at = :updated",
-          ExpressionAttributeValues: {
-            ":inc": 1,
-            ":zero": 0,
-            ":updated": now,
+      const transactItems = [
+        {
+          Put: {
+            TableName: this.tableName,
+            Item: item,
+            ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
           },
-        })
+        },
+        {
+          Update: {
+            TableName: this.tableName,
+            Key: { PK: post_id, SK: "POST" },
+            UpdateExpression:
+              "SET likes_count = if_not_exists(likes_count, :zero) + :inc, updated_at = :updated",
+            ExpressionAttributeValues: {
+              ":inc": 1,
+              ":zero": 0,
+              ":updated": now,
+            },
+          },
+        },
+      ];
+      await docClient.send(
+        new TransactWriteCommand({ TransactItems: transactItems })
       );
       console.log(`Like created: ${username} liked post ${post_id}`);
       return {

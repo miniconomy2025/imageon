@@ -2,9 +2,6 @@ import { PaginatedResult, PaginationOptions } from "../models/paginationModels";
 import { CreateUserInput, UpdateUserInput, User } from "../models/userModels";
 
 import { v4 as uuidv4 } from "uuid";
-// Use the shared single‑table DynamoDB client and configuration. This
-// ensures user records reside in the unified ImageonApp table. We also
-// import the config to get the table name.
 import { docClient } from "./database";
 import { config } from "../config/index.js";
 import {
@@ -14,14 +11,11 @@ import {
   ScanCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { ReturnValue } from "@aws-sdk/client-dynamodb";
 
 type Allowed = keyof UpdateUserInput;
 
 class UserService {
-  /**
-   * All user records live in the single table defined in the
-   * configuration. We store the table name for reuse across methods.
-   */
   private readonly tableName: string;
 
   constructor() {
@@ -31,12 +25,9 @@ class UserService {
   async createUser(userData: CreateUserInput): Promise<User> {
     try {
       const { username, email, display_name, bio } = userData;
-      // Validate required fields. We require a unique username,
-      // email and display_name.
       if (!username || !email || !display_name) {
         throw new Error('Username, email, and display_name are required');
       }
-      // Ensure the username and email are unique by scanning the table.
       const existingUser = await this.getUserByUsername(username);
       if (existingUser) {
         throw new Error('Username already exists');
@@ -45,11 +36,12 @@ class UserService {
       if (existingEmail) {
         throw new Error('Email already exists');
       }
+      const existingDisplayName = await this.getUserByDisplayName(display_name);
+      if (existingDisplayName) {
+        throw new Error('display_name already exists');
+      }
       const now = new Date().toISOString();
       const userId = uuidv4();
-      // Compose the user record. Use a composite key with PK equal
-      // to the user identifier and SK equal to 'USER'. Counters are
-      // initialised to zero. Additional fields may be extended later.
       const item = {
         PK: userId,
         SK: 'USER',
@@ -68,9 +60,6 @@ class UserService {
         is_private: false,
         status: 'active' as const,
       };
-      // Persist the new user record. We conditionally write
-      // ensuring that an item with the same PK/SK does not already
-      // exist.
       await docClient.send(
         new PutCommand({
           TableName: this.tableName,
@@ -80,7 +69,6 @@ class UserService {
         })
       );
       console.log(`User created: ${userId} (${username})`);
-      // Return the user object without DynamoDB metadata.
       return {
         user_id: userId,
         username,
@@ -105,10 +93,6 @@ class UserService {
 
   async getUserByUsername(username: string): Promise<User|null> {
     try {
-      // Scan the table for a user record matching the provided
-      // username. We restrict the scan to items with SK = 'USER'
-      // to avoid unrelated entity types. Only the first match is
-      // returned.
       const result = await docClient.send(
         new ScanCommand({
           TableName: this.tableName,
@@ -186,10 +170,47 @@ class UserService {
     }
   }
 
+  async getUserByDisplayName(displayName: string): Promise<User|null> {
+    try {
+      const result = await docClient.send(
+        new ScanCommand({
+          TableName: this.tableName,
+          FilterExpression: 'SK = :sk AND display_name = :display_name',
+          ExpressionAttributeValues: {
+            ':sk': 'USER',
+            ':display_name': displayName,
+          },
+          Limit: 1,
+        })
+      );
+      if (!result.Items || result.Items.length === 0) {
+        return null;
+      }
+      const item: any = result.Items[0];
+      return {
+        user_id: item.user_id,
+        username: item.username,
+        email: item.email,
+        display_name: item.display_name,
+        bio: item.bio,
+        profile_image_url: item.profile_image_url,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        followers_count: item.followers_count,
+        following_count: item.following_count,
+        posts_count: item.posts_count,
+        is_verified: item.is_verified,
+        is_private: item.is_private,
+        status: item.status,
+      } as User;
+    } catch (error) {
+      console.error('Error getting user by display name:', error);
+      throw error;
+    }
+  }
+
   async getUserById(userId: string): Promise<User|null> {
     try {
-      // Retrieve a user directly by its composite PK/SK. Using a Get
-      // allows constant time lookup.
       const result = await docClient.send(
         new GetCommand({
           TableName: this.tableName,
@@ -277,8 +298,6 @@ class UserService {
       const updateExpressionParts: string[] = [];
       const expressionAttributeNames: Record<string, string> = {};
       const expressionAttributeValues: Record<string, any> = {};
-      // Only allow updates to mutable fields. Disallow changes to
-      // identity fields.
       (Object.keys(updates) as Allowed[]).forEach((key) => {
         if (!['user_id', 'username', 'email'].includes(key)) {
           updateExpressionParts.push(`#${key} = :${key}`);
@@ -286,7 +305,6 @@ class UserService {
           expressionAttributeValues[`:${key}`] = (updates as any)[key];
         }
       });
-      // Always update the updated_at timestamp
       updateExpressionParts.push('#updated_at = :updated_at');
       expressionAttributeNames['#updated_at'] = 'updated_at';
       expressionAttributeValues[':updated_at'] = new Date().toISOString();
@@ -302,7 +320,7 @@ class UserService {
         UpdateExpression: `SET ${updateExpressionParts.join(', ')}`,
         ExpressionAttributeNames: expressionAttributeNames,
         ExpressionAttributeValues: expressionAttributeValues,
-        ReturnValues: 'ALL_NEW',
+        ReturnValues: 'ALL_NEW'  as ReturnValue,
       };
       const result = await docClient.send(new UpdateCommand(params));
       console.log(`User updated: ${userId}`);
@@ -350,7 +368,7 @@ class UserService {
           ':status': 'deleted',
           ':updated_at': new Date().toISOString(),
         },
-        ReturnValues: 'ALL_NEW',
+        ReturnValues: 'ALL_NEW' as ReturnValue,
       };
       await docClient.send(new UpdateCommand(params));
       console.log(`User deleted: ${userId}`);

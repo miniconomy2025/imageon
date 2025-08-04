@@ -8,6 +8,7 @@ import {
   QueryCommand,
   DeleteCommand,
   UpdateCommand,
+  TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
 
 class FollowService {
@@ -55,17 +56,16 @@ class FollowService {
         status: "active",
       };
 
-      await docClient.send(
-        new PutCommand({
-          TableName: this.tableName,
-          Item: item,
-          ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
-        })
-      );
-
-      await Promise.all([
-        docClient.send(
-          new UpdateCommand({
+      const transactItems = [
+        {
+          Put: {
+            TableName: this.tableName,
+            Item: item,
+            ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
+          },
+        },
+        {
+          Update: {
             TableName: this.tableName,
             Key: { PK: follower_id, SK: "USER" },
             UpdateExpression:
@@ -75,10 +75,10 @@ class FollowService {
               ":zero": 0,
               ":updated": now,
             },
-          })
-        ),
-        docClient.send(
-          new UpdateCommand({
+          },
+        },
+        {
+          Update: {
             TableName: this.tableName,
             Key: { PK: followed_id, SK: "USER" },
             UpdateExpression:
@@ -88,9 +88,14 @@ class FollowService {
               ":zero": 0,
               ":updated": now,
             },
-          })
-        ),
-      ]);
+          },
+        },
+      ];
+      await docClient.send(
+        new TransactWriteCommand({
+          TransactItems: transactItems,
+        })
+      );
 
       console.log(
         `Follow created: ${follower_username} followed ${followed_username}`
@@ -217,19 +222,19 @@ class FollowService {
 
   async deleteFollow(followerId: string, followedId: string): Promise<boolean> {
     try {
-      await docClient.send(
-        new DeleteCommand({
-          TableName: this.tableName,
-          Key: {
-            PK: followerId,
-            SK: `FOLLOWING#${followedId}`,
-          },
-        })
-      );
       const now = new Date().toISOString();
-      await Promise.all([
-        docClient.send(
-          new UpdateCommand({
+      const transactItems = [
+        {
+          Delete: {
+            TableName: this.tableName,
+            Key: {
+              PK: followerId,
+              SK: `FOLLOWING#${followedId}`,
+            },
+          },
+        },
+        {
+          Update: {
             TableName: this.tableName,
             Key: { PK: followerId, SK: "USER" },
             UpdateExpression:
@@ -239,10 +244,10 @@ class FollowService {
               ":zero": 0,
               ":updated": now,
             },
-          })
-        ),
-        docClient.send(
-          new UpdateCommand({
+          },
+        },
+        {
+          Update: {
             TableName: this.tableName,
             Key: { PK: followedId, SK: "USER" },
             UpdateExpression:
@@ -252,9 +257,12 @@ class FollowService {
               ":zero": 0,
               ":updated": now,
             },
-          })
-        ),
-      ]);
+          },
+        },
+      ];
+      await docClient.send(
+        new TransactWriteCommand({ TransactItems: transactItems })
+      );
       console.log(
         `Follow deleted: user ${followerId} unfollowed user ${followedId}`
       );

@@ -11,6 +11,7 @@ import {
   ScanCommand,
   UpdateCommand,
   DeleteCommand,
+  TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { ReturnValue } from "@aws-sdk/client-dynamodb";
 
@@ -317,33 +318,58 @@ class PostService {
       if (!existingPost) {
         throw new Error("Post not found");
       }
-      await docClient.send(
-        new DeleteCommand({
+      const likesQuery = await docClient.send(
+        new QueryCommand({
           TableName: this.tableName,
-          Key: {
-            PK: postId,
-            SK: 'POST',
+          KeyConditionExpression: 'PK = :pk and begins_with(SK, :prefix)',
+          ExpressionAttributeValues: {
+            ':pk': postId,
+            ':prefix': 'LIKE#',
           },
         })
       );
+      const likeItems = likesQuery.Items || [];
+      for (const like of likeItems) {
+        try {
+          await docClient.send(
+            new DeleteCommand({
+              TableName: this.tableName,
+              Key: { PK: like.PK, SK: like.SK },
+            })
+          );
+        } catch (err) {
+          console.error('Error deleting like item during post deletion:', err);
+        }
+      }
       const now = new Date().toISOString();
-      await docClient.send(
-        new UpdateCommand({
-          TableName: this.tableName,
-          Key: { PK: existingPost.user_id, SK: 'USER' },
-          UpdateExpression:
-            'SET posts_count = if_not_exists(posts_count, :zero) - :dec, updated_at = :updated',
-          ExpressionAttributeValues: {
-            ':dec': 1,
-            ':zero': 0,
-            ':updated': now,
+      const transactItems = [
+        {
+          Delete: {
+            TableName: this.tableName,
+            Key: { PK: postId, SK: 'POST' },
           },
-        })
+        },
+        {
+          Update: {
+            TableName: this.tableName,
+            Key: { PK: existingPost.user_id, SK: 'USER' },
+            UpdateExpression:
+              'SET posts_count = if_not_exists(posts_count, :zero) - :dec, updated_at = :updated',
+            ExpressionAttributeValues: {
+              ':dec': 1,
+              ':zero': 0,
+              ':updated': now,
+            },
+          },
+        },
+      ];
+      await docClient.send(
+        new TransactWriteCommand({ TransactItems: transactItems })
       );
       console.log(`Post deleted: ${postId}`);
       return true;
     } catch (error) {
-      console.error("Error deleting post:", error);
+      console.error('Error deleting post:', error);
       throw error;
     }
   }
