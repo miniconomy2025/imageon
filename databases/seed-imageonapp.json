@@ -1,6 +1,5 @@
 {
   "ImageonApp": [
-    
     {
       "PutRequest": {
         "Item": {
@@ -20,15 +19,66 @@
           "followers": { "S": "http://localhost:3000/users/alice/followers" },
           "following": { "S": "http://localhost:3000/users/alice/following" },
           "url": { "S": "http://localhost:3000/users/alice" },
-          "icon": { "M": {
-            "type": { "S": "Image" },
-            "url": { "S": "http://localhost:3000/media/alice-avatar.jpg" }
-          }},
-          "publicKey": { "M": {
-            "id": { "S": "http://localhost:3000/users/alice#main-key" },
-            "owner": { "S": "http://localhost:3000/users/alice" },
-            "publicKeyPem": { "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----" }
-          }},
+          "icon": {
+            "M": {
+              "type": { "S": "Image" },
+              "url": { "S": "http://localhost:3000/media/alice-avatar.jpg" }
+            }
+          },
+          "publicKey": {
+            "M": {
+              "id": { "S": "http://localhost:3000/users/alice#main-key" },
+              "owner": { "S": "http://localhost:3000/users/alice" },
+              "publicKeyPem": {
+                "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----"
+              }
+            }
+          },
+          "published": { "S": "2025-01-01T00:00:00Z" },
+          "followers_count": { "N": "2" },
+          "following_count": { "N": "1" }
+        }
+      }
+    },
+
+    {
+      "PutRequest": {
+        "Item": {
+          "PK": { "S": "ACTOR#kanyibbd" },
+          "SK": { "S": "PROFILE" },
+          "GSI1PK": { "S": "ACTOR" },
+          "GSI1SK": { "S": "kanyibbd" },
+          "GSI2PK": { "S": "LOCAL_ACTORS" },
+          "GSI2SK": { "S": "2025-01-01T00:00:00Z" },
+          "id": { "S": "http://localhost:3000/users/kanyibbd" },
+          "type": { "S": "Person" },
+          "preferredUsername": { "S": "kanyibbd" },
+          "name": { "S": "Mkhululi Ncube" },
+          "summary": { "S": "Photography enthusiast and coffee lover ☕📸" },
+          "inbox": { "S": "http://localhost:3000/users/kanyibbd/inbox" },
+          "outbox": { "S": "http://localhost:3000/users/kanyibbd/outbox" },
+          "followers": {
+            "S": "http://localhost:3000/users/kanyibbd/followers"
+          },
+          "following": {
+            "S": "http://localhost:3000/users/kanyibbd/following"
+          },
+          "url": { "S": "http://localhost:3000/users/kanyibbd" },
+          "icon": {
+            "M": {
+              "type": { "S": "Image" },
+              "url": { "S": "http://localhost:3000/media/alice-avatar.jpg" }
+            }
+          },
+          "publicKey": {
+            "M": {
+              "id": { "S": "http://localhost:3000/users/kanyibbd#main-key" },
+              "owner": { "S": "http://localhost:3000/users/kanyibbd" },
+              "publicKeyPem": {
+                "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----"
+              }
+            }
+          },
           "published": { "S": "2025-01-01T00:00:00Z" },
           "followers_count": { "N": "2" },
           "following_count": { "N": "1" }
@@ -55,15 +105,21 @@
           "followers": { "S": "http://localhost:3000/users/bob/followers" },
           "following": { "S": "http://localhost:3000/users/bob/following" },
           "url": { "S": "http://localhost:3000/users/bob" },
-          "icon": { "M": {
-            "type": { "S": "Image" },
-            "url": { "S": "http://localhost:3000/media/bob-avatar.jpg" }
-          }},
-          "publicKey": { "M": {
-            "id": { "S": "http://localhost:3000/users/bob#main-key" },
-            "owner": { "S": "http://localhost:3000/users/bob" },
-            "publicKeyPem": { "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----" }
-          }},
+          "icon": {
+            "M": {
+              "type": { "S": "Image" },
+              "url": { "S": "http://localhost:3000/media/bob-avatar.jpg" }
+            }
+          },
+          "publicKey": {
+            "M": {
+              "id": { "S": "http://localhost:3000/users/bob#main-key" },
+              "owner": { "S": "http://localhost:3000/users/bob" },
+              "publicKeyPem": {
+                "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----"
+              }
+            }
+          },
           "published": { "S": "2025-01-02T00:00:00Z" },
           "followers_count": { "N": "1" },
           "following_count": { "N": "2" }
@@ -90,15 +146,21 @@
           "followers": { "S": "http://localhost:3000/users/charlie/followers" },
           "following": { "S": "http://localhost:3000/users/charlie/following" },
           "url": { "S": "http://localhost:3000/users/charlie" },
-          "icon": { "M": {
-            "type": { "S": "Image" },
-            "url": { "S": "http://localhost:3000/media/charlie-avatar.jpg" }
-          }},
-          "publicKey": { "M": {
-            "id": { "S": "http://localhost:3000/users/charlie#main-key" },
-            "owner": { "S": "http://localhost:3000/users/charlie" },
-            "publicKeyPem": { "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----" }
-          }},
+          "icon": {
+            "M": {
+              "type": { "S": "Image" },
+              "url": { "S": "http://localhost:3000/media/charlie-avatar.jpg" }
+            }
+          },
+          "publicKey": {
+            "M": {
+              "id": { "S": "http://localhost:3000/users/charlie#main-key" },
+              "owner": { "S": "http://localhost:3000/users/charlie" },
+              "publicKeyPem": {
+                "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----"
+              }
+            }
+          },
           "published": { "S": "2025-01-03T00:00:00Z" },
           "followers_count": { "N": "1" },
           "following_count": { "N": "1" }
@@ -118,35 +180,47 @@
           "id": { "S": "http://localhost:3000/objects/post-001" },
           "type": { "S": "Note" },
           "attributedTo": { "S": "http://localhost:3000/users/alice" },
-          "content": { "S": "<p>Beautiful sunrise this morning! 🌅 Perfect lighting for photography.</p>" },
+          "content": {
+            "S": "<p>Beautiful sunrise this morning! 🌅 Perfect lighting for photography.</p>"
+          },
           "published": { "S": "2025-01-15T10:30:00Z" },
-          "to": { "L": [
-            { "S": "https://www.w3.org/ns/activitystreams#Public" }
-          ]},
-          "cc": { "L": [
-            { "S": "http://localhost:3000/users/alice/followers" }
-          ]},
+          "to": {
+            "L": [{ "S": "https://www.w3.org/ns/activitystreams#Public" }]
+          },
+          "cc": {
+            "L": [{ "S": "http://localhost:3000/users/alice/followers" }]
+          },
           "url": { "S": "http://localhost:3000/objects/post-001" },
-          "attachment": { "L": [
-            { "M": {
-              "type": { "S": "Image" },
-              "url": { "S": "http://localhost:3000/media/sunrise-001.jpg" },
-              "mediaType": { "S": "image/jpeg" },
-              "name": { "S": "Sunrise over the mountains" }
-            }}
-          ]},
-          "tag": { "L": [
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/photography" },
-              "name": { "S": "#photography" }
-            }},
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/sunrise" },
-              "name": { "S": "#sunrise" }
-            }}
-          ]},
+          "attachment": {
+            "L": [
+              {
+                "M": {
+                  "type": { "S": "Image" },
+                  "url": { "S": "http://localhost:3000/media/sunrise-001.jpg" },
+                  "mediaType": { "S": "image/jpeg" },
+                  "name": { "S": "Sunrise over the mountains" }
+                }
+              }
+            ]
+          },
+          "tag": {
+            "L": [
+              {
+                "M": {
+                  "type": { "S": "Hashtag" },
+                  "href": { "S": "http://localhost:3000/tags/photography" },
+                  "name": { "S": "#photography" }
+                }
+              },
+              {
+                "M": {
+                  "type": { "S": "Hashtag" },
+                  "href": { "S": "http://localhost:3000/tags/sunrise" },
+                  "name": { "S": "#sunrise" }
+                }
+              }
+            ]
+          },
           "replies_count": { "N": "2" },
           "likes_count": { "N": "3" },
           "shares_count": { "N": "1" }
@@ -166,27 +240,33 @@
           "id": { "S": "http://localhost:3000/objects/post-002" },
           "type": { "S": "Note" },
           "attributedTo": { "S": "http://localhost:3000/users/bob" },
-          "content": { "S": "<p>Working on a new guitar riff 🎸 Music and code have more in common than you'd think!</p>" },
+          "content": {
+            "S": "<p>Working on a new guitar riff 🎸 Music and code have more in common than you'd think!</p>"
+          },
           "published": { "S": "2025-01-16T14:15:00Z" },
-          "to": { "L": [
-            { "S": "https://www.w3.org/ns/activitystreams#Public" }
-          ]},
-          "cc": { "L": [
-            { "S": "http://localhost:3000/users/bob/followers" }
-          ]},
+          "to": {
+            "L": [{ "S": "https://www.w3.org/ns/activitystreams#Public" }]
+          },
+          "cc": { "L": [{ "S": "http://localhost:3000/users/bob/followers" }] },
           "url": { "S": "http://localhost:3000/objects/post-002" },
-          "tag": { "L": [
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/music" },
-              "name": { "S": "#music" }
-            }},
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/guitar" },
-              "name": { "S": "#guitar" }
-            }}
-          ]},
+          "tag": {
+            "L": [
+              {
+                "M": {
+                  "type": { "S": "Hashtag" },
+                  "href": { "S": "http://localhost:3000/tags/music" },
+                  "name": { "S": "#music" }
+                }
+              },
+              {
+                "M": {
+                  "type": { "S": "Hashtag" },
+                  "href": { "S": "http://localhost:3000/tags/guitar" },
+                  "name": { "S": "#guitar" }
+                }
+              }
+            ]
+          },
           "replies_count": { "N": "1" },
           "likes_count": { "N": "2" },
           "shares_count": { "N": "0" }
@@ -206,35 +286,49 @@
           "id": { "S": "http://localhost:3000/objects/post-003" },
           "type": { "S": "Note" },
           "attributedTo": { "S": "http://localhost:3000/users/charlie" },
-          "content": { "S": "<p>Finished my latest landscape painting! Nature is the best teacher 🎨🌲</p>" },
+          "content": {
+            "S": "<p>Finished my latest landscape painting! Nature is the best teacher 🎨🌲</p>"
+          },
           "published": { "S": "2025-01-17T09:45:00Z" },
-          "to": { "L": [
-            { "S": "https://www.w3.org/ns/activitystreams#Public" }
-          ]},
-          "cc": { "L": [
-            { "S": "http://localhost:3000/users/charlie/followers" }
-          ]},
+          "to": {
+            "L": [{ "S": "https://www.w3.org/ns/activitystreams#Public" }]
+          },
+          "cc": {
+            "L": [{ "S": "http://localhost:3000/users/charlie/followers" }]
+          },
           "url": { "S": "http://localhost:3000/objects/post-003" },
-          "attachment": { "L": [
-            { "M": {
-              "type": { "S": "Image" },
-              "url": { "S": "http://localhost:3000/media/landscape-001.jpg" },
-              "mediaType": { "S": "image/jpeg" },
-              "name": { "S": "Mountain landscape painting" }
-            }}
-          ]},
-          "tag": { "L": [
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/art" },
-              "name": { "S": "#art" }
-            }},
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/painting" },
-              "name": { "S": "#painting" }
-            }}
-          ]},
+          "attachment": {
+            "L": [
+              {
+                "M": {
+                  "type": { "S": "Image" },
+                  "url": {
+                    "S": "http://localhost:3000/media/landscape-001.jpg"
+                  },
+                  "mediaType": { "S": "image/jpeg" },
+                  "name": { "S": "Mountain landscape painting" }
+                }
+              }
+            ]
+          },
+          "tag": {
+            "L": [
+              {
+                "M": {
+                  "type": { "S": "Hashtag" },
+                  "href": { "S": "http://localhost:3000/tags/art" },
+                  "name": { "S": "#art" }
+                }
+              },
+              {
+                "M": {
+                  "type": { "S": "Hashtag" },
+                  "href": { "S": "http://localhost:3000/tags/painting" },
+                  "name": { "S": "#painting" }
+                }
+              }
+            ]
+          },
           "replies_count": { "N": "0" },
           "likes_count": { "N": "4" },
           "shares_count": { "N": "2" }
@@ -464,12 +558,12 @@
           "actor": { "S": "http://localhost:3000/users/charlie" },
           "object": { "S": "http://localhost:3000/objects/post-001" },
           "published": { "S": "2025-01-15T13:20:00Z" },
-          "to": { "L": [
-            { "S": "https://www.w3.org/ns/activitystreams#Public" }
-          ]},
-          "cc": { "L": [
-            { "S": "http://localhost:3000/users/charlie/followers" }
-          ]}
+          "to": {
+            "L": [{ "S": "https://www.w3.org/ns/activitystreams#Public" }]
+          },
+          "cc": {
+            "L": [{ "S": "http://localhost:3000/users/charlie/followers" }]
+          }
         }
       }
     },
@@ -488,12 +582,10 @@
           "actor": { "S": "http://localhost:3000/users/bob" },
           "object": { "S": "http://localhost:3000/objects/post-003" },
           "published": { "S": "2025-01-17T14:10:00Z" },
-          "to": { "L": [
-            { "S": "https://www.w3.org/ns/activitystreams#Public" }
-          ]},
-          "cc": { "L": [
-            { "S": "http://localhost:3000/users/bob/followers" }
-          ]}
+          "to": {
+            "L": [{ "S": "https://www.w3.org/ns/activitystreams#Public" }]
+          },
+          "cc": { "L": [{ "S": "http://localhost:3000/users/bob/followers" }] }
         }
       }
     },
@@ -582,6 +674,5 @@
         }
       }
     }
-
   ]
 }
