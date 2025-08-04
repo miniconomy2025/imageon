@@ -140,7 +140,7 @@ export class FederationHandlers {
    */
   static async handleAcceptActivity(ctx: any, accept: Accept) {
     try {
-      if (!accept || !accept.id || !accept.actorId || !accept.object) {
+      if (!accept || !accept.id || !accept.actorId || !accept.objectId) {
         console.log('Invalid Accept activity: missing required fields');
         return;
       }
@@ -148,9 +148,8 @@ export class FederationHandlers {
       const activityId = accept.id.href ?? String(accept.id);
       const actorId = accept.actorId.href ?? String(accept.actorId);
       // The object of an Accept is usually the Follow activity being accepted
-      const objectId = accept.object.id?.href ?? accept.objectId?.href ?? String(accept.object);
-      await activityPub.saveActivity(activityId, 'Accept', actorId, objectId);
-      console.log(`✅ Accept processed: ${actorId} accepted ${objectId}`);
+      await activityPub.saveActivity(activityId, 'Accept', actorId, String(accept.objectId?.href));
+      console.log(`✅ Accept processed: ${actorId} accepted ${String(accept.objectId?.href)}`);
     } catch (error) {
       console.error('Error processing Accept activity:', error);
     }
