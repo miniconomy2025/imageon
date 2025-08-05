@@ -1,0 +1,40 @@
+.attachment-carousel {
+    display: flex;
+    position: relative;
+}
+
+.attachment-carousel__images {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: hidden;
+    scroll-snap-type: x mandatory;
+    width: 100%;
+    height: fit-content;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.attachment-carousel__next-button {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+.attachment-carousel__prev-button {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+.attachment-carousel__image {
+    width: 100%;
+    min-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    transition: 1s cubic-bezier(0.4, 0.6, 0.6, 1);
+    flex-shrink: 0;
+}

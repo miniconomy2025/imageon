@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useGetUser } from "../../hooks/useGetUser";
 import { useUserPosts } from "../../hooks/useUserPosts";
-import { Card, Post } from "../../components";
+import { Card, PostCard } from "../../components";
 import './profilePage.css';
 export const ProfilePage = () => {
     const params = useParams();
@@ -28,7 +28,7 @@ export const ProfilePage = () => {
             {isLoadingPosts && <p>Loading posts...</p>}
             {userPosts && userPosts.map(post => (
                 <Card key={post.id}>
-                    <Post content={post.content} author={{ name: post.author, avatar: '' }} timestamp={post.postedAt} />
+                    <PostCard post={post} />
                 </Card>
             ))}
             </section>

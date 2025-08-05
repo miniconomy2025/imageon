@@ -10,9 +10,9 @@ export const useUserFeed = (username: string) => {
 
             if (config.MOCK_DATA) {
                 return Promise.resolve([
-                    { id: pageParam * 3 - 2, title: `Post ${pageParam * 3 - 2}`, content: `Content ${pageParam * 3 - 2} content content content content content content content content content content content content content content content content content content content content content content content contentv`, author: username, postedAt: new Date().toISOString() }, 
-                    { id: pageParam * 3 - 1, title: `Post ${pageParam * 3 - 1}`, content: `Content ${pageParam * 3 - 1}`, author: username, postedAt: new Date().toISOString() }, 
-                    { id: pageParam * 3, title: `Post ${pageParam * 3}`, content: `Content ${pageParam * 3}`, author: username, postedAt: new Date().toISOString() }
+                    { id: pageParam * 3 - 2, title: `Post ${pageParam * 3 - 2}`, content: `Content ${pageParam * 3 - 2} content content content content content content content content content content content content content content content content content content content content content content content contentv`, author: { username }, postedAt: new Date().toISOString(), attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL] }, 
+                    { id: pageParam * 3 - 1, title: `Post ${pageParam * 3 - 1}`, content: `Content ${pageParam * 3 - 1}`, author: { username }, postedAt: new Date().toISOString(), attachments: [config.MOCK_IMAGE_URL] }, 
+                    { id: pageParam * 3, title: `Post ${pageParam * 3}`, content: `Content ${pageParam * 3}`, author: { username }, postedAt: new Date().toISOString(), attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL] }
                 ] as Post[]);
             }
 

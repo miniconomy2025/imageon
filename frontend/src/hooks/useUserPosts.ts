@@ -10,9 +10,9 @@ export const useUserPosts = (username: string) => {
         queryKey: ['userPosts', username],
         queryFn: async (): Promise<Post[]> => {
             if (config.MOCK_DATA) {
-                return Promise.resolve([{ id: 1, title: 'Post 1', content: 'Content 1', author: username, postedAt: new Date().toISOString() }, 
-                    { id: 2, title: 'Post 2', content: 'Content 2', author: username, postedAt: new Date().toISOString() }, 
-                    { id: 3, title: 'Post 3', content: 'Content 3', author: username, postedAt: new Date().toISOString() }] as Post[]);
+                return Promise.resolve([{ id: 1, title: 'Post 1', content: 'Content 1', author: { username }, postedAt: new Date().toISOString(), attachments: [config.MOCK_IMAGE_URL] }, 
+                    { id: 2, title: 'Post 2', content: 'Content 2', author: { username }, postedAt: new Date().toISOString(), attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL] }, 
+                    { id: 3, title: 'Post 3', content: 'Content 3', author: { username }, postedAt: new Date().toISOString(), attachments: [config.MOCK_IMAGE_URL] }] as Post[]);
             }
 
             const response = await fetch(url);

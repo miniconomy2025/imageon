@@ -12,7 +12,7 @@ export const UserCard = ({ user, onClick }: { user: User, onClick: () => void })
                 size="medium"
             />
             <div className="user__card-info">
-                <h4 className="user__card-name">{user.username}</h4>
+                <h4 className="user__card-name">{!!user.firstName && !!user.lastName ? `${user.firstName} ${user.lastName}` : !!user.firstName ? `${user.firstName}` : user.username}</h4>
             </div>
         </div>
     );

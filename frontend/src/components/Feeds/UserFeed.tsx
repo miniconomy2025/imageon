@@ -1,12 +1,10 @@
 import { useRef, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useUserFeed } from "../../hooks/useUserFeed";
 import Card from "../Card/Card"
-import Post from "../Post/Post"
+import PostCard from "../Post/Post"
 
 
 export const UserFeed = () => {
-    const navigate = useNavigate();
     const observerRef = useRef<IntersectionObserver | null>(null);
 
     //Once login is implemented, replace with logged-in users username
@@ -47,7 +45,7 @@ export const UserFeed = () => {
             key={post.id}
             ref={index === feedPosts.length - 1 ? lastPostElementRef : null}
         >
-            <Post content={post.content} author={{ name: post.author, avatar: '' }} timestamp={post.postedAt} />
+            <PostCard post={post} />
         </Card>))}
             {isLoadingPosts && <p>Loading more posts...</p>}
         </>

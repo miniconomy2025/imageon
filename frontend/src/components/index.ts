@@ -11,7 +11,7 @@ export { default as Card } from './Card/Card'
 export { default as Input } from './Input/Input'
 
 // Post component
-export { default as Post } from './Post/Post'
+export { default as PostCard } from './Post/Post'
 
 // PostComposer component
 export { default as PostComposer } from './PostComposer/PostComposer'
