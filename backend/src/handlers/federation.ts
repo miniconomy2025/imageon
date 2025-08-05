@@ -209,24 +209,6 @@ export class FederationHandlers {
         await activityPub.saveActivity(activityId, 'Undo', actorId, objectId);
         console.log(`🔁 Undo received for unsupported type: ${JSON.stringify(object)}`);
       }
-
-      // await activityPub.removeFollower(
-      //   undo.objectId.href,  
-      //   undo.actor.id.href 
-      // );
-  
-      // const undoId = randomUUID();
-      // await activityPub.saveActivity(
-      //   undoId,
-      //   "Undo",
-      //   undo.actor.id.href,
-      //   undo.object.id.href,
-      //   { undone_at: new Date().toISOString() }
-      // );
-  
-      // console.log(
-      //   `🗑️ Auto-removed follower ${undo.actor.id.href} from ${undo.object.id.href}`
-      // );
     } catch (error) {
       console.error('Error processing Undo activity:', error);
     }
