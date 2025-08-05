@@ -43,6 +43,25 @@ export class FederationHandlers {
       const person = await ActorModel.createPersonObject(ctx, identifier, actorData, keys);
       console.log(`👤 Person object created for: ${identifier}`);
       
+      // Add detailed debugging for the Person object
+      try {
+        console.log(`🔍 Person object type: ${typeof person}`);
+        console.log(`🔍 Person object constructor: ${person.constructor.name}`);
+        console.log(`🔍 Person object has publicKeyId: ${!!person.publicKeyId}`);
+        console.log(`🔍 Person object id: ${person.id}`);
+        
+        // Test if the object can be serialized safely
+        const testSerialization = JSON.stringify({
+          id: person.id?.toString(),
+          name: person.name?.toString(),
+          hasPublicKeyId: !!person.publicKeyId
+        });
+        console.log(`🔍 Basic serialization test: ${testSerialization}`);
+        
+      } catch (debugError) {
+        console.error(`❌ Error during Person object debugging:`, debugError);
+      }
+      
       return person;
     } catch (error) {
       console.error(`❌ Error in handleActorRequest for ${identifier}:`, error);

@@ -556,7 +556,31 @@ serve({
     }
 
     // All other federation-related requests are handled by the Federation object
-    return await federation.fetch(request, { contextData: undefined });
+    try {
+      console.log(`🌐 Delegating to federation.fetch for: ${url.pathname}`);
+      const federationResponse = await federation.fetch(request, { contextData: undefined });
+      console.log(`✅ Federation response status: ${federationResponse.status}`);
+      return federationResponse;
+    } catch (federationError) {
+      console.error(`❌ CRITICAL: Federation fetch error for ${url.pathname}:`, federationError);
+      if (federationError instanceof Error) {
+        console.error(`❌ Federation error stack:`, federationError.stack);
+        console.error(`❌ Federation error message:`, federationError.message);
+      }
+      
+      // Return a more informative error response
+      return new Response(
+        JSON.stringify({ 
+          error: 'Federation processing failed', 
+          details: federationError instanceof Error ? federationError.message : String(federationError),
+          path: url.pathname 
+        }), 
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
   },
   port: config.port
 });
