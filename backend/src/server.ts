@@ -6,6 +6,7 @@ import { config } from "./config/index.js";
 import { createRedisInstance } from "./config/redis.js";
 import { FederationHandlers } from "./handlers/federation.js";
 import { WebHandlers } from "./handlers/web.js";
+import { AuthHandlers } from "./handlers/auth.js";
 import { ActorModel } from "./models/Actor.js";
 // Import ActivityPub service for managing followers, posts and likes
 import { activityPub } from "./services/activitypub.js";
@@ -13,6 +14,7 @@ import { activityPub } from "./services/activitypub.js";
 import { randomUUID } from "crypto";
 
 import { db } from "./services/database.js";
+import { requireAuth } from "./middleware/auth.js";
 
 // Create Redis instance
 const redis = createRedisInstance();
@@ -24,11 +26,17 @@ const federation = createFederation<void>({
 
 // Configure federation dispatchers
 federation
-  .setActorDispatcher("/users/{identifier}", FederationHandlers.handleActorRequest)
+  .setActorDispatcher(
+    "/users/{identifier}",
+    FederationHandlers.handleActorRequest
+  )
   .setKeyPairsDispatcher(FederationHandlers.handleKeyPairsRequest);
 
 // Configure outbox dispatcher separately
-federation.setOutboxDispatcher("/users/{identifier}/outbox", FederationHandlers.handleOutboxRequest);
+federation.setOutboxDispatcher(
+  "/users/{identifier}/outbox",
+  FederationHandlers.handleOutboxRequest
+);
 
 // Configure inbox listeners
 federation
@@ -45,12 +53,98 @@ federation
 serve({
   fetch: async (request: Request) => {
     const url = new URL(request.url);
-    
+
+    // Add CORS headers for all requests
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    };
+
+    // Handle preflight requests
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders,
+      });
+    }
+
+    // Auth endpoints
+    if (url.pathname === "/auth/verify" && request.method === "POST") {
+      const response = await AuthHandlers.handleVerifyToken(request);
+      // Add CORS headers to the response
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (
+      url.pathname === "/auth/complete-profile" &&
+      request.method === "POST"
+    ) {
+      const response = await requireAuth(AuthHandlers.handleCompleteProfile)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/profile" && request.method === "GET") {
+      const response = await requireAuth(AuthHandlers.handleGetProfile)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/profile" && request.method === "PUT") {
+      const response = await requireAuth(AuthHandlers.handleUpdateProfile)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/check-username" && request.method === "GET") {
+      const response = await AuthHandlers.handleCheckUsername(request);
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
     // Health check endpoint
     if (url.pathname === "/health") {
       return await WebHandlers.handleHealthCheck();
     }
-    
+
     // Home page
     if (url.pathname === "/") {
       return await WebHandlers.handleHomePage(url);
@@ -67,7 +161,7 @@ serve({
             {
               status: 400,
               headers: { "Content-Type": "application/json" },
-            },
+            }
           );
         }
 
@@ -79,7 +173,7 @@ serve({
             {
               status: 400,
               headers: { "Content-Type": "application/json" },
-            },
+            }
           );
         }
         const [, identifier, domain] = match;
@@ -88,23 +182,22 @@ serve({
         if (domain !== expectedDomain) {
           // For other domains we cannot serve WebFinger
           return new Response(
-            JSON.stringify({ error: "Requested resource not served by this domain" }),
+            JSON.stringify({
+              error: "Requested resource not served by this domain",
+            }),
             {
               status: 404,
               headers: { "Content-Type": "application/json" },
-            },
+            }
           );
         }
         // Look up the actor
         const actor = await ActorModel.getActor(identifier);
         if (!actor) {
-          return new Response(
-            JSON.stringify({ error: "Actor not found" }),
-            {
-              status: 404,
-              headers: { "Content-Type": "application/json" },
-            },
-          );
+          return new Response(JSON.stringify({ error: "Actor not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
         }
         const actorUrl = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
         const jrd = {
@@ -134,7 +227,7 @@ serve({
           {
             status: 500,
             headers: { "Content-Type": "application/json" },
-          },
+          }
         );
       }
     }
@@ -167,10 +260,13 @@ serve({
         });
       } catch (error) {
         console.error("Error fetching followers list:", error);
-        return new Response(JSON.stringify({ error: "Internal server error" }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
     }
 
@@ -200,10 +296,13 @@ serve({
         });
       } catch (error) {
         console.error("Error fetching following list:", error);
-        return new Response(JSON.stringify({ error: "Internal server error" }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
     }
 
@@ -214,11 +313,13 @@ serve({
         const { actor, content } = body || {};
         if (!actor || !content) {
           return new Response(
-            JSON.stringify({ error: "Missing required fields: actor and content" }),
+            JSON.stringify({
+              error: "Missing required fields: actor and content",
+            }),
             {
               status: 400,
               headers: { "Content-Type": "application/json" },
-            },
+            }
           );
         }
         // Actor can be a username or a full URI. Extract identifier if necessary.
@@ -228,7 +329,10 @@ serve({
             const actorUrl = new URL(actor);
             const parts = actorUrl.pathname.split("/");
             const usersIndex = parts.indexOf("users");
-            identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
+            identifier =
+              usersIndex !== -1 && parts[usersIndex + 1]
+                ? parts[usersIndex + 1]
+                : "";
           } catch {
             identifier = "";
           }
@@ -238,7 +342,7 @@ serve({
         if (!identifier) {
           return new Response(
             JSON.stringify({ error: "Invalid actor identifier" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
+            { status: 400, headers: { "Content-Type": "application/json" } }
           );
         }
         const exists = await ActorModel.exists(identifier);
@@ -255,14 +359,20 @@ serve({
         const activityId = `${actorUri}/activities/${postId}`;
         await db.putItem({
           PK: `POST#${postId}`,
-          SK: 'OBJECT',
+          SK: "OBJECT",
           id: objectId,
           actor: actorUri,
           content,
           created_at: new Date().toISOString(),
         });
         // Save the Create activity
-        await activityPub.saveActivity(activityId, "Create", actorUri, objectId, { content });
+        await activityPub.saveActivity(
+          activityId,
+          "Create",
+          actorUri,
+          objectId,
+          { content }
+        );
         return new Response(
           JSON.stringify({
             success: true,
@@ -274,13 +384,13 @@ serve({
           {
             status: 201,
             headers: { "Content-Type": "application/json" },
-          },
+          }
         );
       } catch (error) {
         console.error("Error creating post:", error);
         return new Response(
           JSON.stringify({ error: "Internal server error" }),
-          { status: 500, headers: { "Content-Type": "application/json" } },
+          { status: 500, headers: { "Content-Type": "application/json" } }
         );
       }
     }
@@ -299,7 +409,7 @@ serve({
           if (!actor) {
             return new Response(
               JSON.stringify({ error: "Missing required field: actor" }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
+              { status: 400, headers: { "Content-Type": "application/json" } }
             );
           }
           // Resolve actor identifier
@@ -309,7 +419,10 @@ serve({
               const actorUrl = new URL(actor);
               const parts = actorUrl.pathname.split("/");
               const usersIndex = parts.indexOf("users");
-              identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
+              identifier =
+                usersIndex !== -1 && parts[usersIndex + 1]
+                  ? parts[usersIndex + 1]
+                  : "";
             } catch {
               identifier = "";
             }
@@ -319,7 +432,7 @@ serve({
           if (!identifier) {
             return new Response(
               JSON.stringify({ error: "Invalid actor identifier" }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
+              { status: 400, headers: { "Content-Type": "application/json" } }
             );
           }
           const exists = await ActorModel.exists(identifier);
@@ -329,12 +442,12 @@ serve({
               headers: { "Content-Type": "application/json" },
             });
           }
-          const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
+          const postItem = await db.getItem(`POST#${postId}`, "OBJECT");
           if (!postItem) {
-            return new Response(
-              JSON.stringify({ error: 'Post not found' }),
-              { status: 404, headers: { 'Content-Type': 'application/json' } },
-            );
+            return new Response(JSON.stringify({ error: "Post not found" }), {
+              status: 404,
+              headers: { "Content-Type": "application/json" },
+            });
           }
           const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
           const likeId = randomUUID();
@@ -342,14 +455,19 @@ serve({
           // Save Like activity
           await activityPub.saveActivity(activityId, "Like", actorUri, postUri);
           return new Response(
-            JSON.stringify({ success: true, activityId, actor: actorUri, object: postUri }),
-            { status: 201, headers: { "Content-Type": "application/json" } },
+            JSON.stringify({
+              success: true,
+              activityId,
+              actor: actorUri,
+              object: postUri,
+            }),
+            { status: 201, headers: { "Content-Type": "application/json" } }
           );
         } catch (error) {
           console.error("Error processing Like activity:", error);
           return new Response(
             JSON.stringify({ error: "Internal server error" }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
+            { status: 500, headers: { "Content-Type": "application/json" } }
           );
         }
       }
@@ -360,7 +478,7 @@ serve({
           if (!actor) {
             return new Response(
               JSON.stringify({ error: "Missing required field: actor" }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
+              { status: 400, headers: { "Content-Type": "application/json" } }
             );
           }
           // Resolve actor identifier
@@ -370,7 +488,10 @@ serve({
               const actorUrl = new URL(actor);
               const parts = actorUrl.pathname.split("/");
               const usersIndex = parts.indexOf("users");
-              identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
+              identifier =
+                usersIndex !== -1 && parts[usersIndex + 1]
+                  ? parts[usersIndex + 1]
+                  : "";
             } catch {
               identifier = "";
             }
@@ -380,7 +501,7 @@ serve({
           if (!identifier) {
             return new Response(
               JSON.stringify({ error: "Invalid actor identifier" }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
+              { status: 400, headers: { "Content-Type": "application/json" } }
             );
           }
           const exists = await ActorModel.exists(identifier);
@@ -390,12 +511,12 @@ serve({
               headers: { "Content-Type": "application/json" },
             });
           }
-          const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
+          const postItem = await db.getItem(`POST#${postId}`, "OBJECT");
           if (!postItem) {
-            return new Response(
-              JSON.stringify({ error: 'Post not found' }),
-              { status: 404, headers: { 'Content-Type': 'application/json' } },
-            );
+            return new Response(JSON.stringify({ error: "Post not found" }), {
+              status: 404,
+              headers: { "Content-Type": "application/json" },
+            });
           }
           const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
           const undoId = randomUUID();
@@ -403,28 +524,38 @@ serve({
           // Record Undo activity for unlike
           await activityPub.saveActivity(activityId, "Undo", actorUri, postUri);
           return new Response(
-            JSON.stringify({ success: true, activityId, actor: actorUri, object: postUri }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
+            JSON.stringify({
+              success: true,
+              activityId,
+              actor: actorUri,
+              object: postUri,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
           );
         } catch (error) {
           console.error("Error processing Undo Like activity:", error);
           return new Response(
             JSON.stringify({ error: "Internal server error" }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
+            { status: 500, headers: { "Content-Type": "application/json" } }
           );
         }
       }
     }
 
     // Follow and unfollow endpoints
-    if (url.pathname === "/follow" && (request.method === "POST" || request.method === "DELETE")) {
+    if (
+      url.pathname === "/follow" &&
+      (request.method === "POST" || request.method === "DELETE")
+    ) {
       try {
         const body = await request.json();
         const { actor, target } = body || {};
         if (!actor || !target) {
           return new Response(
-            JSON.stringify({ error: "Missing required fields: actor and target" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
+            JSON.stringify({
+              error: "Missing required fields: actor and target",
+            }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
           );
         }
         // Resolve follower identifier
@@ -461,7 +592,7 @@ serve({
         if (!followerId) {
           return new Response(
             JSON.stringify({ error: "Invalid actor identifier" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
+            { status: 400, headers: { "Content-Type": "application/json" } }
           );
         }
         const followerExists = await ActorModel.exists(followerId);
@@ -474,26 +605,29 @@ serve({
         if (targetId && followerId === targetId) {
           return new Response(
             JSON.stringify({ error: "Cannot follow yourself" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
+            { status: 400, headers: { "Content-Type": "application/json" } }
           );
         }
         try {
           const targetHost = new URL(targetUri).hostname;
-          const localHost = config.federation.domain.split(':')[0];
+          const localHost = config.federation.domain.split(":")[0];
           if (targetHost === localHost) {
             const targetExists = await ActorModel.exists(targetId);
             if (!targetExists) {
-              return new Response(JSON.stringify({ error: "Target actor not found" }), {
-                status: 404,
-                headers: { "Content-Type": "application/json" },
-              });
+              return new Response(
+                JSON.stringify({ error: "Target actor not found" }),
+                {
+                  status: 404,
+                  headers: { "Content-Type": "application/json" },
+                }
+              );
             }
           }
         } catch {
-          return new Response(
-            JSON.stringify({ error: "Invalid target URI" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ error: "Invalid target URI" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
         }
         const followerUri = `${config.federation.protocol}://${config.federation.domain}/users/${followerId}`;
         const followId = randomUUID();
@@ -501,91 +635,134 @@ serve({
         if (request.method === "POST") {
           // Save follower relationship and activity
           await activityPub.saveFollower(activityId, followerUri, targetUri);
-          await activityPub.saveActivity(activityId, "Follow", followerUri, targetUri);
+          await activityPub.saveActivity(
+            activityId,
+            "Follow",
+            followerUri,
+            targetUri
+          );
           return new Response(
-            JSON.stringify({ success: true, activityId, follower: followerUri, target: targetUri }),
-            { status: 201, headers: { "Content-Type": "application/json" } },
+            JSON.stringify({
+              success: true,
+              activityId,
+              follower: followerUri,
+              target: targetUri,
+            }),
+            { status: 201, headers: { "Content-Type": "application/json" } }
           );
         } else {
           // DELETE - unfollow
           await activityPub.removeFollower(followerUri, targetUri);
-          await activityPub.saveActivity(activityId, "Undo", followerUri, targetUri);
+          await activityPub.saveActivity(
+            activityId,
+            "Undo",
+            followerUri,
+            targetUri
+          );
           return new Response(
-            JSON.stringify({ success: true, activityId, follower: followerUri, target: targetUri }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
+            JSON.stringify({
+              success: true,
+              activityId,
+              follower: followerUri,
+              target: targetUri,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
           );
         }
       } catch (error) {
         console.error("Error processing follow/unfollow:", error);
         return new Response(
           JSON.stringify({ error: "Internal server error" }),
-          { status: 500, headers: { "Content-Type": "application/json" } },
+          { status: 500, headers: { "Content-Type": "application/json" } }
         );
       }
     }
-    
+
     // Handle outbox requests manually
     const outboxRegex = /^\/users\/([^/]+)\/outbox$/;
     const outboxMatch = outboxRegex.exec(url.pathname);
     if (outboxMatch) {
       const identifier = outboxMatch[1];
       try {
-        const cursor = url.searchParams.get('cursor');
-        const outboxData = await FederationHandlers.handleOutboxRequest(null, identifier, cursor);
+        const cursor = url.searchParams.get("cursor");
+        const outboxData = await FederationHandlers.handleOutboxRequest(
+          null,
+          identifier,
+          cursor
+        );
         if (outboxData) {
           return new Response(JSON.stringify(outboxData), {
             status: 200,
             headers: {
-              'Content-Type': 'application/activity+json',
-              'Access-Control-Allow-Origin': '*',
-            }
+              "Content-Type": "application/activity+json",
+              "Access-Control-Allow-Origin": "*",
+            },
           });
         } else {
-          return new Response(JSON.stringify({ error: 'Actor not found' }), {
+          return new Response(JSON.stringify({ error: "Actor not found" }), {
             status: 404,
-            headers: { 'Content-Type': 'application/json' }
+            headers: { "Content-Type": "application/json" },
           });
         }
       } catch (error) {
-        console.error('Error handling outbox request:', error);
-        return new Response(JSON.stringify({ error: 'Internal server error' }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        console.error("Error handling outbox request:", error);
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
     }
 
     // All other federation-related requests are handled by the Federation object
     try {
       console.log(`🌐 Delegating to federation.fetch for: ${url.pathname}`);
-      const federationResponse = await federation.fetch(request, { contextData: undefined });
-      console.log(`✅ Federation response status: ${federationResponse.status}`);
+      const federationResponse = await federation.fetch(request, {
+        contextData: undefined,
+      });
+      console.log(
+        `✅ Federation response status: ${federationResponse.status}`
+      );
       return federationResponse;
     } catch (federationError) {
-      console.error(`❌ CRITICAL: Federation fetch error for ${url.pathname}:`, federationError);
+      console.error(
+        `❌ CRITICAL: Federation fetch error for ${url.pathname}:`,
+        federationError
+      );
       if (federationError instanceof Error) {
         console.error(`❌ Federation error stack:`, federationError.stack);
         console.error(`❌ Federation error message:`, federationError.message);
       }
-      
+
       // Return a more informative error response
       return new Response(
-        JSON.stringify({ 
-          error: 'Federation processing failed', 
-          details: federationError instanceof Error ? federationError.message : String(federationError),
-          path: url.pathname 
-        }), 
+        JSON.stringify({
+          error: "Federation processing failed",
+          details:
+            federationError instanceof Error
+              ? federationError.message
+              : String(federationError),
+          path: url.pathname,
+        }),
         {
           status: 500,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
   },
-  port: config.port
+  port: config.port,
 });
 
 console.log(`🚀 ImageOn Federation Server started on port ${config.port}`);
-console.log(`🌐 Server URL: ${config.federation.protocol}://${config.federation.domain}`);
-console.log(`📊 Health check: ${config.federation.protocol}://${config.federation.domain}/health`);
-console.log(`🎭 Actors: ${config.federation.protocol}://${config.federation.domain}/users/{identifier}`);
+console.log(
+  `🌐 Server URL: ${config.federation.protocol}://${config.federation.domain}`
+);
+console.log(
+  `📊 Health check: ${config.federation.protocol}://${config.federation.domain}/health`
+);
+console.log(
+  `🎭 Actors: ${config.federation.protocol}://${config.federation.domain}/users/{identifier}`
+);
