@@ -93,7 +93,7 @@ const Post: React.FC<PostProps> = ({
           onClick={onShare}
           className="post__action"
         >
-          📤 {shares}
+          💬 {comments}
         </Button>
       </div>
     </div>
