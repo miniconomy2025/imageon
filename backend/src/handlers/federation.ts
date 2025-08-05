@@ -40,7 +40,7 @@ export class FederationHandlers {
       console.log(`🔑 Key pairs retrieved for: ${identifier}`);
       
       // Create and return the Person object
-      const person = ActorModel.createPersonObject(ctx, identifier, actorData, keyPairs);
+      const person = await ActorModel.createPersonObject(ctx, identifier, actorData, keyPairs);
       console.log(`👤 Person object created for: ${identifier}`);
       
       return person;
