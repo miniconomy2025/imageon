@@ -7,15 +7,16 @@ import { createRedisInstance } from "./config/redis.js";
 import { FederationHandlers } from "./handlers/federation.js";
 import { WebHandlers } from "./handlers/web.js";
 import { ActorModel } from "./models/Actor.js";
-// Import ActivityPub service for managing followers, posts and likes
 import { activityPub } from "./services/activitypub.js";
-// Import randomUUID for generating unique IDs for activities and posts
 import { randomUUID } from "crypto";
+import { S3Service }     from "./services/s3Service.js";
 
 import { db } from "./services/database.js";
 
 // Create Redis instance
 const redis = createRedisInstance();
+
+const s3 = new S3Service();
 
 // Create federation instance with Redis KV store
 const federation = createFederation<void>({
@@ -210,8 +211,38 @@ serve({
     // Create post endpoint
     if (url.pathname === "/posts" && request.method === "POST") {
       try {
-        const body = await request.json();
-        const { actor, content } = body || {};
+        
+        const contentType = request.headers.get("content-type") || "";
+        let actor: string, content: string;
+        let mediaUrl: string | undefined;
+        let mediaType: string | undefined; 
+
+        if (contentType.startsWith("multipart/form-data")) {
+          
+          const form = await request.formData();
+          actor = form.get("actor")?.toString()   || "";
+          content = form.get("content")?.toString() || "";
+          const file = form.get("media") as File | null;
+
+          if (file) {
+            const postId = crypto.randomUUID();
+            const key = `posts/${actor}/${postId}/${file.name}`;
+            mediaUrl = await s3.uploadMedia(key, file.stream(), file.type);
+            mediaType = file.type; 
+          }
+        } else {
+          const json = await request.json();
+          actor   = json.actor;
+          content = json.content;
+        }
+
+        if (!actor || !content) {
+          return new Response(
+            JSON.stringify({ error: "Missing required fields: actor and content" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
         if (!actor || !content) {
           return new Response(
             JSON.stringify({ error: "Missing required fields: actor and content" }),
@@ -221,7 +252,6 @@ serve({
             },
           );
         }
-        // Actor can be a username or a full URI. Extract identifier if necessary.
         let identifier: string;
         if (actor.startsWith("http://") || actor.startsWith("https://")) {
           try {
@@ -249,20 +279,33 @@ serve({
           });
         }
         const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
-        // Generate unique IDs for the activity and the post object
         const postId = randomUUID();
         const objectId = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
         const activityId = `${actorUri}/activities/${postId}`;
-        await db.putItem({
+
+        const item: Record<string, any> = {
           PK: `POST#${postId}`,
-          SK: 'OBJECT',
+          SK: "OBJECT",
           id: objectId,
           actor: actorUri,
           content,
           created_at: new Date().toISOString(),
-        });
-        // Save the Create activity
-        await activityPub.saveActivity(activityId, "Create", actorUri, objectId, { content });
+        };
+        if (mediaUrl) {
+          item.media_url = mediaUrl;
+        }
+        await db.putItem(item);
+
+        const extra = { content } as any;
+        if (mediaUrl) {
+          extra.attachment = [{
+            type: "Document",
+            mediaType: mediaType,
+            url: mediaUrl
+          }];
+        }
+        await activityPub.saveActivity(activityId, "Create", actorUri, objectId, extra);
+        
         return new Response(
           JSON.stringify({
             success: true,
