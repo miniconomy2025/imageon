@@ -1,0 +1,22 @@
+.post-page {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background-color: #f8f9fa;
+}
+
+.post-page__details {
+    flex: 1;
+    background-color: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.post-page__comments {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}

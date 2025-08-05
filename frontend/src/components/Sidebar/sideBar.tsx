@@ -44,7 +44,7 @@ export const SideBar = () => {
             }
         },
         {
-            label: 'Profile',
+            label: 'My Profile',
             onClick: () => {
                 handleUserClick();
                 currentUser?.user?.username && navigate(Pages.profilePage.replace(':username', currentUser?.user?.username));
@@ -54,7 +54,7 @@ export const SideBar = () => {
             label: 'Create post',
             onClick: () => {
                 handleUserClick();
-                currentUser?.user?.username && navigate(Pages.profilePage.replace(':username', currentUser?.user?.username));
+                navigate(Pages.createPostPage);
             }
         }
     ];
@@ -62,6 +62,8 @@ export const SideBar = () => {
     return (
         <>
             {isMobile && isCollapsed && <MenuButton className='toggle-btn' onClick={toggleSidebar} />}
+
+            <div className={`sidebar-spacer ${isCollapsed ? 'collapsed' : ''} ${isMobile ? 'mobile' : ''}`}></div>
 
             <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobile ? 'mobile' : ''}`}>
                 <div className='sidebar-header'>
@@ -79,6 +81,7 @@ export const SideBar = () => {
                             ))}
                         </div>
                         <div className='sidebar-menuSection'>
+                            <h3>Following</h3>
                             {isFetching ? (
                                 <p>Loading following...</p>
                             ) : (

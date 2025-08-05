@@ -1,13 +1,13 @@
-import { User } from "./user";
+import { User } from './user';
+import { Comment } from './comment';
 
 export type Post = {
-    id: number;
+    id: string;
     title?: string;
     content?: string;
     author?: User;
     postedAt?: string;
     likes?: number;
-    shares?: number;
-    comments?: number;
+    comments?: Comment[];
     attachments?: string[];
 };

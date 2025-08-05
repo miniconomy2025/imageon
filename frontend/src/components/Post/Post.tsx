@@ -58,12 +58,14 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onComment, onShare, class
             <div className='post__content'>{post.content}</div>
 
             <div className='post__actions'>
+                <Button variant='primary' size='small' onClick={() => navigate(Pages.postPage.replace(':id', post.id.toString()))} className={`post__action`}>
+                    Open
+                </Button>
                 <Button variant='outline' size='small' onClick={handleLike} className={`post__action ${isLiked ? 'post__action--liked' : ''}`}>
                     ❤️ {likeCount}
                 </Button>
-
-                <Button variant='outline' size='small' onClick={onShare} className='post__action'>
-                    📤 {post.shares}
+                <Button variant='outline' size='small' onClick={onComment} className='post__action'>
+                    💬 {post.comments?.length}
                 </Button>
             </div>
         </div>
