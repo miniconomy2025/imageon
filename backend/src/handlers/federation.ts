@@ -3,6 +3,7 @@ import { ActorModel } from "../models/Actor.js";
 import { crypto } from "../services/cryptography.js";
 import { activityPub } from "../services/activitypub.js";
 import { redis } from "../services/redis.js";
+import { randomUUID } from "crypto";
 
 const OUTBOX_PAGE_SIZE = 10;
 
@@ -106,27 +107,32 @@ export class FederationHandlers {
         follow.objectId.href
       );
 
-      // Save the follow activity
-      await activityPub.saveActivity(
+      await activityPub.saveFollower(
         follow.id.href,
-        'Follow',
         follow.actorId.href,
-        follow.objectId.href,
-        {
-          accepted: true,
-          accepted_at: new Date().toISOString(),
+        follow.objectId.href
+      );
+
+      await activityPub.saveActivity(
+        randomUUID(),  
+        'Accept',
+        follow.objectId.href,  
+        follow.id.href,   
+        { 
+          accepted_at: new Date().toISOString()
         }
       );
 
-      // Send Accept activity back to the follower
+      const acceptActivity = new Accept({
+        actor: follow.objectId, 
+        object: follow    
+      });
       await ctx.sendActivity(
         { identifier: parsed.identifier },
-        follower,
-        new Accept({ 
-          actor: follow.objectId, 
-          object: follow 
-        }),
+        acceptActivity
       );
+
+      console.log(`✅ Auto-accepted follow: ${follow.actorId.href} → ${follow.objectId.href}`);
 
       console.log(`✅ Follow accepted: ${follow.actorId.href} -> ${follow.objectId.href}`);
     } catch (error) {
@@ -185,7 +191,6 @@ export class FederationHandlers {
         console.log('Invalid Undo activity: missing required fields');
         return;
       }
-      // Determine what is being undone. Most commonly a Follow.
       const object = undo.object;
       // If the object is a Follow, remove the follower relationship
       if (object.type === 'Follow' && object.actor && object.object) {
@@ -204,6 +209,24 @@ export class FederationHandlers {
         await activityPub.saveActivity(activityId, 'Undo', actorId, objectId);
         console.log(`🔁 Undo received for unsupported type: ${JSON.stringify(object)}`);
       }
+
+      // await activityPub.removeFollower(
+      //   undo.objectId.href,  
+      //   undo.actor.id.href 
+      // );
+  
+      // const undoId = randomUUID();
+      // await activityPub.saveActivity(
+      //   undoId,
+      //   "Undo",
+      //   undo.actor.id.href,
+      //   undo.object.id.href,
+      //   { undone_at: new Date().toISOString() }
+      // );
+  
+      // console.log(
+      //   `🗑️ Auto-removed follower ${undo.actor.id.href} from ${undo.object.id.href}`
+      // );
     } catch (error) {
       console.error('Error processing Undo activity:', error);
     }
