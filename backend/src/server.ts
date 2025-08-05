@@ -14,23 +14,19 @@ import { randomUUID } from "crypto";
 
 import { db } from "./services/database.js";
 
-// Create Redis instance
 const redis = createRedisInstance();
 
-// Create federation instance with Redis KV store
 const federation = createFederation<void>({
   kv: new RedisKvStore(redis),
+  origin: `${config.federation.protocol}://${config.federation.domain}`,
 });
 
-// Configure federation dispatchers
 federation
   .setActorDispatcher("/users/{identifier}", FederationHandlers.handleActorRequest)
   .setKeyPairsDispatcher(FederationHandlers.handleKeyPairsRequest);
 
-// Configure outbox dispatcher separately
 federation.setOutboxDispatcher("/users/{identifier}/outbox", FederationHandlers.handleOutboxRequest);
 
-// Configure inbox listeners
 federation
   .setInboxListeners("/users/{identifier}/inbox", "/inbox")
   .on(Follow, FederationHandlers.handleFollowActivity)
