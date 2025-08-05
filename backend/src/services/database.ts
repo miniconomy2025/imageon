@@ -3,14 +3,21 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, DeleteCom
 import { config } from "../config/index.js";
 
 // Initialize DynamoDB client
-const dynamoClient = new DynamoDBClient({
+const dynamoClientConfig: any = {
   region: config.dynamodb.region,
   endpoint: config.dynamodb.endpoint,
-  credentials: {
+};
+
+// Only use explicit credentials for local development (when endpoint is set)
+if (config.dynamodb.endpoint) {
+  dynamoClientConfig.credentials = {
     accessKeyId: config.aws.accessKeyId,
     secretAccessKey: config.aws.secretAccessKey,
-  },
-});
+  };
+}
+// For production, AWS SDK will automatically use IAM role credentials
+
+const dynamoClient = new DynamoDBClient(dynamoClientConfig);
 
 export const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
