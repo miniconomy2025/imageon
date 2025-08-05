@@ -1,4 +1,4 @@
-import { Person, CryptographicKey } from "@fedify/fedify";
+import { Person, Context } from "@fedify/fedify";
 import { db } from "../services/database.js";
 import { redis } from "../services/redis.js";
 import { config } from "../config/index.js";
@@ -82,51 +82,30 @@ export class ActorModel {
   /**
    * Convert actor data to Fedify Person object with public key
    */
-  static async createPersonObject(ctx: any, identifier: string, actorData: ActorData, publicKeys: any[]) {
-    // Get the public key if available
-    let cryptographicKey = null;
-    if (publicKeys && publicKeys.length > 0 && publicKeys[0].publicKey) {
-      try {
-        console.log(`🔍 Creating CryptographicKey with ctx.getActorUri: ${ctx.getActorUri(identifier)}`);
-        
-        // Use HTTPS URLs for production to match the request protocol
-        const actorUrl = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
-        console.log(`🔧 Using corrected actor URL: ${actorUrl}`);
-        
-        // Create a CryptographicKey object with the CryptoKey
-        cryptographicKey = new CryptographicKey({
-          id: new URL(`${actorUrl}#main-key`),
-          owner: new URL(actorUrl),
-          publicKey: publicKeys[0].publicKey, // Use the CryptoKey directly
-        });
-        
-        console.log(`🔑 Created CryptographicKey for: ${identifier}`);
-        console.log(`🔍 CryptographicKey created successfully`);
-      } catch (error) {
-        console.error(`❌ Error creating CryptographicKey for ${identifier}:`, error);
-        console.error(`❌ ctx.getActorUri result: ${ctx.getActorUri(identifier)}`);
-        console.error(`❌ publicKey type: ${typeof publicKeys[0].publicKey}`);
-      }
-    }
-
-    // Create Person object with public key if available
+  static async createPersonObject(ctx: Context<void | null>, identifier: string, actorData: ActorData, keys: any[]) {
+    console.log(`🔍 Creating Person object for: ${identifier}`);
+    console.log(`� Keys received:`, keys.length);
+    
+    // Create Person object using Fedify's standard pattern
     const personData: any = {
-      id: new URL(ctx.getActorUri(identifier)),
+      id: ctx.getActorUri(identifier),
       name: actorData.name,
       summary: actorData.summary,
       preferredUsername: actorData.preferredUsername,
-      url: new URL(`/users/${identifier}`, `${config.federation.protocol}://${config.federation.domain}`),
-      inbox: new URL(ctx.getInboxUri(identifier)),
+      url: ctx.getActorUri(identifier),
+      inbox: ctx.getInboxUri(identifier),
       outbox: new URL(`/users/${identifier}/outbox`, `${config.federation.protocol}://${config.federation.domain}`),
       followers: new URL(`/users/${identifier}/followers`, `${config.federation.protocol}://${config.federation.domain}`),
       following: new URL(`/users/${identifier}/following`, `${config.federation.protocol}://${config.federation.domain}`),
       icon: actorData.icon ? new URL(actorData.icon.url) : undefined,
     };
 
-    // Add public key to the constructor data
-    if (cryptographicKey) {
-      personData.publicKey = cryptographicKey;
+    // Add public key using Fedify's standard pattern
+    if (keys && keys.length > 0 && keys[0].cryptographicKey) {
+      personData.publicKey = keys[0].cryptographicKey;
       console.log(`🔑 Added CryptographicKey to Person constructor data for: ${identifier}`);
+    } else {
+      console.log(`⚠️ No cryptographic key available for: ${identifier}`);
     }
 
     const person = new Person(personData);

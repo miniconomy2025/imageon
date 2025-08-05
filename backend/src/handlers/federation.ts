@@ -35,12 +35,12 @@ export class FederationHandlers {
 
       console.log(`✅ Actor found: ${identifier}`);
 
-      // Get key pairs for the actor
-      const keyPairs = await crypto.getOrGenerateKeyPairs(identifier);
-      console.log(`🔑 Key pairs retrieved for: ${identifier}`);
+      // Get actor key pairs using Fedify's context method
+      const keys = await ctx.getActorKeyPairs(identifier);
+      console.log(`🔑 Key pairs retrieved for: ${identifier}`, keys.length > 0 ? 'SUCCESS' : 'FAILED');
       
-      // Create and return the Person object
-      const person = await ActorModel.createPersonObject(ctx, identifier, actorData, keyPairs);
+      // Create and return the Person object using Fedify's standard pattern
+      const person = await ActorModel.createPersonObject(ctx, identifier, actorData, keys);
       console.log(`👤 Person object created for: ${identifier}`);
       
       return person;
