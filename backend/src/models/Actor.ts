@@ -87,6 +87,8 @@ export class ActorModel {
     let cryptographicKey = null;
     if (publicKeys && publicKeys.length > 0 && publicKeys[0].publicKey) {
       try {
+        console.log(`🔍 Creating CryptographicKey with ctx.getActorUri: ${ctx.getActorUri(identifier)}`);
+        
         // Create a CryptographicKey object with the CryptoKey
         cryptographicKey = new CryptographicKey({
           id: new URL(`${ctx.getActorUri(identifier)}#main-key`),
@@ -95,8 +97,11 @@ export class ActorModel {
         });
         
         console.log(`🔑 Created CryptographicKey for: ${identifier}`);
+        console.log(`🔍 CryptographicKey created successfully`);
       } catch (error) {
         console.error(`❌ Error creating CryptographicKey for ${identifier}:`, error);
+        console.error(`❌ ctx.getActorUri result: ${ctx.getActorUri(identifier)}`);
+        console.error(`❌ publicKey type: ${typeof publicKeys[0].publicKey}`);
       }
     }
 
