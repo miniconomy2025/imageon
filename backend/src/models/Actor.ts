@@ -89,10 +89,14 @@ export class ActorModel {
       try {
         console.log(`🔍 Creating CryptographicKey with ctx.getActorUri: ${ctx.getActorUri(identifier)}`);
         
+        // Use HTTPS URLs for production to match the request protocol
+        const actorUrl = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
+        console.log(`🔧 Using corrected actor URL: ${actorUrl}`);
+        
         // Create a CryptographicKey object with the CryptoKey
         cryptographicKey = new CryptographicKey({
-          id: new URL(`${ctx.getActorUri(identifier)}#main-key`),
-          owner: new URL(ctx.getActorUri(identifier)),
+          id: new URL(`${actorUrl}#main-key`),
+          owner: new URL(actorUrl),
           publicKey: publicKeys[0].publicKey, // Use the CryptoKey directly
         });
         
