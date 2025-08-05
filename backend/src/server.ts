@@ -140,6 +140,75 @@ serve({
       });
     }
 
+    // New user routes
+    if (url.pathname === "/auth/user/posts" && request.method === "GET") {
+      const response = await requireAuth(AuthHandlers.handleGetUserPosts)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/user/followers" && request.method === "GET") {
+      const response = await requireAuth(AuthHandlers.handleGetFollowers)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/user/following" && request.method === "GET") {
+      const response = await requireAuth(AuthHandlers.handleGetFollowing)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/user/logged-in" && request.method === "GET") {
+      const response = await requireAuth(AuthHandlers.handleGetLoggedInUser)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/user/by-id" && request.method === "GET") {
+      const response = await AuthHandlers.handleGetUserById(request);
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
     // Health check endpoint
     if (url.pathname === "/health") {
       return await WebHandlers.handleHealthCheck();

@@ -20,7 +20,8 @@
     "services:stop": "npm run db:stop; npm run redis:stop",
     "services:restart": "npm run services:stop && npm run services:start",
     "setup:table": "aws dynamodb create-table --cli-input-json file://../databases/create-imageonapp-table.json --endpoint-url http://localhost:8000",
-    "seed:data": "aws dynamodb batch-write-item --request-items file://../databases/seed-imageonapp.json --endpoint-url http://localhost:8000"
+    "seed:data": "aws dynamodb batch-write-item --request-items file://../databases/seed-imageonapp.json --endpoint-url http://localhost:8000",
+    "full:setup": "npm run db:start && npm run setup:table && npm run seed:data"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.654.0",

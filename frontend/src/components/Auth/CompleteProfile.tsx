@@ -13,6 +13,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 }) => {
   const [displayName, setDisplayName] = useState(user.displayName || "");
   const [username, setUsername] = useState("");
+  const [summary, setSummary] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [usernameError, setUsernameError] = useState<string | null>(null);
@@ -77,7 +78,11 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 
     try {
       const updatedUser = await authService.completeProfile(
-        { displayName: displayName.trim(), username: username.trim() },
+        {
+          displayName: displayName.trim(),
+          username: username.trim(),
+          summary: summary.trim(),
+        },
         user.idToken
       );
 
@@ -96,7 +101,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
     <div className="auth-container">
       <div className="auth-card">
         <h1>Complete Your Profile</h1>
-        <p>Please provide your preferred name and username to continue</p>
+        <p>Please provide your preferred name, username, and bio to continue</p>
 
         {error && <div className="error-message">{error}</div>}
 
@@ -137,6 +142,20 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             <small>
               Username can only contain letters, numbers, and underscores
             </small>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="summary">Bio</label>
+            <textarea
+              id="summary"
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder="Tell us about yourself (optional)"
+              rows={3}
+              maxLength={500}
+              disabled={isLoading}
+            />
+            <small>{summary.length}/500 characters</small>
           </div>
 
           <button

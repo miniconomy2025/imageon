@@ -14,12 +14,18 @@ export interface UserProfile {
   displayName?: string;
   username?: string;
   photoURL?: string;
+  bio?: string;
+  followersCount?: number;
+  followingCount?: number;
+  postsCount?: number;
+  actorId?: string;
   needsProfile: boolean;
 }
 
 export interface CompleteProfileData {
   displayName: string;
   username: string;
+  summary?: string;
 }
 
 class AuthService {
@@ -127,6 +133,161 @@ class AuthService {
     } catch (error) {
       console.error("Error getting profile:", error);
       throw error;
+    }
+  }
+
+  // Get current user (Firebase + Backend profile)
+  async getCurrentUser(): Promise<UserProfile | null> {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        return null;
+      }
+
+      const idToken = await currentUser.getIdToken();
+      return await this.getProfile(idToken);
+    } catch (error) {
+      console.error("Error getting current user:", error);
+      return null;
+    }
+  }
+
+  // Get logged in user (full profile from DynamoDB)
+  async getLoggedInUser(): Promise<UserProfile | null> {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        return null;
+      }
+
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch(`${API_BASE_URL}/auth/user/logged-in`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to get logged in user");
+      }
+
+      return data.user;
+    } catch (error) {
+      console.error("Error getting logged in user:", error);
+      return null;
+    }
+  }
+
+  // Get user posts
+  async getUserPosts(): Promise<any[]> {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("No user logged in");
+      }
+
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch(`${API_BASE_URL}/auth/user/posts`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to get user posts");
+      }
+
+      return data.posts;
+    } catch (error) {
+      console.error("Error getting user posts:", error);
+      throw error;
+    }
+  }
+
+  // Get user followers
+  async getFollowers(): Promise<any[]> {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("No user logged in");
+      }
+
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch(`${API_BASE_URL}/auth/user/followers`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to get followers");
+      }
+
+      return data.followers;
+    } catch (error) {
+      console.error("Error getting followers:", error);
+      throw error;
+    }
+  }
+
+  // Get user following
+  async getFollowing(): Promise<any[]> {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("No user logged in");
+      }
+
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch(`${API_BASE_URL}/auth/user/following`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to get following");
+      }
+
+      return data.following;
+    } catch (error) {
+      console.error("Error getting following:", error);
+      throw error;
+    }
+  }
+
+  // Get user by ID
+  async getUserById(userId: string): Promise<UserProfile | null> {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/auth/user/by-id?userId=${encodeURIComponent(userId)}`,
+        {
+          method: "GET",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to get user");
+      }
+
+      return data.user;
+    } catch (error) {
+      console.error("Error getting user by ID:", error);
+      return null;
     }
   }
 
