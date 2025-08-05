@@ -116,7 +116,7 @@ export class ActorModel {
 
     // Add public key to the constructor data
     if (cryptographicKey) {
-      personData.publicKeys = [cryptographicKey];
+      personData.publicKey = cryptographicKey;
       console.log(`🔑 Added CryptographicKey to Person constructor data for: ${identifier}`);
     }
 
