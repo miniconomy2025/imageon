@@ -49,7 +49,7 @@ if [ ! -f ".env" ]; then
   cat > .env << 'ENV_VARS'
 NODE_ENV=production
 PORT=3000
-FEDERATION_PROTOCOL=http
+FEDERATION_PROTOCOL=https
 DYNAMODB_TABLE_NAME=imageonapp
 REDIS_HOST=localhost
 REDIS_PORT=6379
@@ -63,6 +63,17 @@ ENV_VARS
   echo "FEDERATION_DOMAIN=$FEDERATION_DOMAIN" >> .env
   echo "AWS_REGION=$AWS_REGION" >> .env
   
+  # Also export to current shell session
+  export FEDERATION_DOMAIN="$FEDERATION_DOMAIN"
+  export FEDERATION_PROTOCOL="https"
+  export PORT=3000
+  export AWS_REGION="$AWS_REGION"
+  
+  # Add to ubuntu user's bashrc for persistence
+  grep -q "FEDERATION_DOMAIN" /home/ubuntu/.bashrc || echo "export FEDERATION_DOMAIN=\"$FEDERATION_DOMAIN\"" >> /home/ubuntu/.bashrc
+  grep -q "FEDERATION_PROTOCOL" /home/ubuntu/.bashrc || echo "export FEDERATION_PROTOCOL=\"https\"" >> /home/ubuntu/.bashrc
+  grep -q "export PORT" /home/ubuntu/.bashrc || echo "export PORT=3000" >> /home/ubuntu/.bashrc
+  
   echo "✅ Production environment configured"
 else
   echo "⚙️ Environment file exists, updating production values..."
@@ -71,7 +82,7 @@ else
   sed -i 's/FEDERATION_PROTOCOL=.*/FEDERATION_PROTOCOL=https/' .env
   sed -i "s/FEDERATION_DOMAIN=.*/FEDERATION_DOMAIN=$FEDERATION_DOMAIN/" .env
   sed -i "s/AWS_REGION=.*/AWS_REGION=$AWS_REGION/" .env
-  sed -i 's/DYNAMODB_TABLE_NAME=.*/DYNAMODB_TABLE_NAME=imageonapp/' .env
+  sed -i 's/DYNAMODB_TABLE_NAME=.*/DYNAMODB_TABLE_NAME=imageon-app/' .env
   # Remove DYNAMO_ENDPOINT for production (use native DynamoDB)
   sed -i 's/^DYNAMO_ENDPOINT=/#DYNAMO_ENDPOINT=/' .env
 fi
