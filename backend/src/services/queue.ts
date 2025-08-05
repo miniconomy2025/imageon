@@ -117,6 +117,13 @@ export class QueueProcessor {
           await this.syncRemoteActor(data.remoteActorUri);
         }
         break;
+      case 'process_follow':
+        try {
+          console.log(`📩 Processing follow job:`, data);
+        } catch (error) {
+          console.error('Error processing follow job:', error);
+        }
+        break;
       default:
         console.log(`Unknown federation job type: ${type}`);
     }
@@ -146,16 +153,21 @@ export class QueueProcessor {
       // Mark as pending
       await redis.cacheDeliveryStatus(activityId, targetInbox, 'pending');
 
-      // TODO: Implement actual HTTP delivery to remote inbox
-      // For now, just simulate success
       console.log(`📤 Delivering activity ${activityId} to ${targetInbox}`);
-      
-      // Simulate network delay
-      await this.sleep(100);
-      
+      const body = JSON.stringify({ id: activityId });
+      const response = await fetch(targetInbox, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/activity+json'
+        },
+        body
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
       // Mark as delivered
       await redis.cacheDeliveryStatus(activityId, targetInbox, 'delivered');
-      
+      console.log(`✅ Delivered activity ${activityId} to ${targetInbox}`);
     } catch (error) {
       console.error(`Failed to deliver activity ${activityId} to ${targetInbox}:`, error);
       await redis.cacheDeliveryStatus(activityId, targetInbox, 'failed');
@@ -168,10 +180,17 @@ export class QueueProcessor {
   private async syncRemoteActor(remoteActorUri: string) {
     try {
       console.log(`🔄 Syncing remote actor: ${remoteActorUri}`);
-      
-      // TODO: Implement actual remote actor fetching
-      // For now, just log the operation
-      
+      const response = await fetch(remoteActorUri, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/activity+json, application/json'
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json().catch(() => null);
+      console.log(`🧾 Fetched remote actor data for ${remoteActorUri}:`, data);
     } catch (error) {
       console.error(`Failed to sync remote actor ${remoteActorUri}:`, error);
     }
