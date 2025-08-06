@@ -15,7 +15,6 @@ import { requireAuth } from "./middleware/auth.js";
 
 const redis = createRedisInstance();
 
-
 const federation = createFederation<void>({
   kv: new RedisKvStore(redis),
   origin: `${config.federation.protocol}://${config.federation.domain}`,
@@ -384,7 +383,8 @@ serve({
 
     // Create post endpoint
     if (url.pathname === "/api/posts" && request.method === "POST") {
-      const response = await AuthHandlers.handleCreatePost(request);
+      // Protect the create post endpoint behind authentication
+      const response = await requireAuth((r: any) => AuthHandlers.handleCreatePost(r))(request);
       const responseHeaders = new Headers(response.headers);
       Object.entries(corsHeaders).forEach(([key, value]) => {
         responseHeaders.set(key, value as any);
@@ -405,7 +405,8 @@ serve({
     ) {
       const postId = likeParts[3];
       if (request.method === "POST") {
-        const response = await AuthHandlers.handleLikePost(request, postId);
+        // Authenticate like request
+        const response = await requireAuth((r: any) => AuthHandlers.handleLikePost(r, postId))(request);
         const responseHeaders = new Headers(response.headers);
         Object.entries(corsHeaders).forEach(([key, value]) => {
           responseHeaders.set(key, value as any);
@@ -416,7 +417,8 @@ serve({
         });
       }
       if (request.method === "DELETE") {
-        const response = await AuthHandlers.handleUnlikePost(request, postId);
+        // Authenticate unlike request
+        const response = await requireAuth((r: any) => AuthHandlers.handleUnlikePost(r, postId))(request);
         const responseHeaders = new Headers(response.headers);
         Object.entries(corsHeaders).forEach(([key, value]) => {
           responseHeaders.set(key, value as any);
@@ -438,7 +440,8 @@ serve({
       request.method === "POST"
     ) {
       const parentPostId = commentParts[3];
-      const response = await AuthHandlers.handleCreateComment(request, parentPostId);
+      // Authenticate comment creation
+      const response = await requireAuth((r: any) => AuthHandlers.handleCreateComment(r, parentPostId))(request);
       const responseHeaders = new Headers(response.headers);
       Object.entries(corsHeaders).forEach(([key, value]) => {
         responseHeaders.set(key, value as any);
@@ -451,7 +454,8 @@ serve({
 
     // User feed endpoint - returns posts from followed actors and self
     if (url.pathname === "/api/feed" && request.method === "GET") {
-      const response = await AuthHandlers.handleUserFeed(request);
+      // Authenticate feed retrieval
+      const response = await requireAuth((r: any) => AuthHandlers.handleUserFeed(r))(request);
       const responseHeaders = new Headers(response.headers);
       Object.entries(corsHeaders).forEach(([key, value]) => {
         responseHeaders.set(key, value as any);
@@ -464,7 +468,8 @@ serve({
 
     // Follow and unfollow endpoints
     if (url.pathname === "/api/follow" && (request.method === "POST" || request.method === "DELETE")) {
-      const response = await AuthHandlers.handleFollowUnfollow(request);
+      // Authenticate follow and unfollow actions
+      const response = await requireAuth((r: any) => AuthHandlers.handleFollowUnfollow(r))(request);
       const responseHeaders = new Headers(response.headers);
       Object.entries(corsHeaders).forEach(([key, value]) => {
         responseHeaders.set(key, value as any);

@@ -1,4 +1,4 @@
-import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { initializeApp, cert, getApps , ServiceAccount  } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
@@ -19,7 +19,7 @@ const serviceAccount = {
 // Initialize Firebase Admin if not already initialized
 if (getApps().length === 0) {
   initializeApp({
-    credential: cert(serviceAccount),
+    credential: cert(serviceAccount as ServiceAccount),
     projectId: "imageon-cc2e2"
   });
 }
