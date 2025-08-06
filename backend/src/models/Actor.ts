@@ -79,26 +79,26 @@ export class ActorModel {
         return actorData;
     }
 
-    /**
-     * Convert actor data to Fedify Person object with public key
-     */
-    static async createPersonObject(ctx: Context<void | null>, identifier: string, actorData: ActorData, keys: any[]) {
-        console.log(`🔍 Creating Person object for: ${identifier}`);
-        console.log(`� Keys received:`, keys.length);
-
-        // Create Person object using Fedify's standard pattern
-        const personData: any = {
-            id: ctx.getActorUri(identifier),
-            name: actorData.name,
-            summary: actorData.summary,
-            preferredUsername: actorData.preferredUsername,
-            url: ctx.getActorUri(identifier),
-            inbox: ctx.getInboxUri(identifier),
-            outbox: new URL(`/users/${identifier}/outbox`, `${config.federation.protocol}://${config.federation.domain}`),
-            followers: new URL(`/users/${identifier}/followers`, `${config.federation.protocol}://${config.federation.domain}`),
-            following: new URL(`/users/${identifier}/following`, `${config.federation.protocol}://${config.federation.domain}`),
-            icon: actorData.icon ? new URL(actorData.icon.url) : undefined
-        };
+  /**
+   * Convert actor data to Fedify Person object with public key
+   */
+  static async createPersonObject<T>(ctx: Context<T>, identifier: string, actorData: ActorData, keys: any[]) {
+    console.log(`🔍 Creating Person object for: ${identifier}`);
+    console.log(`� Keys received:`, keys.length);
+    
+    // Create Person object using Fedify's standard pattern
+    const personData: any = {
+      id: ctx.getActorUri(identifier),
+      name: actorData.name,
+      summary: actorData.summary,
+      preferredUsername: actorData.preferredUsername,
+      url: ctx.getActorUri(identifier),
+      inbox: ctx.getInboxUri(identifier),
+      outbox: new URL(`/users/${identifier}/outbox`, `${config.federation.protocol}://${config.federation.domain}`),
+      followers: new URL(`/users/${identifier}/followers`, `${config.federation.protocol}://${config.federation.domain}`),
+      following: new URL(`/users/${identifier}/following`, `${config.federation.protocol}://${config.federation.domain}`),
+      icon: actorData.icon ? new URL(actorData.icon.url) : undefined,
+    };
 
         // Add public key using Fedify's standard pattern
         if (keys && keys.length > 0 && keys[0].cryptographicKey) {
