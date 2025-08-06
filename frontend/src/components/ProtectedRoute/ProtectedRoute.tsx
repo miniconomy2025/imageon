@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { authService } from '../../api/authService';
 import './ProtectedRoute.css';
 
 interface ProtectedRouteProps {
@@ -9,29 +8,26 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-    const { isAuthenticated } = useAuth();
-    const location = useLocation();
+    const { currentUser, userProfile, loading } = useAuth();
 
-    useEffect(() => {
-        if (!isAuthenticated) {
-            // Store the current path so we can redirect back after login
-            const returnPath = location.pathname + location.search;
-
-            // Redirect to Google OAuth
-            authService.redirectToGoogleAuth(returnPath);
-        }
-    }, [isAuthenticated, location]);
-
-    // Show loading state while checking auth or redirecting
-    if (!isAuthenticated) {
+    if (loading) {
         return (
             <div className='auth-loading'>
                 <div className='auth-loading__container'>
                     <div className='auth-loading__spinner'></div>
-                    <p>Redirecting to login...</p>
+                    <p>Loading...</p>
                 </div>
             </div>
         );
+    }
+
+    if (!currentUser) {
+        return <Navigate to='/login' replace />;
+    }
+
+    // If user needs to complete their profile, redirect them to complete profile
+    if (userProfile?.needsProfile) {
+        return <Navigate to='/complete-profile' replace />;
     }
 
     return <>{children}</>;

@@ -22,7 +22,20 @@ export const googleProvider = new GoogleAuthProvider();
 
 // Configure Google Auth Provider
 googleProvider.setCustomParameters({
-  prompt: 'select_account'
+    prompt: 'select_account'
 });
 
-export default app; 
+// Add redirect URI for local development
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
+
+// Set custom parameters for local development
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    googleProvider.setCustomParameters({
+        prompt: 'select_account',
+        // This helps with local development
+        redirect_uri: window.location.origin
+    });
+}
+
+export default app;

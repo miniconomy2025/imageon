@@ -5,3 +5,4 @@ export { default as Input } from './Input/Input';
 export { default as PostCard } from './Post/Post';
 export { default as PostComposer } from './PostComposer/PostComposer';
 export { ProtectedRoute } from './ProtectedRoute/ProtectedRoute';
+export { LogoutButton } from './LogoutButton/LogoutButton';

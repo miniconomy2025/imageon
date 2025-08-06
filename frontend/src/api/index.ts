@@ -1,2 +1,2 @@
 export { postsService, type CreatePostRequest, type CreatePostResponse } from './postsService';
-export { authService, type GoogleAuthRequest, type LoginResponse, type AuthState } from './authService';
+export { AuthService, type UserProfile, type CompleteProfileData, type AuthResponse } from '../services/authService';
