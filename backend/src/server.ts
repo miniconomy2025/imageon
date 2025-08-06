@@ -137,10 +137,16 @@ serve({
       }
     }
 
-    // Followers collection endpoint (ActivityPub OrderedCollection)
-    const followersMatch = /^\/users\/([^/]+)\/followers$/.exec(url.pathname);
-    if (followersMatch && request.method === "GET") {
-      const identifier = followersMatch[1];
+    // Followers collection endpoint (ActivityPub OrderedCollection, API only)
+    const followersParts = url.pathname.split("/");
+    if (
+      followersParts.length === 5 &&
+      followersParts[1] === "api" &&
+      followersParts[2] === "users" &&
+      followersParts[4] === "followers" &&
+      request.method === "GET"
+    ) {
+      const identifier = followersParts[3];
       try {
         // Verify that the actor exists
         const exists = await ActorModel.exists(identifier);
@@ -172,10 +178,16 @@ serve({
       }
     }
 
-    // Following collection endpoint (ActivityPub OrderedCollection)
-    const followingMatch = /^\/users\/([^/]+)\/following$/.exec(url.pathname);
-    if (followingMatch && request.method === "GET") {
-      const identifier = followingMatch[1];
+    // Following collection endpoint (ActivityPub OrderedCollection, API only)
+    const followingParts = url.pathname.split("/");
+    if (
+      followingParts.length === 5 &&
+      followingParts[1] === "api" &&
+      followingParts[2] === "users" &&
+      followingParts[4] === "following" &&
+      request.method === "GET"
+    ) {
+      const identifier = followingParts[3];
       try {
         const exists = await ActorModel.exists(identifier);
         if (!exists) {
@@ -206,7 +218,7 @@ serve({
     }
 
     // Create post endpoint
-    if (url.pathname === "/posts" && request.method === "POST") {
+    if (url.pathname === "/api/posts" && request.method === "POST") {
       try {
         
         const contentType = request.headers.get("content-type") || "";
@@ -319,10 +331,15 @@ serve({
       }
     }
 
-    // Like and unlike endpoints for posts
-    const likeMatch = /^\/posts\/([^/]+)\/like$/.exec(url.pathname);
-    if (likeMatch) {
-      const postId = likeMatch[1];
+    // Like and unlike endpoints for posts (API only)
+    const likeParts = url.pathname.split("/");
+    if (
+      likeParts.length === 5 &&
+      likeParts[1] === "api" &&
+      likeParts[2] === "posts" &&
+      likeParts[4] === "like"
+    ) {
+      const postId = likeParts[3];
       // Determine full post URI.  Posts are stored under `/posts/{id}` and
       // persisted with a POST#<id> partition key (see the Create post handler).
       const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
@@ -450,8 +467,216 @@ serve({
       }
     }
 
+    // Create comment endpoint (API only)
+    const commentParts = url.pathname.split("/");
+    if (
+      commentParts.length === 5 &&
+      commentParts[1] === "api" &&
+      commentParts[2] === "posts" &&
+      commentParts[4] === "comment" &&
+      request.method === "POST"
+    ) {
+      const parentPostId = commentParts[3];
+      // Determine parent post URI
+      const parentPostUri = `${config.federation.protocol}://${config.federation.domain}/posts/${parentPostId}`;
+      try {
+        // Safely parse request body as JSON
+        const body = await request.json().catch(() => null);
+        const actorParam = body && typeof body === 'object' ? (body as any).actor : undefined;
+        const content = body && typeof body === 'object' ? (body as any).content : undefined;
+        if (!actorParam || !content) {
+          return new Response(
+            JSON.stringify({ error: "Missing required fields: actor and content" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        // Resolve actor identifier
+        let identifier: string;
+        if (actorParam.startsWith("http://") || actorParam.startsWith("https://")) {
+          try {
+            const actorUrl = new URL(actorParam);
+            const parts = actorUrl.pathname.split("/");
+            const usersIndex = parts.indexOf("users");
+            identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
+          } catch {
+            identifier = "";
+          }
+        } else {
+          identifier = actorParam;
+        }
+        if (!identifier) {
+          return new Response(
+            JSON.stringify({ error: "Invalid actor identifier" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        // Check actor exists
+        const actorExists = await ActorModel.exists(identifier);
+        if (!actorExists) {
+          return new Response(JSON.stringify({ error: "Actor not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        // Ensure parent post exists
+        const postItem = await db.getItem(`POST#${parentPostId}`, "OBJECT");
+        if (!postItem) {
+          return new Response(
+            JSON.stringify({ error: "Post not found" }),
+            { status: 404, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
+        // Create comment object and activity
+        const commentId = randomUUID();
+        const commentObjectId = `${config.federation.protocol}://${config.federation.domain}/comments/${commentId}`;
+        const activityId = `${actorUri}/activities/${commentId}`;
+        // Save comment object in database
+        const commentItem: Record<string, any> = {
+          PK: `COMMENT#${commentId}`,
+          SK: "OBJECT",
+          id: commentObjectId,
+          actor: actorUri,
+          content,
+          inReplyTo: parentPostUri,
+          created_at: new Date().toISOString(),
+        };
+        await db.putItem(commentItem);
+        // Save Create activity with additional data including inReplyTo
+        const additionalData: Record<string, any> = { content, inReplyTo: parentPostUri };
+        await activityPub.saveActivity(activityId, "Create", actorUri, commentObjectId, additionalData);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            activityId,
+            objectId: commentObjectId,
+            actor: actorUri,
+            content,
+            inReplyTo: parentPostUri,
+          }),
+          {
+            status: 201,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      } catch (error) {
+        console.error("Error creating comment:", error);
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    // User feed endpoint - returns posts from followed actors and self
+    if (url.pathname === "/api/feed" && request.method === "GET") {
+      try {
+        // Extract actor parameter
+        const actorParam = url.searchParams.get("actor") || "";
+        if (!actorParam) {
+          return new Response(
+            JSON.stringify({ error: "Missing required query parameter: actor" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        // Resolve actor identifier
+        let identifier: string;
+        if (actorParam.startsWith("http://") || actorParam.startsWith("https://")) {
+          try {
+            const urlObj = new URL(actorParam);
+            const parts = urlObj.pathname.split("/");
+            const usersIndex = parts.indexOf("users");
+            identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
+          } catch {
+            identifier = "";
+          }
+        } else {
+          identifier = actorParam;
+        }
+        if (!identifier) {
+          return new Response(
+            JSON.stringify({ error: "Invalid actor identifier" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        // Verify actor exists
+        const exists = await ActorModel.exists(identifier);
+        if (!exists) {
+          return new Response(JSON.stringify({ error: "Actor not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        // Get list of actors this user follows (URIs)
+        const followingUris = await activityPub.getFollowing(identifier);
+        // Include the user's own actor URI
+        const selfUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
+        const actorUris = [selfUri, ...followingUris];
+        const items: any[] = [];
+        // Helper to extract identifier from URI
+        const extractIdentifier = (uri: string): string | null => {
+          try {
+            const urlObj = new URL(uri);
+            const parts = urlObj.pathname.split("/");
+            const usersIndex = parts.indexOf("users");
+            if (usersIndex !== -1 && parts[usersIndex + 1]) {
+              return parts[usersIndex + 1];
+            }
+            return null;
+          } catch {
+            return null;
+          }
+        };
+        // Fetch activities for each actor and accumulate Create activities
+        for (const uri of actorUris) {
+          const id = uri.startsWith("http://") || uri.startsWith("https://") ? extractIdentifier(uri) : uri;
+          if (!id) continue;
+          const activities = await activityPub.getActorActivities(id) as any[];
+          for (const act of activities as any[]) {
+            const activity: any = act as any;
+            if (activity.type === "Create") {
+              // Each Create activity should include actor, object, published and possibly additionalData
+              const entry: any = {
+                actor: activity.actor,
+                object: activity.object,
+                published: activity.published,
+              };
+              if (activity.additionalData && typeof activity.additionalData === "object") {
+                if ("content" in activity.additionalData) {
+                  entry.content = (activity.additionalData as any).content;
+                }
+                if ("attachment" in activity.additionalData) {
+                  entry.attachment = (activity.additionalData as any).attachment;
+                }
+                if ("inReplyTo" in activity.additionalData) {
+                  entry.inReplyTo = (activity.additionalData as any).inReplyTo;
+                }
+              }
+              items.push(entry);
+            }
+          }
+        }
+        // Sort by published date descending
+        items.sort((a, b) => {
+          const timeA = new Date(a.published).getTime();
+          const timeB = new Date(b.published).getTime();
+          return timeB - timeA;
+        });
+        return new Response(
+          JSON.stringify({ items }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      } catch (error) {
+        console.error("Error generating feed:", error);
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // Follow and unfollow endpoints
-    if (url.pathname === "/follow" && (request.method === "POST" || request.method === "DELETE")) {
+    if (url.pathname === "/api/follow" && (request.method === "POST" || request.method === "DELETE")) {
       try {
         const body = await request.json().catch(() => null);
         const actor = body && typeof body === 'object' ? (body as any).actor : undefined;
@@ -559,11 +784,15 @@ serve({
       }
     }
     
-    // Handle outbox requests manually
-    const outboxRegex = /^\/users\/([^/]+)\/outbox$/;
-    const outboxMatch = outboxRegex.exec(url.pathname);
-    if (outboxMatch) {
-      const identifier = outboxMatch[1];
+    // Handle outbox requests manually (API only)
+    const outboxParts = url.pathname.split("/");
+    if (
+      outboxParts.length === 5 &&
+      outboxParts[1] === "api" &&
+      outboxParts[2] === "users" &&
+      outboxParts[4] === "outbox"
+    ) {
+      const identifier = outboxParts[3];
       try {
         const cursor = url.searchParams.get('cursor');
         const outboxData = await FederationHandlers.handleOutboxRequest(null, identifier, cursor);
