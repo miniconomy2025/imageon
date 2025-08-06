@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import config from '../../config.json';
 import { Post } from '../types/post';
-import { Comment } from '../types/comment';
 
 export const useGetPost = (id: string) => {
     const url = `${config.API_URL}/posts/${id}`;
@@ -14,7 +13,14 @@ export const useGetPost = (id: string) => {
                     id: '1',
                     title: 'Post 1',
                     content: 'Content 1',
-                    author: { id: 1, firstName: 'Bob', lastName: 'Bobby', username: 'bob', avatar: config.MOCK_IMAGE_URL },
+                    author: {
+                        id: 1,
+                        firstName: 'Bob',
+                        lastName: 'Bobby',
+                        username: 'bob',
+                        avatar: config.MOCK_IMAGE_URL,
+                        bio: 'Content creator and tech enthusiast. Love sharing insights about development and design.'
+                    },
                     postedAt: new Date().toISOString(),
                     attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL],
                     likes: 0,
@@ -23,11 +29,12 @@ export const useGetPost = (id: string) => {
                             id: 'c1',
                             postId: '1',
                             author: {
-                                id: '2',
+                                id: 2,
                                 firstName: 'Alice',
                                 lastName: 'Smith',
                                 username: 'alice',
-                                avatar: config.MOCK_IMAGE_URL
+                                avatar: config.MOCK_IMAGE_URL,
+                                bio: 'UX designer with a passion for creating intuitive experiences.'
                             },
                             content: 'Nice post!',
                             createdAt: new Date().toISOString()
@@ -36,11 +43,12 @@ export const useGetPost = (id: string) => {
                             id: 'c2',
                             postId: '1',
                             author: {
-                                id: '3',
+                                id: 3,
                                 firstName: 'John',
                                 lastName: 'Doe',
                                 username: 'john',
-                                avatar: config.MOCK_IMAGE_URL
+                                avatar: config.MOCK_IMAGE_URL,
+                                bio: 'Software engineer and open source contributor. Always excited to learn new technologies.'
                             },
                             content: 'Interesting read!',
                             createdAt: new Date().toISOString()

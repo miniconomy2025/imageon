@@ -22,6 +22,7 @@ export const router = createBrowserRouter([
         element: <Layout />,
         children: [
             {
+                //Comment out the protected route for testing purposes
                 path: '/',
                 element: (
                     <ProtectedRoute>

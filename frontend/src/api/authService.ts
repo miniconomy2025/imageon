@@ -66,7 +66,8 @@ class AuthService {
                     username: 'googleuser',
                     firstName: 'Google',
                     lastName: 'User',
-                    avatar: config.MOCK_IMAGE_URL || 'https://via.placeholder.com/150'
+                    avatar: config.MOCK_IMAGE_URL || 'https://via.placeholder.com/150',
+                    bio: 'Tech enthusiast and early adopter. Love exploring new platforms and connecting with like-minded individuals.'
                 };
 
                 const mockToken = `mock-google-token-${Date.now()}`;
