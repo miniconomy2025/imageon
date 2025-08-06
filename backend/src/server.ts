@@ -1,4 +1,5 @@
-import "dotenv/config";
+import dotenv from 'dotenv';
+dotenv.config();
 import { serve } from "@hono/node-server";
 import { createFederation, Follow, Accept, Like, Undo } from "@fedify/fedify";
 import { RedisKvStore } from "@fedify/redis";
