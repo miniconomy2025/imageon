@@ -1,0 +1,26 @@
+.user__card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+
+    &:hover {
+        cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+      }
+}
+
+  .user__card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .user__card-name {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #212529;
+}

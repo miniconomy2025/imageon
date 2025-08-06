@@ -2,6 +2,7 @@ import React from 'react'
 import './Card.css'
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  ref?: React.Ref<HTMLDivElement>
   children: React.ReactNode
   variant?: 'default' | 'primary' | 'secondary'
   shadow?: boolean
@@ -11,6 +12,7 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const Card: React.FC<CardProps> = ({ 
   children, 
+  ref,
   variant = 'default',
   shadow = true,
   padding = 'medium',
@@ -27,7 +29,7 @@ const Card: React.FC<CardProps> = ({
   const cardClass = `${baseClass} ${variantClass} ${shadowClass} ${paddingClass} ${clickableClass} ${className}`.trim()
 
   return (
-    <div className={cardClass} onClick={onClick} {...props}>
+    <div className={cardClass} onClick={onClick} ref={ref} {...props}>
       {children}
     </div>
   )
