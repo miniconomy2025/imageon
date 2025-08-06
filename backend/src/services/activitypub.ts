@@ -1,8 +1,6 @@
-import { db } from "./database.js";
-import { redis } from "./redis.js";
-// Import configuration and DynamoDB client so we can perform custom queries
+import { db, docClient } from "./database.js";
+// Import configuration so we can perform custom queries
 import { config } from "../config/index.js";
-import { docClient } from "./database.js";
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 
 export class ActivityPubService {
@@ -38,7 +36,7 @@ export class ActivityPubService {
    */
   async getFollowers(identifier: string) {
     const followers = await db.queryItems(`FOLLOWER#${identifier}`);
-    return followers.map((item: any) => item.follower_id);
+    return followers.map((item: any) => new URL(item.follower_id));
   }
 
   /**
@@ -57,7 +55,7 @@ export class ActivityPubService {
       };
       const result = await docClient.send(new QueryCommand(params));
       const items = result.Items ?? [];
-      return items.map((item: any) => item.following_id);
+      return items.map((item: any) => new URL(item.following_id));
     } catch (error) {
       console.error(`Error getting following for ${identifier}:`, error);
       return [];
@@ -94,26 +92,14 @@ export class ActivityPubService {
   }
 
   /**
-   * Get activities for a specific actor (with caching)
+   * Get activities for a specific actor (no caching - let handlers handle caching)
    */
   async getActorActivities(identifier: string) {
     try {
-      // Try to get from cache first
-      const cached = await redis.getCachedActorActivities(identifier);
-      if (cached) {
-        console.log(`🟢 Cache hit for activities: ${identifier}`);
-        return cached;
-      }
-
-      // Cache miss - get from database
-      console.log(`🔍 Cache miss for activities: ${identifier}, fetching from database`);
+      console.log(`� Fetching activities for actor: ${identifier}`);
       const activities = await db.queryItemsByGSI1(`ACTOR#${identifier}`);
       const result = activities || [];
-
-      // Cache the result for future requests
-      await redis.cacheActorActivities(identifier, result, 900); // Cache for 15 minutes
-      console.log(`💾 Cached activities for: ${identifier}`);
-
+      console.log(`✅ Found ${result.length} activities for: ${identifier}`);
       return result;
     } catch (error) {
       console.error(`Error getting activities for ${identifier}:`, error);
