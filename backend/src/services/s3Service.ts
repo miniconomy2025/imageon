@@ -1,6 +1,7 @@
 // backend/src/services/s3Service.ts
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { config } from "../config/index.js";
+import { Readable } from "stream";
 
 export class S3Service {
   private client = new S3Client({
@@ -11,16 +12,20 @@ export class S3Service {
     },
   });
 
-  private bucket = process.env.S3_BUCKET_NAME!;
+  private bucket: string = process.env.S3_BUCKET_NAME || process.env.AWS_S3_BUCKET || "";
   
   /**
    * Uploads a Buffer or stream to S3 and returns the public URL.
    */
   async uploadMedia(
     key: string,
-    body: Buffer | ReadableStream,
-    contentType: string
+    body: Buffer | Readable,
+    contentType: string,
   ): Promise<string> {
+    if (!this.bucket) {
+      throw new Error("S3 bucket name is not configured. Set S3_BUCKET_NAME or AWS_S3_BUCKET in your environment.");
+    }
+
     const cmd = new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,

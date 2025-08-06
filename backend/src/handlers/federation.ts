@@ -121,15 +121,9 @@ export class FederationHandlers {
     try {
       // Store the follower relationship
       await activityPub.saveFollower(
-        follow.id.href, 
-        follow.actorId.href, 
-        follow.objectId.href
-      );
-
-      await activityPub.saveFollower(
         follow.id.href,
         follow.actorId.href,
-        follow.objectId.href
+        follow.objectId.href,
       );
 
       await activityPub.saveActivity(
@@ -151,9 +145,8 @@ export class FederationHandlers {
         acceptActivity
       );
 
+      // Log a single message indicating the follow was auto-accepted.
       console.log(`✅ Auto-accepted follow: ${follow.actorId.href} → ${follow.objectId.href}`);
-
-      console.log(`✅ Follow accepted: ${follow.actorId.href} -> ${follow.objectId.href}`);
     } catch (error) {
       console.error('Error processing follow activity:', error);
     }

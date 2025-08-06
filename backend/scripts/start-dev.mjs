@@ -17,8 +17,9 @@ try {
   console.log('🔴 Starting Redis...');
   try {
     // Stop existing Redis container if it exists
-    execSync('docker stop imageon-redis 2>nul || echo ""', { stdio: 'pipe' });
-    execSync('docker rm imageon-redis 2>nul || echo ""', { stdio: 'pipe' });
+    // Use /dev/null for cross-platform compatibility; suppress errors if the container doesn't exist.
+    execSync('docker stop imageon-redis 2>/dev/null || true', { stdio: 'pipe' });
+    execSync('docker rm imageon-redis 2>/dev/null || true', { stdio: 'pipe' });
   } catch (e) {
     // Ignore errors - container might not exist
   }

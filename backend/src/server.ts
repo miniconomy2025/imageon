@@ -9,6 +9,7 @@ import { WebHandlers } from "./handlers/web.js";
 import { ActorModel } from "./models/Actor.js";
 import { activityPub } from "./services/activitypub.js";
 import { randomUUID } from "crypto";
+import { Readable } from "stream";
 import { S3Service }     from "./services/s3Service.js";
 
 import { db } from "./services/database.js";
@@ -221,10 +222,14 @@ serve({
           const file = form.get("media") as File | null;
 
           if (file) {
-            const postId = crypto.randomUUID();
+            // Generate a unique ID for the post using the imported randomUUID function.
+            const postId = randomUUID();
             const key = `posts/${actor}/${postId}/${file.name}`;
-            mediaUrl = await s3.uploadMedia(key, file.stream(), file.type);
-            mediaType = file.type; 
+            // Convert the browser ReadableStream into a Node.js Readable. This is necessary because
+            // the AWS SDK expects a Node stream when running in a server environment.
+            const nodeStream = Readable.fromWeb(file.stream() as any);
+            mediaUrl = await s3.uploadMedia(key, nodeStream, file.type);
+            mediaType = file.type;
           }
         } else {
           const json = await request.json();
@@ -235,17 +240,7 @@ serve({
         if (!actor || !content) {
           return new Response(
             JSON.stringify({ error: "Missing required fields: actor and content" }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
-          );
-        }
-
-        if (!actor || !content) {
-          return new Response(
-            JSON.stringify({ error: "Missing required fields: actor and content" }),
-            {
-              status: 400,
-              headers: { "Content-Type": "application/json" },
-            },
+            { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }
         let identifier: string;
