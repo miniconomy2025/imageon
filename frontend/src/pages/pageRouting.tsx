@@ -1,7 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom';
 import Layout from '../layouts/mainLayout';
 import { MainPage, ProfilePage, PostPage, CreatePostPage } from './index';
-import { CallbackPage } from './callbackPage/callbackPage';
+import { LoginPage } from './loginPage/loginPage';
+import { CompleteProfilePage } from './completeProfilePage/completeProfilePage';
 import { ProtectedRoute } from '../components/ProtectedRoute/ProtectedRoute';
 
 export const Pages = {
@@ -9,20 +10,24 @@ export const Pages = {
     profilePage: '/:username',
     postPage: '/post/:postId',
     createPostPage: '/create-post',
-    authCallback: '/auth/callback'
+    login: '/login',
+    completeProfile: '/complete-profile'
 } as const;
 
 export const router = createBrowserRouter([
     {
-        path: '/auth/callback',
-        element: <CallbackPage />
+        path: '/login',
+        element: <LoginPage />
+    },
+    {
+        path: '/complete-profile',
+        element: <CompleteProfilePage />
     },
     {
         path: '/',
         element: <Layout />,
         children: [
             {
-                //Comment out the protected route for testing purposes
                 path: '/',
                 element: (
                     <ProtectedRoute>
