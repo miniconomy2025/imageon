@@ -1,16 +1,23 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { config } from "../config/index.js";
 
 // Initialize DynamoDB client
-const dynamoClient = new DynamoDBClient({
+const dynamoClientConfig: any = {
   region: config.dynamodb.region,
   endpoint: config.dynamodb.endpoint,
-  credentials: {
+};
+
+// Only use explicit credentials for local development (when endpoint is set)
+if (config.dynamodb.endpoint) {
+  dynamoClientConfig.credentials = {
     accessKeyId: config.aws.accessKeyId,
     secretAccessKey: config.aws.secretAccessKey,
-  },
-});
+  };
+}
+// For production, AWS SDK will automatically use IAM role credentials
+
+const dynamoClient = new DynamoDBClient(dynamoClientConfig);
 
 export const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
@@ -55,6 +62,23 @@ export class DatabaseService {
       return true;
     } catch (error) {
       console.error('Error putting item:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Delete an item from the database
+   */
+  async deleteItem(pk: string, sk: string) {
+    try {
+      const command = new DeleteCommand({
+        TableName: this.tableName,
+        Key: { PK: pk, SK: sk },
+      });
+      await docClient.send(command);
+      return true;
+    } catch (error) {
+      console.error(`Error deleting item ${pk}#${sk}:`, error);
       return false;
     }
   }

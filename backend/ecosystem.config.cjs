@@ -14,17 +14,17 @@ module.exports = {
       FEDERATION_PROTOCOL: 'https',
       
       // DynamoDB Configuration for Production
-      AWS_REGION: process.env.AWS_REGION || 'us-east-1',
-      DYNAMODB_TABLE_NAME: 'imageonapp',
+      AWS_REGION: 'us-east-1',
+      DYNAMODB_TABLE_NAME: 'imageon-app',
       // DYNAMO_ENDPOINT is intentionally omitted for production DynamoDB
-      // Use IAM roles for authentication instead of access keys
+      // AWS SDK will automatically use IAM role credentials
       
       // Redis Configuration
       REDIS_HOST: 'localhost',
       REDIS_PORT: 6379,
       
-      // Federation Configuration (set via environment)
-      FEDERATION_DOMAIN: process.env.FEDERATION_DOMAIN,
+      // Federation Configuration - Hardcoded for production
+      FEDERATION_DOMAIN: 'team7-todo.xyz',
       
       // Activity and Rate Limiting Configuration
       ACTIVITY_CACHE_TTL: 3600,
