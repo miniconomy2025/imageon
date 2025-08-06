@@ -328,8 +328,8 @@ serve({
       const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
       if (request.method === "POST") {
         try {
-          const body = await request.json();
-          const { actor } = body || {};
+          const body = await request.json().catch(() => null);
+          const actor = body && typeof body === 'object' ? (body as any).actor : undefined;
           if (!actor) {
             return new Response(
               JSON.stringify({ error: "Missing required field: actor" }),
@@ -389,8 +389,8 @@ serve({
       }
       if (request.method === "DELETE") {
         try {
-          const body = await request.json();
-          const { actor } = body || {};
+          const body = await request.json().catch(() => null);
+          const actor = body && typeof body === 'object' ? (body as any).actor : undefined;
           if (!actor) {
             return new Response(
               JSON.stringify({ error: "Missing required field: actor" }),
@@ -453,8 +453,9 @@ serve({
     // Follow and unfollow endpoints
     if (url.pathname === "/follow" && (request.method === "POST" || request.method === "DELETE")) {
       try {
-        const body = await request.json();
-        const { actor, target } = body || {};
+        const body = await request.json().catch(() => null);
+        const actor = body && typeof body === 'object' ? (body as any).actor : undefined;
+        const target = body && typeof body === 'object' ? (body as any).target : undefined;
         if (!actor || !target) {
           return new Response(
             JSON.stringify({ error: "Missing required fields: actor and target" }),
