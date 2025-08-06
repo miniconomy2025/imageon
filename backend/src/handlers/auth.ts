@@ -23,8 +23,49 @@ export class AuthHandlers {
 
       const decodedToken = await auth.verifyIdToken(idToken);
 
-      // Check if user exists in DynamoDB
-      const userData = await db.getItem(`USER#${decodedToken.uid}`, "PROFILE");
+      // Get user mapping from Firestore to get username
+      const userMappingDoc = await firestore
+        .collection("users")
+        .doc(decodedToken.uid)
+        .get();
+
+      if (!userMappingDoc.exists) {
+        return new Response(
+          JSON.stringify({
+            error: "User not found",
+            needsProfile: true,
+            uid: decodedToken.uid,
+            email: decodedToken.email,
+          }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const userMapping = userMappingDoc.data();
+
+      if (!userMapping?.username) {
+        return new Response(
+          JSON.stringify({
+            error: "Invalid user mapping",
+            needsProfile: true,
+            uid: decodedToken.uid,
+            email: decodedToken.email,
+          }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Check if user exists in DynamoDB using ACTOR#username pattern
+      const userData = await db.getItem(
+        `ACTOR#${userMapping.username}`,
+        "PROFILE"
+      );
 
       if (!userData) {
         return new Response(
@@ -113,9 +154,9 @@ export class AuthHandlers {
 
       // Create user document in DynamoDB
       const userData = {
-        PK: `USER#${request.user.uid}`,
+        PK: `ACTOR#${username}`,
         SK: "PROFILE",
-        GSI1PK: `USER#${request.user.uid}`,
+        GSI1PK: `ACTOR#${username}`,
         GSI1SK: "PROFILE",
         GSI2PK: `USERNAME#${username}`,
         GSI2SK: "PROFILE",
@@ -221,7 +262,35 @@ export class AuthHandlers {
         );
       }
 
-      const userData = await db.getItem(`USER#${request.user.uid}`, "PROFILE");
+      // Get user mapping from Firestore to get username
+      const userMappingDoc = await firestore
+        .collection("users")
+        .doc(request.user.uid)
+        .get();
+
+      if (!userMappingDoc.exists) {
+        return new Response(
+          JSON.stringify({ error: "User mapping not found" }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const userMapping = userMappingDoc.data();
+
+      if (!userMapping?.username) {
+        return new Response(JSON.stringify({ error: "Invalid user mapping" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const userData = await db.getItem(
+        `ACTOR#${userMapping.username}`,
+        "PROFILE"
+      );
 
       if (!userData) {
         return new Response(JSON.stringify({ error: "User not found" }), {
@@ -275,6 +344,31 @@ export class AuthHandlers {
       const body = await request.json();
       const { displayName, photoURL, bio } = body;
 
+      // Get user mapping from Firestore to get username
+      const userMappingDoc = await firestore
+        .collection("users")
+        .doc(request.user.uid)
+        .get();
+
+      if (!userMappingDoc.exists) {
+        return new Response(
+          JSON.stringify({ error: "User mapping not found" }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const userMapping = userMappingDoc.data();
+
+      if (!userMapping?.username) {
+        return new Response(JSON.stringify({ error: "Invalid user mapping" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
       const updateData: any = {
         updated_at: new Date().toISOString(),
       };
@@ -284,7 +378,7 @@ export class AuthHandlers {
       if (bio !== undefined) updateData.bio = bio;
 
       const updateItem = {
-        PK: `USER#${request.user.uid}`,
+        PK: `ACTOR#${userMapping.username}`,
         SK: "PROFILE",
         ...updateData,
       };
@@ -569,15 +663,15 @@ export class AuthHandlers {
     }
   }
 
-  // Get user by ID
+  // Get user by ID (username)
   static async handleGetUserById(request: Request): Promise<Response> {
     try {
       const { searchParams } = new URL(request.url);
-      const userId = searchParams.get("userId");
+      const username = searchParams.get("userId");
 
-      if (!userId) {
+      if (!username) {
         return new Response(
-          JSON.stringify({ error: "User ID parameter required" }),
+          JSON.stringify({ error: "Username parameter required" }),
           {
             status: 400,
             headers: { "Content-Type": "application/json" },
@@ -585,8 +679,8 @@ export class AuthHandlers {
         );
       }
 
-      // Get user from DynamoDB
-      const userData = await db.getItem(`USER#${userId}`, "PROFILE");
+      // Get user from DynamoDB using ACTOR#username pattern
+      const userData = await db.getItem(`ACTOR#${username}`, "PROFILE");
 
       if (!userData) {
         return new Response(JSON.stringify({ error: "User not found" }), {
@@ -665,7 +759,10 @@ export class AuthHandlers {
       }
 
       // Get full user profile from DynamoDB
-      const userData = await db.getItem(`USER#${request.user.uid}`, "PROFILE");
+      const userData = await db.getItem(
+        `ACTOR#${userMapping.username}`,
+        "PROFILE"
+      );
 
       if (!userData) {
         return new Response(
