@@ -715,73 +715,113 @@ export class AuthHandlers {
 
   /**
    * Create a new post. Supports both JSON and multipart/form-data requests.
-   * Accepts actor and content fields and optionally a media file. If media is provided
-   * it is uploaded to S3 and stored in the post object and activity.
+   * The actor is always derived from the authenticated user and never taken from client input.
+   * Optionally accepts a media file which will be uploaded to S3.
    */
   static async handleCreatePost(request: Request): Promise<Response> {
     try {
       const contentType = request.headers.get("content-type") || "";
-      let actor: string;
-      let content: string;
+      let content: string | undefined;
       let mediaUrl: string | undefined;
       let mediaType: string | undefined;
-      // Handle multipart form-data for media uploads
+      let actorParam: string | undefined;
+      let file: File | null | undefined;
+
+      // Parse incoming body depending on content type
       if (contentType.startsWith("multipart/form-data")) {
         const form = await request.formData();
-        actor = form.get("actor")?.toString() || "";
+        // Content is required
         content = form.get("content")?.toString() || "";
-        const file = form.get("media") as File | null;
-        if (file) {
-          // Each upload uses a unique post ID for the storage path
-          const postId = randomUUID();
-          const key = `posts/${actor}/${postId}/${file.name}`;
-          // Convert the browser ReadableStream into a Node.js Readable
-          const nodeStream = Readable.fromWeb(file.stream() as any);
-          const s3 = new S3Service();
-          mediaUrl = await s3.uploadMedia(key, nodeStream, file.type);
-          mediaType = file.type;
-        }
+        actorParam = form.get("actor")?.toString() || undefined;
+        file = form.get("media") as File | null;
       } else {
-        // Expect JSON body for non-file uploads
-        const json = await request.json();
-        actor = json.actor;
-        content = json.content;
+        const json = await request.json().catch(() => ({}));
+        content = (json as any).content;
+        actorParam = (json as any).actor;
       }
-      // Validate required fields
-      if (!actor || !content) {
+
+      // Ensure content is provided
+      if (!content || typeof content !== "string" || content.trim() === "") {
         return new Response(
-          JSON.stringify({ error: "Missing required fields: actor and content" }),
+          JSON.stringify({ error: "Missing required field: content" }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
-      // Resolve actor identifier. Accept both full ActivityPub URI and bare identifier.
-      let identifier: string;
-      if (actor.startsWith("http://") || actor.startsWith("https://")) {
-        try {
-          const actorUrl = new URL(actor);
-          const parts = actorUrl.pathname.split("/");
-          const usersIndex = parts.indexOf("users");
-          identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
-        } catch {
-          identifier = "";
+
+      // Determine the actor identifier from the authenticated user
+      const authReq = request as unknown as AuthenticatedRequest;
+      let identifier: string | undefined;
+      if (authReq.user) {
+        // Fetch username mapping from Firestore
+        const userMappingDoc = await firestore
+          .collection("users")
+          .doc(authReq.user.uid)
+          .get();
+        if (!userMappingDoc.exists) {
+          return new Response(
+            JSON.stringify({ error: "User mapping not found" }),
+            { status: 404, headers: { "Content-Type": "application/json" } }
+          );
         }
+        const userMapping = userMappingDoc.data();
+        if (!userMapping || !userMapping.username) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user mapping" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        identifier = userMapping.username as string;
       } else {
-        identifier = actor;
+        // If unauthenticated, fall back to actorParam for federated actors
+        if (!actorParam || typeof actorParam !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: actor" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        // Resolve identifier from actorParam (URI or bare username)
+        if (actorParam.startsWith("http://") || actorParam.startsWith("https://")) {
+          try {
+            const actorUrl = new URL(actorParam);
+            const parts = actorUrl.pathname.split("/");
+            const usersIndex = parts.indexOf("users");
+            identifier = usersIndex !== -1 && parts[usersIndex + 1]
+              ? parts[usersIndex + 1]
+              : undefined;
+          } catch {
+            identifier = undefined;
+          }
+        } else {
+          identifier = actorParam;
+        }
       }
+
       if (!identifier) {
         return new Response(
           JSON.stringify({ error: "Invalid actor identifier" }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
+
       // Ensure the actor exists
       const exists = await ActorModel.exists(identifier);
       if (!exists) {
-        return new Response(JSON.stringify({ error: "Actor not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Actor not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
       }
+
+      // If a media file was provided, upload it using the derived identifier
+      if (file) {
+        const postIdForMedia = randomUUID();
+        const key = `posts/${identifier}/${postIdForMedia}/${file.name}`;
+        const nodeStream = Readable.fromWeb(file.stream() as any);
+        const s3 = new S3Service();
+        mediaUrl = await s3.uploadMedia(key, nodeStream, file.type);
+        mediaType = file.type;
+      }
+
       // Build ActivityPub URIs
       const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
       const postId = randomUUID();
@@ -837,28 +877,54 @@ export class AuthHandlers {
   static async handleLikePost(request: Request, postId: string): Promise<Response> {
     try {
       const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
-      // Parse request body
+      // Parse request body for potential federated actor
       const body = await request.json().catch(() => null);
-      const actor = body && typeof body === "object" ? (body as any).actor : undefined;
-      if (!actor) {
-        return new Response(
-          JSON.stringify({ error: "Missing required field: actor" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      // Resolve actor identifier
-      let identifier: string;
-      if (actor.startsWith("http://") || actor.startsWith("https://")) {
-        try {
-          const actorUrl = new URL(actor);
-          const parts = actorUrl.pathname.split("/");
-          const usersIndex = parts.indexOf("users");
-          identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
-        } catch {
-          identifier = "";
+      const actorParam = body && typeof body === "object" ? (body as any).actor : undefined;
+
+      // Determine identifier: prefer authenticated user, otherwise use actorParam
+      const authReq = request as unknown as AuthenticatedRequest;
+      let identifier: string | undefined;
+      if (authReq.user) {
+        // Local user: derive username from Firestore mapping
+        const userMappingDoc = await firestore
+          .collection("users")
+          .doc(authReq.user.uid)
+          .get();
+        if (!userMappingDoc.exists) {
+          return new Response(
+            JSON.stringify({ error: "User mapping not found" }),
+            { status: 404, headers: { "Content-Type": "application/json" } }
+          );
         }
+        const userMapping = userMappingDoc.data();
+        if (!userMapping || !userMapping.username) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user mapping" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        identifier = userMapping.username as string;
       } else {
-        identifier = actor;
+        // Federated request: actorParam must be provided
+        if (!actorParam) {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: actor" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        // Resolve identifier from actorParam
+        if (typeof actorParam === "string" && (actorParam.startsWith("http://") || actorParam.startsWith("https://"))) {
+          try {
+            const actorUrl = new URL(actorParam);
+            const parts = actorUrl.pathname.split("/");
+            const usersIndex = parts.indexOf("users");
+            identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : undefined;
+          } catch {
+            identifier = undefined;
+          }
+        } else {
+          identifier = actorParam as any;
+        }
       }
       if (!identifier) {
         return new Response(
@@ -869,18 +935,18 @@ export class AuthHandlers {
       // Verify actor exists
       const exists = await ActorModel.exists(identifier);
       if (!exists) {
-        return new Response(JSON.stringify({ error: "Actor not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Actor not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
       }
       // Ensure the target post exists
       const postItem = await db.getItem(`POST#${postId}`, "OBJECT");
       if (!postItem) {
-        return new Response(JSON.stringify({ error: "Post not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Post not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
       }
       const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
       const likeId = randomUUID();
@@ -911,26 +977,49 @@ export class AuthHandlers {
     try {
       const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
       const body = await request.json().catch(() => null);
-      const actor = body && typeof body === "object" ? (body as any).actor : undefined;
-      if (!actor) {
-        return new Response(
-          JSON.stringify({ error: "Missing required field: actor" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      // Resolve actor identifier
-      let identifier: string;
-      if (actor.startsWith("http://") || actor.startsWith("https://")) {
-        try {
-          const actorUrl = new URL(actor);
-          const parts = actorUrl.pathname.split("/");
-          const usersIndex = parts.indexOf("users");
-          identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
-        } catch {
-          identifier = "";
+      const actorParam = body && typeof body === "object" ? (body as any).actor : undefined;
+
+      // Determine identifier: prefer authenticated user, otherwise use actorParam
+      const authReq = request as unknown as AuthenticatedRequest;
+      let identifier: string | undefined;
+      if (authReq.user) {
+        const userMappingDoc = await firestore
+          .collection("users")
+          .doc(authReq.user.uid)
+          .get();
+        if (!userMappingDoc.exists) {
+          return new Response(
+            JSON.stringify({ error: "User mapping not found" }),
+            { status: 404, headers: { "Content-Type": "application/json" } }
+          );
         }
+        const userMapping = userMappingDoc.data();
+        if (!userMapping || !userMapping.username) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user mapping" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        identifier = userMapping.username as string;
       } else {
-        identifier = actor;
+        if (!actorParam) {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: actor" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        if (typeof actorParam === "string" && (actorParam.startsWith("http://") || actorParam.startsWith("https://"))) {
+          try {
+            const actorUrl = new URL(actorParam);
+            const parts = actorUrl.pathname.split("/");
+            const usersIndex = parts.indexOf("users");
+            identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : undefined;
+          } catch {
+            identifier = undefined;
+          }
+        } else {
+          identifier = actorParam as any;
+        }
       }
       if (!identifier) {
         return new Response(
@@ -940,17 +1029,17 @@ export class AuthHandlers {
       }
       const exists = await ActorModel.exists(identifier);
       if (!exists) {
-        return new Response(JSON.stringify({ error: "Actor not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Actor not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
       }
       const postItem = await db.getItem(`POST#${postId}`, "OBJECT");
       if (!postItem) {
-        return new Response(JSON.stringify({ error: "Post not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Post not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
       }
       const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
       const undoId = randomUUID();
@@ -985,25 +1074,54 @@ export class AuthHandlers {
       const body = await request.json().catch(() => null);
       const actorParam = body && typeof body === "object" ? (body as any).actor : undefined;
       const content = body && typeof body === "object" ? (body as any).content : undefined;
-      if (!actorParam || !content) {
+      // Validate content
+      if (!content) {
         return new Response(
-          JSON.stringify({ error: "Missing required fields: actor and content" }),
+          JSON.stringify({ error: "Missing required field: content" }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
-      // Resolve actor identifier
-      let identifier: string;
-      if (actorParam.startsWith("http://") || actorParam.startsWith("https://")) {
-        try {
-          const actorUrl = new URL(actorParam);
-          const parts = actorUrl.pathname.split("/");
-          const usersIndex = parts.indexOf("users");
-          identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
-        } catch {
-          identifier = "";
+      // Determine identifier: prefer authenticated user, otherwise use actorParam
+      const authReq = request as unknown as AuthenticatedRequest;
+      let identifier: string | undefined;
+      if (authReq.user) {
+        const userMappingDoc = await firestore
+          .collection("users")
+          .doc(authReq.user.uid)
+          .get();
+        if (!userMappingDoc.exists) {
+          return new Response(
+            JSON.stringify({ error: "User mapping not found" }),
+            { status: 404, headers: { "Content-Type": "application/json" } }
+          );
         }
+        const userMapping = userMappingDoc.data();
+        if (!userMapping || !userMapping.username) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user mapping" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        identifier = userMapping.username as string;
       } else {
-        identifier = actorParam;
+        if (!actorParam) {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: actor" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        if (typeof actorParam === "string" && (actorParam.startsWith("http://") || actorParam.startsWith("https://"))) {
+          try {
+            const actorUrl = new URL(actorParam);
+            const parts = actorUrl.pathname.split("/");
+            const usersIndex = parts.indexOf("users");
+            identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : undefined;
+          } catch {
+            identifier = undefined;
+          }
+        } else {
+          identifier = actorParam as any;
+        }
       }
       if (!identifier) {
         return new Response(
@@ -1014,18 +1132,18 @@ export class AuthHandlers {
       // Check actor exists
       const actorExists = await ActorModel.exists(identifier);
       if (!actorExists) {
-        return new Response(JSON.stringify({ error: "Actor not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Actor not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
       }
       // Ensure parent post exists
       const postItem = await db.getItem(`POST#${parentPostId}`, "OBJECT");
       if (!postItem) {
-        return new Response(JSON.stringify({ error: "Post not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Post not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
       }
       const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
       const commentId = randomUUID();
@@ -1182,43 +1300,74 @@ export class AuthHandlers {
   static async handleFollowUnfollow(request: Request): Promise<Response> {
     try {
       const body = await request.json().catch(() => null);
-      const actor = body && typeof body === "object" ? (body as any).actor : undefined;
-      const target = body && typeof body === "object" ? (body as any).target : undefined;
-      if (!actor || !target) {
+      const actorParam = body && typeof body === "object" ? (body as any).actor : undefined;
+      const targetParam = body && typeof body === "object" ? (body as any).target : undefined;
+
+      // Determine follower identifier: prefer authenticated user
+      const authReq = request as unknown as AuthenticatedRequest;
+      let followerId: string | undefined;
+      if (authReq.user) {
+        const userMappingDoc = await firestore
+          .collection("users")
+          .doc(authReq.user.uid)
+          .get();
+        if (!userMappingDoc.exists) {
+          return new Response(
+            JSON.stringify({ error: "User mapping not found" }),
+            { status: 404, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        const userMapping = userMappingDoc.data();
+        if (!userMapping || !userMapping.username) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user mapping" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        followerId = userMapping.username as string;
+      } else {
+        // Federated request: actorParam must be provided
+        if (!actorParam) {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: actor" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        if (typeof actorParam === "string" && (actorParam.startsWith("http://") || actorParam.startsWith("https://"))) {
+          try {
+            const u = new URL(actorParam);
+            const parts = u.pathname.split("/");
+            const idx = parts.indexOf("users");
+            followerId = idx !== -1 && parts[idx + 1] ? parts[idx + 1] : undefined;
+          } catch {
+            followerId = undefined;
+          }
+        } else {
+          followerId = actorParam as any;
+        }
+      }
+      const target = targetParam;
+      if (!followerId || !target) {
         return new Response(
           JSON.stringify({ error: "Missing required fields: actor and target" }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
-      // Resolve follower identifier
-      let followerId: string;
-      if (actor.startsWith("http://") || actor.startsWith("https://")) {
-        try {
-          const u = new URL(actor);
-          const parts = u.pathname.split("/");
-          const idx = parts.indexOf("users");
-          followerId = idx !== -1 && parts[idx + 1] ? parts[idx + 1] : "";
-        } catch {
-          followerId = "";
-        }
-      } else {
-        followerId = actor;
-      }
       // Resolve target identifier and target URI. If target is a full URI, use it; otherwise construct local URI.
-      let targetId: string;
+      let targetId: string | undefined;
       let targetUri: string;
-      if (target.startsWith("http://") || target.startsWith("https://")) {
+      if (typeof target === "string" && (target.startsWith("http://") || target.startsWith("https://"))) {
         targetUri = target;
         try {
           const tu = new URL(target);
           const parts = tu.pathname.split("/");
           const idx = parts.indexOf("users");
-          targetId = idx !== -1 && parts[idx + 1] ? parts[idx + 1] : "";
+          targetId = idx !== -1 && parts[idx + 1] ? parts[idx + 1] : undefined;
         } catch {
-          targetId = "";
+          targetId = undefined;
         }
       } else {
-        targetId = target;
+        targetId = target as any;
         targetUri = `${config.federation.protocol}://${config.federation.domain}/users/${target}`;
       }
       if (!followerId) {
@@ -1230,10 +1379,10 @@ export class AuthHandlers {
       // Verify follower exists
       const followerExists = await ActorModel.exists(followerId);
       if (!followerExists) {
-        return new Response(JSON.stringify({ error: "Actor not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Actor not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
       }
       if (targetId && followerId === targetId) {
         return new Response(
@@ -1245,7 +1394,7 @@ export class AuthHandlers {
       try {
         const targetHost = new URL(targetUri).hostname;
         const localHost = config.federation.domain.split(":" )[0];
-        if (targetHost === localHost) {
+        if (targetHost === localHost && targetId) {
           const targetExists = await ActorModel.exists(targetId);
           if (!targetExists) {
             return new Response(
