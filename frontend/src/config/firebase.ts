@@ -1,14 +1,15 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import "dotenv/config";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBoiSyJdsWHqm_Zb3mZ8VXbW0t6LQ5vFHw",
-  authDomain: "imageon-cc2e2.firebaseapp.com",
-  projectId: "imageon-cc2e2",
-  storageBucket: "imageon-cc2e2.firebasestorage.app",
-  messagingSenderId: "480920431317",
-  appId: "1:480920431317:web:29debb14e94ceb6758905c",
-  measurementId: "G-HM07DQR22Z"
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_FIREBASE_APP_ID,
+  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
