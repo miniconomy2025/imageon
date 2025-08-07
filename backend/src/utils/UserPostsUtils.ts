@@ -111,7 +111,7 @@ async function fetchUserPosts(userUrl: string): Promise<PaginationResult> {
         // Step 1: Get user profile get user profilewe
         const userData = await fetchUserProfile(userUrl);
 
-        // Step 2: Extract outbox URL
+        // Step 2: Extract outbox URL url
         const outboxUrl = extractOutboxUrl(userData);
 
         // Step 3: Fetch outbox data
