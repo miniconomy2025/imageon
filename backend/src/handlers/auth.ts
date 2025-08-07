@@ -8,7 +8,6 @@ import { crypto } from '../services/cryptography.js';
 
 // Additional imports to support post, like, comment, feed and follow operations
 import { randomUUID } from 'crypto';
-import { Readable } from 'stream';
 import { S3Service } from '../services/s3Service.js';
 import { activityPub } from '../services/activitypub.js';
 
@@ -677,13 +676,13 @@ export class AuthHandlers {
                     // Each upload uses a unique post ID for the storage path
                     const postId = randomUUID();
                     const key = `posts/${actor}/${postId}/${file.name}`;
-                    // Convert the browser ReadableStream into a Node.js Readable
-                    const nodeStream = Readable.fromWeb(file.stream() as any);
+                    const arrayBuffer = await file.arrayBuffer();
+                    const buffer = Buffer.from(arrayBuffer);
                     const s3 = new S3Service();
-                    mediaUrl = await s3.uploadMedia(key, nodeStream, file.type);
+                    mediaUrl = await s3.uploadMedia(key, buffer, file.type);
                     mediaType = file.type;
                 }
-            } else {
+            } else {  
                 // Expect JSON body for non-file uploads
                 const json = await request.json();
                 actor = json.actor;
