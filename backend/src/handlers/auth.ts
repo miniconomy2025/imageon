@@ -1042,7 +1042,10 @@ export class AuthHandlers {
             };
             // Fetch Create activities from each actor
             for (const uri of actorUris) {
-                const id = uri.startsWith('http://') || uri.startsWith('https://') ? extractIdentifier(uri) : uri;
+                const uriStr = String(uri);
+                const id = uriStr.startsWith('http://') || uriStr.startsWith('https://')
+                    ? extractIdentifier(uriStr)
+                    : uriStr;
                 if (!id) continue;
                 const activities = (await activityPub.getActorActivities(id)) as any[];
                 for (const act of activities) {

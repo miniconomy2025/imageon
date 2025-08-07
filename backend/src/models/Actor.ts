@@ -32,21 +32,13 @@ export interface ActorData {
 }
 
 export class ActorModel {
-    /**
-     * Get actor data from cache or database with cryptographic keys
-     */
-    static async getActor(identifier: string): Promise<ActorData | null> {
-        // Try to get from cache first
-        const cached = await redis.getCachedActor(identifier);
-        if (cached) {
-            console.log(`🟢 Cache hit for actor: ${identifier}`);
-            return cached;
-        }
-
-        // Cache miss - get from database
-        console.log(`🔍 Cache miss for actor: ${identifier}, fetching from database`);
-        const actor = await db.getActor(identifier);
-        if (!actor) return null;
+  /**
+   * Get actor data from database (no caching - let handlers handle caching)
+   */
+  static async getActor(identifier: string): Promise<ActorData | null> {
+    console.log(`� Fetching actor from database: ${identifier}`);
+    const actor = await db.getActor(identifier);
+    if (!actor) return null;
 
         // Get cryptographic keys for the actor
         const keyPair = await db.getItem(`ACTOR#${identifier}`, 'KEYPAIR');
@@ -72,33 +64,30 @@ export class ActorModel {
             publicKeyJwk: keyPair?.publicKey
         };
 
-        // Cache the result for future requests
-        await redis.cacheActor(identifier, actorData, 3600); // Cache for 1 hour
-        console.log(`💾 Cached actor: ${identifier}`);
+    console.log(`✅ Actor data retrieved for: ${identifier}`);
+    return actorData;
+  }
 
-        return actorData;
-    }
-
-    /**
-     * Convert actor data to Fedify Person object with public key
-     */
-    static async createPersonObject(ctx: Context<void | null>, identifier: string, actorData: ActorData, keys: any[]) {
-        console.log(`🔍 Creating Person object for: ${identifier}`);
-        console.log(`� Keys received:`, keys.length);
-
-        // Create Person object using Fedify's standard pattern
-        const personData: any = {
-            id: ctx.getActorUri(identifier),
-            name: actorData.name,
-            summary: actorData.summary,
-            preferredUsername: actorData.preferredUsername,
-            url: ctx.getActorUri(identifier),
-            inbox: ctx.getInboxUri(identifier),
-            outbox: new URL(`/users/${identifier}/outbox`, `${config.federation.protocol}://${config.federation.domain}`),
-            followers: new URL(`/users/${identifier}/followers`, `${config.federation.protocol}://${config.federation.domain}`),
-            following: new URL(`/users/${identifier}/following`, `${config.federation.protocol}://${config.federation.domain}`),
-            icon: actorData.icon ? new URL(actorData.icon.url) : undefined
-        };
+  /**
+   * Convert actor data to Fedify Person object with public key
+   */
+  static async createPersonObject<T>(ctx: Context<T>, identifier: string, actorData: ActorData, keys: any[]) {
+    console.log(`🔍 Creating Person object for: ${identifier}`);
+    console.log(`� Keys received:`, keys.length);
+    
+    // Create Person object using Fedify's standard pattern
+    const personData: any = {
+      id: ctx.getActorUri(identifier),
+      name: actorData.name,
+      summary: actorData.summary,
+      preferredUsername: actorData.preferredUsername,
+      url: ctx.getActorUri(identifier),
+      inbox: ctx.getInboxUri(identifier),
+      outbox: new URL(`/users/${identifier}/outbox`, `${config.federation.protocol}://${config.federation.domain}`),
+      followers: new URL(`/users/${identifier}/followers`, `${config.federation.protocol}://${config.federation.domain}`),
+      following: new URL(`/users/${identifier}/following`, `${config.federation.protocol}://${config.federation.domain}`),
+      icon: actorData.icon ? new URL(actorData.icon.url) : undefined,
+    };
 
         // Add public key using Fedify's standard pattern
         if (keys && keys.length > 0 && keys[0].cryptographicKey) {
