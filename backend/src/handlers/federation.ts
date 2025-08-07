@@ -733,14 +733,18 @@ export class FederationHandlers {
             const containsMedia = !!postItem?.media_url;
             const mediaType = containsMedia ? (['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && 'Image') || 'Video' : null;
             // Create Note object
+            const noteUrl = `${ctx
+                .getActorUri(values.identifier)
+                .toString()
+                .replace(/\/users\/[^/]+$/, '')}/users/${values.identifier}/activities/${noteId}`;
             const note = new Note({
-                id: postItem.id ? new URL(postItem.id) : new URL(`https://example.com/notes/${noteId}`),
+                id: new URL(noteUrl),
                 content: postItem.content,
                 published: Temporal.Instant.from(timestamp),
                 attachments:
                     (containsMedia && [
                         new Object({
-                            id: new URL(postItem.id),
+                            id: new URL(noteUrl),
                             mediaType: mediaType,
                             url: new URL(postItem.media_url)
                         })
