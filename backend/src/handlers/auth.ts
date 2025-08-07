@@ -458,7 +458,8 @@ export class AuthHandlers {
                     followers: followers.map(follower => ({
                         username: follower.SK?.replace('ACTOR#', '') || '',
                         displayName: follower.follower_display_name,
-                        createdAt: follower.created_at
+                        createdAt: follower.created_at,
+                        url: follower.following_id
                     }))
                 }),
                 {
