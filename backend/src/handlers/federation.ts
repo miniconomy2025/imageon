@@ -647,7 +647,7 @@ export class FederationHandlers {
     }
 
     /**
-     * Note object dispatcher - handles requests for individual Note objects
+     * Note object dispatcher - handles requests for individual Note objectss
      */
     static async handleNoteRequest(ctx: RequestContext<ContextData>, values: { identifier: string; noteId: string }) {
         try {
