@@ -547,7 +547,7 @@ export class AuthHandlers {
             }
 
             // Get user from DynamoDB
-            const userData = await db.getItem(`USER#${userId}`, 'PROFILE');
+            const userData = await db.getItem(`ACTOR#${userId}`, 'PROFILE');
 
             if (!userData) {
                 return new Response(JSON.stringify({ error: 'User not found' }), {
@@ -682,7 +682,7 @@ export class AuthHandlers {
                     mediaUrl = await s3.uploadMedia(key, buffer, file.type);
                     mediaType = file.type;
                 }
-            } else {  
+            } else {
                 // Expect JSON body for non-file uploads
                 const json = await request.json();
                 actor = json.actor;
@@ -1043,9 +1043,7 @@ export class AuthHandlers {
             // Fetch Create activities from each actor
             for (const uri of actorUris) {
                 const uriStr = String(uri);
-                const id = uriStr.startsWith('http://') || uriStr.startsWith('https://')
-                    ? extractIdentifier(uriStr)
-                    : uriStr;
+                const id = uriStr.startsWith('http://') || uriStr.startsWith('https://') ? extractIdentifier(uriStr) : uriStr;
                 if (!id) continue;
                 const activities = (await activityPub.getActorActivities(id)) as any[];
                 for (const act of activities) {
