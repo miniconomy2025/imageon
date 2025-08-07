@@ -54,7 +54,7 @@ export class FederationHandlers {
     try {
       
       // Rate limiting check
-      const isRateLimited = await this.isRateLimitExceeded(ctx, CacheKeys.RATE_LIMIT.actor(identifier), 100, 3600);
+      const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, CacheKeys.RATE_LIMIT.actor(identifier), 100, 3600);
 
       if (isRateLimited) {
         return null; // Rate limit exceeded
