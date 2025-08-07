@@ -49,7 +49,8 @@ export const SideBar = () => {
             label: 'My Profile',
             onClick: () => {
                 handleUserClick();
-                currentUser?.user?.username && navigate(Pages.profilePage.replace(':username', currentUser?.user?.username));
+                currentUser?.user?.username &&
+                    navigate(Pages.profilePage.replace(':username', currentUser?.user.username) + `?url=${encodeURIComponent(currentUser?.user.url || '')}`);
             }
         },
         {

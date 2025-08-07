@@ -11,4 +11,5 @@ export type Post = {
     likes?: number;
     comments?: Comment[];
     attachments?: Attachment[];
+    url?: string;
 };
