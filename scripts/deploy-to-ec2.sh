@@ -70,7 +70,9 @@ ENV_VARS
     echo "FIREBASE_PRIVATE_KEY_ID=$FIREBASE_PRIVATE_KEY_ID" >> .env
   fi
   if [ -n "$FIREBASE_PRIVATE_KEY" ]; then
-    echo "FIREBASE_PRIVATE_KEY=$FIREBASE_PRIVATE_KEY" >> .env
+    # Properly handle multi-line private key by replacing literal \n with actual newlines
+    FORMATTED_KEY=$(echo "$FIREBASE_PRIVATE_KEY" | sed 's/\\n/\n/g')
+    echo "FIREBASE_PRIVATE_KEY=\"$FORMATTED_KEY\"" >> .env
   fi
   
   # Also export to current shell session
@@ -89,7 +91,11 @@ ENV_VARS
     grep -q "FIREBASE_PRIVATE_KEY_ID" /home/ubuntu/.bashrc || echo "export FIREBASE_PRIVATE_KEY_ID=\"$FIREBASE_PRIVATE_KEY_ID\"" >> /home/ubuntu/.bashrc
   fi
   if [ -n "$FIREBASE_PRIVATE_KEY" ]; then
-    grep -q "FIREBASE_PRIVATE_KEY" /home/ubuntu/.bashrc || echo "export FIREBASE_PRIVATE_KEY=\"$FIREBASE_PRIVATE_KEY\"" >> /home/ubuntu/.bashrc
+    # Format the private key properly for bashrc
+    FORMATTED_KEY=$(echo "$FIREBASE_PRIVATE_KEY" | sed 's/\\n/\n/g')
+    if ! grep -q "FIREBASE_PRIVATE_KEY" /home/ubuntu/.bashrc; then
+      echo "export FIREBASE_PRIVATE_KEY=\"$FORMATTED_KEY\"" >> /home/ubuntu/.bashrc
+    fi
   fi
   
   echo "✅ Production environment configured"
@@ -114,11 +120,14 @@ else
   fi
   if [ -n "$FIREBASE_PRIVATE_KEY" ]; then
     if grep -q "FIREBASE_PRIVATE_KEY=" .env; then
-      # Handle multi-line private key by escaping newlines
-      ESCAPED_KEY=$(echo "$FIREBASE_PRIVATE_KEY" | sed ':a;N;$!ba;s/\n/\\n/g')
-      sed -i "s|FIREBASE_PRIVATE_KEY=.*|FIREBASE_PRIVATE_KEY=\"$ESCAPED_KEY\"|" .env
+      # Handle multi-line private key by replacing literal \n with actual newlines
+      FORMATTED_KEY=$(echo "$FIREBASE_PRIVATE_KEY" | sed 's/\\n/\n/g')
+      # Use a different delimiter since the key contains forward slashes
+      sed -i "\|FIREBASE_PRIVATE_KEY=.*|c\\
+FIREBASE_PRIVATE_KEY=\"$FORMATTED_KEY\"" .env
     else
-      echo "FIREBASE_PRIVATE_KEY=\"$FIREBASE_PRIVATE_KEY\"" >> .env
+      FORMATTED_KEY=$(echo "$FIREBASE_PRIVATE_KEY" | sed 's/\\n/\n/g')
+      echo "FIREBASE_PRIVATE_KEY=\"$FORMATTED_KEY\"" >> .env
     fi
   fi
 fi
