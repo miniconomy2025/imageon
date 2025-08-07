@@ -8,7 +8,7 @@ const mockActorModel = {
         return identifier === 'testuser';
     },
     getActor: async identifier => {
-        // Mock: return full actor object
+        // Mock: return full actor object here
         return {
             id: `https://example.com/users/${identifier}`,
             type: 'Person',
