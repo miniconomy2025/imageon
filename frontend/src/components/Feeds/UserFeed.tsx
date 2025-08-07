@@ -1,8 +1,9 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useMemo } from 'react';
 import { useUserFeed } from '../../hooks/useUserFeed';
 import Card from '../Card/Card';
 import PostCard from '../Post/Post';
 import { useAuth } from '../../contexts/AuthContext';
+import { useGetUser } from '../../hooks/useGetUser';
 
 export const UserFeed = () => {
     const { userProfile } = useAuth();
@@ -16,6 +17,13 @@ export const UserFeed = () => {
     }
 
     const { posts: feedPosts, isFetching: isLoadingPosts, fetchNextPage, hasNextPage } = useUserFeed(username);
+
+    const posts = useMemo(() => {
+        return feedPosts?.map(post => ({
+            ...post,
+            author: post?.author && post?.author !== undefined && useGetUser(post?.author?.username)
+        }));
+    }, [feedPosts]);
 
     const lastPostElementRef = useCallback(
         (node: HTMLDivElement) => {
@@ -47,7 +55,7 @@ export const UserFeed = () => {
             {feedPosts &&
                 feedPosts.map((post, index) => (
                     <Card key={post.id} ref={index === feedPosts.length - 1 ? lastPostElementRef : null}>
-                        <PostCard post={post} />
+                        <PostCard post={post} author={post.author} />
                     </Card>
                 ))}
             {isLoadingPosts && <p>Loading more posts...</p>}

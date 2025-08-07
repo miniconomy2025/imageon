@@ -7,11 +7,11 @@ import { Pages } from '../../pages/pageRouting';
 import { AttachmentCarousel } from '../AttachmentCarousel/attachementCarousel';
 import { Post } from '../../types/post';
 import { useLikePost } from '../../hooks/useLikePost';
-import { UserProfile } from '../../api';
+import { User } from '../../types/user';
 
 interface PostProps extends React.HTMLAttributes<HTMLDivElement> {
     post: Post;
-    author?: UserProfile;
+    author?: User;
     className?: string;
 }
 
@@ -62,14 +62,14 @@ const PostCard: React.FC<PostProps> = ({ post, author, className = '', ...props 
     return (
         <div className={`post ${className}`} {...props}>
             <div className='post__header'>
-                <Avatar src={author?.photoURL || undefined} alt={author?.username} fallbackText={author?.username} size='medium' />
+                <Avatar src={author?.avatar || undefined} alt={author?.username} fallbackText={author?.username} size='medium' />
                 <div className='post__author-info'>
                     <h4
                         onClick={() => {
                             navigate(Pages.profilePage.replace(':username', author?.username ?? ''));
                         }}
                         className='post__author-name'>
-                        {author?.displayName}
+                        {author?.username}
                     </h4>
                     {post.postedAt && <span className='post__timestamp'>{formatTime(post.postedAt)}</span>}
                 </div>

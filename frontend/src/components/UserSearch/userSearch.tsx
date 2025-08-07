@@ -8,14 +8,32 @@ import { Pages } from '../../pages/pageRouting';
 
 export const UserSearch = () => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [showResults, setShowResults] = useState(false);
     const [followingUsers, setFollowingUsers] = useState<Set<number>>(new Set());
     const searchRef = useRef<HTMLDivElement>(null);
+    const debounceTimeoutRef = useRef<number | null>(null);
 
     const navigate = useNavigate();
 
-    const { users, isLoading } = useSearchUser(searchTerm);
+    const { users, isLoading } = useSearchUser(debouncedSearchTerm);
     const { followUser, isLoading: isFollowLoading } = useFollowUser();
+
+    useEffect(() => {
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+
+        debounceTimeoutRef.current = window.setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 1000);
+
+        return () => {
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
+            }
+        };
+    }, [searchTerm]);
 
     // Close results when clicking outside
     useEffect(() => {

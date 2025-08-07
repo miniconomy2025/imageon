@@ -10,36 +10,6 @@ export const useUserFeed = (username: string) => {
         queryKey: ['userFeed', username],
         queryFn: async ({ pageParam = 1 }): Promise<Post[]> => {
             const page = pageParam as number;
-            if (config.MOCK_DATA) {
-                return Promise.resolve([
-                    {
-                        id: String(page * 3 - 2),
-                        title: `Post ${page * 3 - 2}`,
-                        content: `Content ${
-                            page * 3 - 2
-                        } content content content content content content content content content content content content content content content content content content content content content content content contentv`,
-                        author: { username },
-                        postedAt: new Date().toISOString(),
-                        attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL]
-                    },
-                    {
-                        id: String(page * 3 - 1),
-                        title: `Post ${page * 3 - 1}`,
-                        content: `Content ${page * 3 - 1}`,
-                        author: { username },
-                        postedAt: new Date().toISOString(),
-                        attachments: [config.MOCK_IMAGE_URL]
-                    },
-                    {
-                        id: String(page * 3),
-                        title: `Post ${page * 3}`,
-                        content: `Content ${page * 3}`,
-                        author: { username },
-                        postedAt: new Date().toISOString(),
-                        attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL]
-                    }
-                ] as Post[]);
-            }
 
             const url = `${config.API_URL}/api/feed?actor=${encodeURIComponent(username)}`;
 
@@ -66,7 +36,8 @@ export const useUserFeed = (username: string) => {
 
                 return {
                     ...item,
-                    id: postId
+                    id: postId,
+                    attachments: item.attachment || []
                 };
             });
         },
