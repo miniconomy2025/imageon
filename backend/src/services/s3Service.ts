@@ -12,7 +12,7 @@ export class S3Service {
     },
   });
 
-  private bucket: string = process.env.AWS_S3_BUCKET || process.env.AWS_S3_BUCKET || "";
+  private bucket: string = process.env.AWS_S3_BUCKET || "";
   
   /**
    * Uploads a Buffer or stream to S3 and returns the public URL.
@@ -23,7 +23,9 @@ export class S3Service {
     contentType: string,
   ): Promise<string> {
     if (!this.bucket) {
-      throw new Error("S3 bucket name is not configured. Set AWS_S3_BUCKET or AWS_S3_BUCKET in your environment.");
+      throw new Error(
+        "S3 bucket name is not configured. Set AWS_S3_BUCKET in your environment."
+      );
     }
 
     const cmd = new PutObjectCommand({

@@ -19,10 +19,11 @@ const serviceAccount = {
 };
 
 // Initialize Firebase Admin if not already initialized
+// Use the project ID from the service account or environment instead of hard‑coding
 if (getApps().length === 0) {
   initializeApp({
     credential: cert(serviceAccount as ServiceAccount),
-    projectId: "imageon-cc2e2"
+    projectId: process.env.FIREBASE_PROJECT_ID || (serviceAccount as any).project_id,
   });
 }
 

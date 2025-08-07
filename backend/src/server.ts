@@ -11,7 +11,6 @@ import { AuthHandlers } from "./handlers/auth.js";
 import { ActorModel } from "./models/Actor.js";
 import { activityPub } from "./services/activitypub.js";
 
-import { db } from "./services/database.js";
 import { requireAuth } from "./middleware/auth.js";
 
 const redis = createRedisInstance();
