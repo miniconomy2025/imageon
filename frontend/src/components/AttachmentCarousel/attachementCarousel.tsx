@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import './attachmentCarousel.css';
+import { Attachment } from '../../types/attachment';
 
-export const AttachmentCarousel = ({ attachments }: { attachments: string[] }) => {
+export const AttachmentCarousel = ({ attachments }: { attachments: Attachment[] }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
 
     const carouselIndex = () => {
@@ -16,15 +17,28 @@ export const AttachmentCarousel = ({ attachments }: { attachments: string[] }) =
         <div className='attachment-carousel'>
             {attachments.length > 1 && <></>}
             <div className='attachment-carousel__images'>
-                {attachments.map((attachment, index) => (
-                    <img
-                        key={index}
-                        src={attachment}
-                        alt={`Attachment ${index + 1}`}
-                        className='attachment-carousel__image'
-                        style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-                    />
-                ))}
+                {attachments.map((attachment, index) => {
+                    const isVideo = attachment.mediaType?.startsWith('video/');
+
+                    return isVideo ? (
+                        <video
+                            key={index}
+                            src={attachment.url}
+                            className='attachment-carousel__image'
+                            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+                            controls
+                            preload='metadata'
+                        />
+                    ) : (
+                        <img
+                            key={index}
+                            src={attachment.url}
+                            alt={`Attachment ${index + 1}`}
+                            className='attachment-carousel__image'
+                            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+                        />
+                    );
+                })}
             </div>
             <div className='attachment-carousel__controls'>
                 {attachments.length > 1 && (

@@ -41,6 +41,9 @@ export const useGetUser = (username: string) => {
             }
 
             const backendUser = result.user;
+
+            console.debug('Fetched user:', backendUser);
+
             return {
                 id: parseInt(backendUser.uid) || 0,
                 username: backendUser.username,

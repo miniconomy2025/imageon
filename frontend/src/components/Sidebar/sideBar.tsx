@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserCard } from '../UserCard/userCard';
 import { MenuButton } from '../MenuButton/menuButton';
 import Card from '../Card/Card';
+import { useGetFollowers } from '../../hooks/useGetFollowers';
 
 export interface SidebarMenuItem {
     label: string;
@@ -20,6 +21,7 @@ export const SideBar = () => {
     const currentUser = useGetCurrentUser();
     const navigate = useNavigate();
     const { following, isFetching } = useGetFollowing();
+    const { followers, isFetching: isFetchingFollowers } = useGetFollowers();
 
     useEffect(() => {
         setIsCollapsed(isMobile);
@@ -79,6 +81,26 @@ export const SideBar = () => {
                                     {item.label}
                                 </Card>
                             ))}
+                        </div>
+                        <div className='sidebar-menuSection'>
+                            <h3>Your followers</h3>
+                            {isFetchingFollowers ? (
+                                <p>Loading followers...</p>
+                            ) : (
+                                <ul>
+                                    {followers &&
+                                        followers?.map((user, index) => (
+                                            <UserCard
+                                                key={`${user.id}-${index}`}
+                                                user={user}
+                                                onClick={() => {
+                                                    handleUserClick();
+                                                    navigate(Pages.profilePage.replace(':username', user.username));
+                                                }}
+                                            />
+                                        ))}
+                                </ul>
+                            )}
                         </div>
                         <div className='sidebar-menuSection'>
                             <h3>Following</h3>
