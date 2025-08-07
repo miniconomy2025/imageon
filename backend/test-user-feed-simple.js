@@ -4,7 +4,7 @@
 // Mock
 const mockActorModel = {
     exists: async identifier => {
-        // Mock: return true for 'testuser', false for others
+        // Mock: return true for 'testuser', false for others??
         return identifier === 'testuser';
     },
     getActor: async identifier => {
