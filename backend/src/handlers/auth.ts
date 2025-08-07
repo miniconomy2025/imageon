@@ -504,13 +504,10 @@ export class AuthHandlers {
                 });
             }
 
-            const followingItems = await db.queryItemsByGSI2(
-                `ACTOR#${userMapping.username}`,
-                {
-                    sortKeyExpression: 'GSI2SK = :sk',
-                    attributeValues: { ':sk': 'FOLLOWING' }
-                }
-            );
+            const followingItems = await db.queryItemsByGSI2(`ACTOR#${userMapping.username}`, {
+                sortKeyExpression: 'GSI2SK = :sk',
+                attributeValues: { ':sk': 'FOLLOWING' }
+            });
 
             const following = await Promise.all(
                 followingItems.map(async item => {
@@ -1081,13 +1078,17 @@ export class AuthHandlers {
                 const uriStr = String(uri);
                 const id = uriStr.startsWith('http://') || uriStr.startsWith('https://') ? extractIdentifier(uriStr) : uriStr;
                 if (!id) continue;
+                
+                // Get full actor object
+                const actor = await ActorModel.getActor(id);
                 const activities = (await activityPub.getActorActivities(id)) as any[];
+                
                 for (const act of activities) {
                     const activity: any = act as any;
                     if (activity.type === 'Create') {
                         const entry: any = {
-                            actor: activity.actor,
-                            object: activity.object,
+                            actor: actor, // Full actor object
+                            object: activity.object, // Full post object
                             published: activity.published
                         };
                         if (activity.additionalData && typeof activity.additionalData === 'object') {
