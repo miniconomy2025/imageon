@@ -32,7 +32,6 @@ export class S3Service {
       Key: key,
       Body: body,
       ContentType: contentType,
-      ACL: "public-read",
     });
     await this.client.send(cmd);
     return `https://${this.bucket}.s3.amazonaws.com/${key}`;
