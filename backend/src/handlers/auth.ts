@@ -504,20 +504,56 @@ export class AuthHandlers {
                 });
             }
 
-            // Get following from DynamoDB
-            const following = await db.queryItems(`FOLLOWER#${userMapping.username}`, {
-                sortKeyExpression: 'begins_with(SK, :sk)',
-                attributeValues: { ':sk': 'ACTOR#' }
-            });
+            const followingItems = await db.queryItemsByGSI2(
+                `ACTOR#${userMapping.username}`,
+                {
+                    sortKeyExpression: 'GSI2SK = :sk',
+                    attributeValues: { ':sk': 'FOLLOWING' }
+                }
+            );
+
+            const following = await Promise.all(
+                followingItems.map(async item => {
+                    const followUri: string | undefined = item.following_id;
+                    let username = '';
+                    let displayName: string | undefined = undefined;
+
+                    if (followUri) {
+                        try {
+                            const url = new URL(followUri);
+
+                            const parts = url.pathname.split('/');
+                            const usersIndex = parts.indexOf('users');
+                            if (usersIndex !== -1 && parts[usersIndex + 1]) {
+                                username = parts[usersIndex + 1];
+                            }
+
+                            const localHost = config.federation.domain.split(':')[0];
+                            if (url.hostname === localHost && username) {
+                                try {
+                                    const actor = await ActorModel.getActor(username);
+                                    displayName = actor?.name;
+                                } catch {
+                                    // Ignore resolution errors; leave displayName undefined
+                                }
+                            }
+                        } catch {
+                            username = '';
+                        }
+                    }
+
+                    return {
+                        username,
+                        displayName,
+                        createdAt: item.created_at
+                    };
+                })
+            );
 
             return new Response(
                 JSON.stringify({
                     success: true,
-                    following: following.map(follow => ({
-                        username: follow.SK?.replace('ACTOR#', '') || '',
-                        displayName: follow.following_display_name,
-                        createdAt: follow.created_at
-                    }))
+                    following
                 }),
                 {
                     status: 200,
