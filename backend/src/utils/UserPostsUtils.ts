@@ -108,7 +108,7 @@ function createResultObject(firstData: FirstPageData, firstUrl: string, notes: N
 // Main function that orchestrates the entire flow done
 async function fetchUserPosts(userUrl: string): Promise<PaginationResult> {
     try {
-        // Step 1: Get user profile
+        // Step 1: Get user profile get user profilewe
         const userData = await fetchUserProfile(userUrl);
 
         // Step 2: Extract outbox URL
