@@ -1,3 +1,5 @@
 {
-    "API_URL": "http://localhost:5000/api"
+  "API_URL": "http://localhost:5000/api",
+  "MOCK_DATA": false,
+  "MOCK_IMAGE_URL": "https://via.placeholder.com/150"
 }
