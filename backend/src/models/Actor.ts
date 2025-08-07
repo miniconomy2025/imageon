@@ -1,6 +1,5 @@
 import { Person, Context } from "@fedify/fedify";
 import { db } from "../services/database.js";
-import { redis } from "../services/redis.js";
 import { config } from "../config/index.js";
 
 export interface ActorData {
@@ -33,18 +32,10 @@ export interface ActorData {
 
 export class ActorModel {
   /**
-   * Get actor data from cache or database with cryptographic keys
+   * Get actor data from database (no caching - let handlers handle caching)
    */
   static async getActor(identifier: string): Promise<ActorData | null> {
-    // Try to get from cache first
-    const cached = await redis.getCachedActor(identifier);
-    if (cached) {
-      console.log(`🟢 Cache hit for actor: ${identifier}`);
-      return cached;
-    }
-
-    // Cache miss - get from database
-    console.log(`🔍 Cache miss for actor: ${identifier}, fetching from database`);
+    console.log(`� Fetching actor from database: ${identifier}`);
     const actor = await db.getActor(identifier);
     if (!actor) return null;
 
@@ -72,17 +63,14 @@ export class ActorModel {
       publicKeyJwk: keyPair?.publicKey,
     };
 
-    // Cache the result for future requests
-    await redis.cacheActor(identifier, actorData, 3600); // Cache for 1 hour
-    console.log(`💾 Cached actor: ${identifier}`);
-
+    console.log(`✅ Actor data retrieved for: ${identifier}`);
     return actorData;
   }
 
   /**
    * Convert actor data to Fedify Person object with public key
    */
-  static async createPersonObject(ctx: Context<void | null>, identifier: string, actorData: ActorData, keys: any[]) {
+  static async createPersonObject<T>(ctx: Context<T>, identifier: string, actorData: ActorData, keys: any[]) {
     console.log(`🔍 Creating Person object for: ${identifier}`);
     console.log(`� Keys received:`, keys.length);
     
