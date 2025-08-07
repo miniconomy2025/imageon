@@ -1,15 +1,14 @@
 // backend/src/services/s3Service.ts
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { config } from "../config/index.js";
 import { Readable } from "stream";
-
+import { config } from "../config/index.js"
 export class S3Service {
   private client = new S3Client({
     region: process.env.AWS_REGION || config.dynamodb.region,
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || config.aws.accessKeyId,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || config.aws.secretAccessKey,
-    },
+    // credentials: {
+    //   accessKeyId: process.env.AWS_ACCESS_KEY_ID || config.aws.accessKeyId,
+    //   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || config.aws.secretAccessKey,
+    // },
   });
 
   private bucket: string = process.env.AWS_S3_BUCKET || "";
