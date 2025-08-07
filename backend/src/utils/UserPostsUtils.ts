@@ -49,7 +49,7 @@ function extractOutboxUrl(userData: UserData): string {
     return outboxUrl;
 }
 
-// Step 3: Fetch outbox data
+// Step 3: Fetch outbox data here
 async function fetchOutboxData(outboxUrl: string): Promise<OutboxData> {
     console.log('Step 3: Fetching outbox data...');
     const outboxResponse = await axios.get(outboxUrl, {
