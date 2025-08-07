@@ -72,22 +72,49 @@ export class ActivityPubService {
             return false;
         }
 
+        const timestamp = new Date().toISOString();
         const item: Record<string, any> = {
             PK: `ACTIVITY#${activityId}`,
             SK: activityType.toUpperCase(),
             GSI1PK: `ACTOR#${identifier}`,
-            GSI1SK: new Date().toISOString(),
+            GSI1SK: timestamp,
             GSI2PK: `${activityType.toUpperCase()}_ACTIVITIES`,
-            GSI2SK: new Date().toISOString(),
+            GSI2SK: timestamp,
             id: activityId,
             type: activityType,
             actor: actorId,
-            object: objectId,
-            published: new Date().toISOString()
+            published: timestamp
         };
+
+        // For Create activities with Notes, store the note content in the activity
+        if (activityType === 'Create' && additionalData?.object?.type === 'Note') {
+            item.object = {
+                id: activityId, // Use same ID for now since that's what the outbox shows
+                type: 'Note',
+                content: additionalData.object.content,
+                published: timestamp
+            };
+
+            // Also create a separate Note record
+            await db.putItem({
+                PK: `POST#${activityId}`,
+                SK: 'OBJECT',
+                GSI1PK: `ACTOR#${identifier}`,
+                GSI1SK: timestamp,
+                id: activityId,
+                type: 'Note',
+                content: additionalData.object.content,
+                published: timestamp,
+                actor: actorId
+            });
+        } else {
+            item.object = objectId;
+        }
+
         if (additionalData && Object.keys(additionalData).length > 0) {
             item.additionalData = additionalData;
         }
+
         return await db.putItem(item);
     }
 
