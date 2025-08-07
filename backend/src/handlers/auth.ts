@@ -459,7 +459,7 @@ export class AuthHandlers {
                         username: follower.SK?.replace('ACTOR#', '') || '',
                         displayName: follower.follower_display_name,
                         createdAt: follower.created_at,
-                        url: follower.following_id
+                        url: follower.follower_id
                     }))
                 }),
                 {
