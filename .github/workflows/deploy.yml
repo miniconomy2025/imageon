@@ -90,7 +90,7 @@ jobs:
               -o ServerAliveCountMax=3 \
               -o ConnectTimeout=30 \
               ubuntu@${{ secrets.EC2_HOST }} \
-              "timeout 900 bash -c 'chmod +x /tmp/deploy-to-ec2.sh && /tmp/deploy-to-ec2.sh \"${{ env.APP_DIR }}\" \"${{ env.PM2_APP_NAME }}\" \"${{ secrets.FEDERATION_DOMAIN }}\" \"${{ secrets.AWS_REGION }}\"; echo \"Exit code: \$?\"'"
+              "timeout 900 bash -c 'chmod +x /tmp/deploy-to-ec2.sh && /tmp/deploy-to-ec2.sh \"${{ env.APP_DIR }}\" \"${{ env.PM2_APP_NAME }}\" \"${{ secrets.FEDERATION_DOMAIN }}\" \"${{ secrets.AWS_REGION }}\" \"${{ secrets.FIREBASE_PRIVATE_KEY_ID }}\" \"${{ secrets.FIREBASE_PRIVATE_KEY }}\"; echo \"Exit code: \$?\"'"
           
       - name: Health Check
         timeout-minutes: 5

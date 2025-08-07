@@ -26,6 +26,16 @@ module.exports = {
       // Federation Configuration - Hardcoded for production
       FEDERATION_DOMAIN: 'team7-todo.xyz',
       
+      // Firebase Configuration (non-sensitive values)
+      FIREBASE_TYPE: 'service_account',
+      FIREBASE_PROJECT_ID: 'imageon-cc2e2',
+      FIREBASE_CLIENT_ID: '114126417811598938971',
+      FIREBASE_AUTH_URI: 'https://accounts.google.com/o/oauth2/auth',
+      FIREBASE_TOKEN_URI: 'https://oauth2.googleapis.com/token',
+      FIREBASE_AUTH_PROVIDER_X509_CERT_URL: 'https://www.googleapis.com/oauth2/v1/certs',
+      FIREBASE_CLIENT_X509_CERT_URL: 'https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40imageon-cc2e2.iam.gserviceaccount.com',
+      FIREBASE_CLIENT_EMAIL: 'firebase-adminsdk-fbsvc@imageon-cc2e2.iam.gserviceaccount.com',
+      
       // Activity and Rate Limiting Configuration
       ACTIVITY_CACHE_TTL: 3600,
       RATE_LIMIT_WINDOW: 900,
