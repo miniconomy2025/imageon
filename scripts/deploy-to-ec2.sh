@@ -50,7 +50,7 @@ if [ ! -f ".env" ]; then
 NODE_ENV=production
 PORT=3000
 FEDERATION_PROTOCOL=https
-DYNAMODB_TABLE_NAME=imageonapp
+DYNAMODB_TABLE_NAME=imageon-app
 REDIS_HOST=localhost
 REDIS_PORT=6379
 LOG_LEVEL=info
