@@ -654,7 +654,7 @@ export class FederationHandlers {
             const { identifier, noteId } = values;
             console.log(`📝 Note request for identifier: ${identifier}, noteId: ${noteId}`);
 
-            // Rate limiting check
+            // Rate limiting check, does it work right
             const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, 'note_request', 200, 3600);
             if (isRateLimited) {
                 return null;
