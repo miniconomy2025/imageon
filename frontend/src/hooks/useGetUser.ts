@@ -42,6 +42,8 @@ export const useGetUser = (username: string) => {
             return mappedUser;
         },
         enabled: !!username,
+        retry: 3,
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
         staleTime: 5 * 60 * 1000,
         gcTime: 10 * 60 * 1000
     });

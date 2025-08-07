@@ -73,6 +73,10 @@ export const useUserFeed = (username: string) => {
             return undefined;
         },
         enabled: !!username,
+        retry: 3,
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+        staleTime: 2 * 60 * 1000, // 2 minutes (shorter for feeds to keep them fresh)
+        gcTime: 5 * 60 * 1000, // 5 minutes
         initialPageParam: 1
     });
 
