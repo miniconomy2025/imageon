@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGetPost } from '../../hooks/useGetPost';
 import { useGetCurrentUser } from '../../hooks/useGetCurrentUser';
 import { useCreateComment } from '../../hooks/useCreateComment';
@@ -9,16 +9,24 @@ import './postPage.css';
 
 export const PostPage = () => {
     const params = useParams();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { user: currentUser } = useGetCurrentUser();
     const [newComment, setNewComment] = useState('');
     const { createComment, isLoading: isCreatingComment, isSuccess } = useCreateComment();
 
-    if (!params.postId || params.postId === '' || params.postId === undefined) {
-        navigate('/');
+    const postUrl = searchParams.get('url');
+    const postId = params.postId;
+
+    if (!postId) {
+        return <div>Error: Post ID is required</div>;
     }
 
-    const { data: post } = useGetPost(params.postId ?? '');
+    if (!postUrl) {
+        return <div>Error: Post URL is required</div>;
+    }
+
+    const { data: post } = useGetPost(postUrl);
 
     useEffect(() => {
         if (isSuccess) {
@@ -29,13 +37,13 @@ export const PostPage = () => {
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!newComment.trim() || !params.postId) {
+        if (!newComment.trim() || !postId) {
             return;
         }
 
         try {
             createComment({
-                postId: params.postId,
+                postId: postId,
                 content: newComment.trim()
             });
         } catch (error) {
@@ -49,6 +57,8 @@ export const PostPage = () => {
             handleCommentSubmit(e as any);
         }
     };
+
+    console.debug('PostPage rendered with post:', post);
 
     return (
         <div className='post-page'>

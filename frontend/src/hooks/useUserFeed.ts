@@ -62,7 +62,8 @@ export const useUserFeed = (username: string) => {
                     author: user,
                     object: item.object,
                     likes: 0,
-                    comments: []
+                    comments: [],
+                    url: item.object
                 };
             });
         },
