@@ -13,14 +13,6 @@ export const useLikePost = () => {
 
     const mutation = useMutation({
         mutationFn: async ({ postId, isLiked }: LikePostParams): Promise<void> => {
-            if (config.MOCK_DATA) {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve();
-                    }, 500);
-                });
-            }
-
             const url = `${config.API_URL}/api/posts/${postId}/like`;
             const method = isLiked ? 'DELETE' : 'POST';
 

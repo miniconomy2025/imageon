@@ -62,7 +62,7 @@ const PostCard: React.FC<PostProps> = ({ post, author, className = '', ...props 
     return (
         <div className={`post ${className}`} {...props}>
             <div className='post__header'>
-                <Avatar src={author?.avatar || undefined} alt={author?.username} fallbackText={author?.username} size='medium' />
+                <Avatar src={author?.icon?.url || undefined} alt={author?.username} fallbackText={author?.username} size='medium' />
                 <div className='post__author-info'>
                     <h4
                         onClick={() => {

@@ -8,9 +8,7 @@ export const useUserFeed = (username: string) => {
 
     const { data, isError, isSuccess, isFetching, fetchNextPage, hasNextPage } = useInfiniteQuery<Post[], Error>({
         queryKey: ['userFeed', username],
-        queryFn: async ({ pageParam = 1 }): Promise<Post[]> => {
-            const page = pageParam as number;
-
+        queryFn: async ({}): Promise<Post[]> => {
             const url = `${config.API_URL}/api/feed?actor=${encodeURIComponent(username)}`;
 
             const response = await fetch(url, {
@@ -34,10 +32,37 @@ export const useUserFeed = (username: string) => {
                     postId = urlParts[urlParts.length - 1];
                 }
 
+                // Map actor to both actor and author fields
+                const user = item.actor
+                    ? {
+                          id: item.actor.id,
+                          username: item.actor.preferredUsername || '',
+                          name: item.actor.name,
+                          preferredUsername: item.actor.preferredUsername,
+                          summary: item.actor.summary,
+                          bio: item.actor.summary,
+                          url: item.actor.url,
+                          icon: item.actor.icon,
+                          type: item.actor.type,
+                          inbox: item.actor.inbox,
+                          outbox: item.actor.outbox,
+                          followers: item.actor.followers,
+                          following: item.actor.following,
+                          published: item.actor.published,
+                          followers_count: item.actor.followers_count,
+                          following_count: item.actor.following_count
+                      }
+                    : undefined;
+
                 return {
-                    ...item,
                     id: postId,
-                    attachments: item.attachment || []
+                    content: item.content,
+                    postedAt: item.published,
+                    attachments: item.attachment || [],
+                    author: user,
+                    object: item.object,
+                    likes: 0,
+                    comments: []
                 };
             });
         },

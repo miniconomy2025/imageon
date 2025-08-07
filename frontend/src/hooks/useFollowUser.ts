@@ -14,14 +14,6 @@ export const useFollowUser = () => {
 
     const mutation = useMutation({
         mutationFn: async ({ userId, isFollowing, targetUsername }: FollowUserParams): Promise<void> => {
-            if (config.MOCK_DATA) {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve();
-                    }, 500);
-                });
-            }
-
             const url = `${config.API_URL}/api/follow`;
             const method = isFollowing ? 'DELETE' : 'POST';
 
