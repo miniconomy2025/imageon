@@ -1,7 +1,8 @@
 // Simple test for handleUserFeed function
 // This test mocks the dependencies to avoid Firebase configuration issues
 
-// Mock
+// Mock,, fix now works, but need to fix the actor model to return the correct actor object
+
 const mockActorModel = {
     exists: async identifier => {
         // Mock: return true for 'testuser', false for others??
