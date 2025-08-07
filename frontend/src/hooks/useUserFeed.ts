@@ -54,7 +54,21 @@ export const useUserFeed = (username: string) => {
                 throw new Error('Network response was not ok');
             }
             const result = await response.json();
-            return result.items || [];
+            const items = result.items || [];
+
+            return items.map((item: any) => {
+                let postId = item.id;
+
+                if (item.object) {
+                    const urlParts = item.object.split('/');
+                    postId = urlParts[urlParts.length - 1];
+                }
+
+                return {
+                    ...item,
+                    id: postId
+                };
+            });
         },
         getNextPageParam: (_lastPage: Post[], _pages: Post[][]) => {
             // Returns undefined if there are no more pages
