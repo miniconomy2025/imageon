@@ -79,10 +79,6 @@ export class AuthService {
     }
 
     static async checkUsername(username: string): Promise<{ isAvailable: boolean }> {
-        if (config.MOCK_DATA == true) {
-            return Promise.resolve({ isAvailable: true });
-        }
-
         const response = await fetch(`${config.API_URL}/auth/check-username?username=${encodeURIComponent(username)}`, {
             method: 'GET'
         });

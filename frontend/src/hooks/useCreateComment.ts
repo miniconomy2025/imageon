@@ -12,14 +12,6 @@ export const useCreateComment = () => {
 
     const mutation = useMutation({
         mutationFn: async ({ postId, content }: CreateCommentParams): Promise<void> => {
-            if (config.MOCK_DATA) {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve();
-                    }, 500);
-                });
-            }
-
             const url = `${config.API_URL}/api/posts/${postId}/comment`;
 
             const response = await fetch(url, {
