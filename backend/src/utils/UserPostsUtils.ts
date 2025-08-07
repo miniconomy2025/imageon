@@ -96,7 +96,7 @@ function extractNotesFromOrderedItems(orderedItems: any[]): Note[] {
         }));
 }
 
-// Step 7: Create final result object
+// Step 7: Create final result object here
 function createResultObject(firstData: FirstPageData, firstUrl: string, notes: Note[]): PaginationResult {
     return {
         next: firstData.next || null,
