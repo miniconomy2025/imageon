@@ -5,9 +5,8 @@ APP_DIR="$1"
 PM2_APP_NAME="$2"
 FEDERATION_DOMAIN="$3"
 AWS_REGION="$4"
-S3_BUCKET="$5"
-FIREBASE_PRIVATE_KEY_ID="$6"
-FIREBASE_PRIVATE_KEY="$7"
+FIREBASE_PRIVATE_KEY_ID="$5"
+FIREBASE_PRIVATE_KEY="$6"
 
 echo "🚀 Starting deployment..."
 
@@ -65,12 +64,8 @@ ENV_VARS
   # Add dynamic values
   echo "FEDERATION_DOMAIN=$FEDERATION_DOMAIN" >> .env
   echo "AWS_REGION=$AWS_REGION" >> .env
-  echo "S3_BUCKET=$S3_BUCKET" >> .env
   
   # Add Firebase secrets if provided as environment variables
-  if [ -n "$S3_BUCKET" ]; then
-    echo "S3_BUCKET=$S3_BUCKET" >> .env
-  fi
   if [ -n "$FIREBASE_PRIVATE_KEY_ID" ]; then
     echo "FIREBASE_PRIVATE_KEY_ID=$FIREBASE_PRIVATE_KEY_ID" >> .env
   fi
@@ -85,13 +80,11 @@ ENV_VARS
   export FEDERATION_PROTOCOL="https"
   export PORT=3000
   export AWS_REGION="$AWS_REGION"
-  export S3_BUCKET="$S3_BUCKET"
   
   # Add to ubuntu user's bashrc for persistence
   grep -q "FEDERATION_DOMAIN" /home/ubuntu/.bashrc || echo "export FEDERATION_DOMAIN=\"$FEDERATION_DOMAIN\"" >> /home/ubuntu/.bashrc
   grep -q "FEDERATION_PROTOCOL" /home/ubuntu/.bashrc || echo "export FEDERATION_PROTOCOL=\"https\"" >> /home/ubuntu/.bashrc
   grep -q "export PORT" /home/ubuntu/.bashrc || echo "export PORT=3000" >> /home/ubuntu/.bashrc
-  grep -q "S3_BUCKET" /home/ubuntu/.bashrc || echo "export S3_BUCKET=\"$S3_BUCKET\"" >> /home/ubuntu/.bashrc
   
   # Add Firebase secrets to bashrc if provided
   if [ -n "$FIREBASE_PRIVATE_KEY_ID" ]; then
@@ -113,19 +106,9 @@ else
   sed -i 's/FEDERATION_PROTOCOL=.*/FEDERATION_PROTOCOL=https/' .env
   sed -i "s/FEDERATION_DOMAIN=.*/FEDERATION_DOMAIN=$FEDERATION_DOMAIN/" .env
   sed -i "s/AWS_REGION=.*/AWS_REGION=$AWS_REGION/" .env
-  sed -i "s/S3_BUCKET=.*/S3_BUCKET=$S3_BUCKET/" .env
   sed -i 's/DYNAMODB_TABLE_NAME=.*/DYNAMODB_TABLE_NAME=imageon-app/' .env
   # Remove DYNAMO_ENDPOINT for production (use native DynamoDB)
   sed -i 's/^DYNAMO_ENDPOINT=/#DYNAMO_ENDPOINT=/' .env
-  
-  # Update S3_BUCKET if provided as environment variable
-  if [ -n "$S3_BUCKET" ]; then
-    if grep -q "S3_BUCKET" .env; then
-      sed -i "s/S3_BUCKET=.*/S3_BUCKET=$S3_BUCKET/" .env
-    else
-      echo "S3_BUCKET=$S3_BUCKET" >> .env
-    fi
-  fi
   
   # Update Firebase secrets if provided as environment variables
   if [ -n "$FIREBASE_PRIVATE_KEY_ID" ]; then
