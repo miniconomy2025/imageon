@@ -120,7 +120,7 @@ async function fetchUserPosts(userUrl: string): Promise<PaginationResult> {
         // Step 4: Extract first page URL url
         const firstUrl = extractFirstPageUrl(outboxData);
 
-        // Step 5: Fetch first page data
+        // Step 5: Fetch first page data data
         const firstData = await fetchFirstPageData(firstUrl);
 
         // Step 6: Extract notes from ordered items
