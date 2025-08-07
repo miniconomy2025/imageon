@@ -61,7 +61,7 @@ async function fetchOutboxData(outboxUrl: string): Promise<OutboxData> {
     return outboxResponse.data;
 }
 
-// Step 4: Extract first page URL from outbox data
+// Step 4: Extract first page URL from outbox data here
 function extractFirstPageUrl(outboxData: OutboxData): string {
     const firstUrl = outboxData.first;
 
