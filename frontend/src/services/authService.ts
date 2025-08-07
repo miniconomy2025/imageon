@@ -57,7 +57,7 @@ export class AuthService {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${idToken}`
+                Authorization: `Bearer ${currentUser?.getIdToken()}`
             },
             body: JSON.stringify(profileData)
         });
@@ -74,7 +74,7 @@ export class AuthService {
         const response = await fetch(`${config.API_URL}/auth/profile`, {
             method: 'GET',
             headers: {
-                Authorization: `Bearer ${idToken}`
+                Authorization: `Bearer ${currentUser?.getIdToken()}`
             }
         });
 
@@ -87,8 +87,6 @@ export class AuthService {
     }
 
     static async checkUsername(username: string): Promise<{ isAvailable: boolean }> {
-        console.debug(config.MOCK_DATA);
-
         if (config.MOCK_DATA == true) {
             return Promise.resolve({ isAvailable: true });
         }
@@ -109,7 +107,7 @@ export class AuthService {
         const response = await fetch(`${config.API_URL}/auth/user/logged-in`, {
             method: 'GET',
             headers: {
-                Authorization: `Bearer ${idToken}`
+                Authorization: `Bearer ${currentUser?.getIdToken()}`
             }
         });
 

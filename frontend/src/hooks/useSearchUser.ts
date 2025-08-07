@@ -8,7 +8,7 @@ const config = {
 };
 
 export const useSearchUser = (searchTerm: string) => {
-    const url = `${config.API_URL}/users/search?q=${encodeURIComponent(searchTerm)}`;
+    const url = `${config.API_URL}/.well-known/webfinger?resource=acct:${encodeURIComponent(searchTerm)}`;
 
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['searchUsers', searchTerm],

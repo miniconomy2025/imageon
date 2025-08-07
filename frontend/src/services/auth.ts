@@ -2,7 +2,8 @@ import { auth, googleProvider } from '../config/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 
 const config = {
-    API_BASE_URL: import.meta.env.VITE_API_URL
+    API_BASE_URL: import.meta.env.VITE_API_URL,
+    MOCK_DATA: import.meta.env.VITE_MOCK_DATA
 };
 export interface UserProfile {
     uid: string;
@@ -49,6 +50,7 @@ class AuthService {
     // Verify token with backend
     async verifyToken(idToken: string): Promise<UserProfile> {
         try {
+            console.log(config);
             const response = await fetch(`${config.API_BASE_URL}/auth/verify`, {
                 method: 'POST',
                 headers: {
@@ -240,11 +242,10 @@ class AuthService {
                 throw new Error('No user logged in');
             }
 
-            const idToken = await currentUser.getIdToken();
             const response = await fetch(`${config.API_BASE_URL}/auth/user/following`, {
                 method: 'GET',
                 headers: {
-                    Authorization: `Bearer ${idToken}`
+                    Authorization: `Bearer ${await currentUser.getIdToken()}`
                 }
             });
 

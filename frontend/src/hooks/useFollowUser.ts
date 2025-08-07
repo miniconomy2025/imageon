@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../contexts/AuthContext';
 
 const config = {
     API_URL: import.meta.env.VITE_API_URL,
@@ -11,12 +12,12 @@ interface FollowUserParams {
 }
 
 export const useFollowUser = () => {
+    const { currentUser } = useAuth();
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
         mutationFn: async ({ userId, isFollowing }: FollowUserParams): Promise<void> => {
             if (config.MOCK_DATA) {
-                // Mock implementation - just simulate a delay
                 return new Promise(resolve => {
                     setTimeout(() => {
                         resolve();
@@ -24,13 +25,18 @@ export const useFollowUser = () => {
                 });
             }
 
-            const url = `${config.API_URL}/users/${userId}/${isFollowing ? 'unfollow' : 'follow'}`;
+            const url = `${config.API_URL}/api/follow`;
+            const method = isFollowing ? 'DELETE' : 'POST';
+
             const response = await fetch(url, {
-                method: 'POST',
+                method,
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${currentUser?.getIdToken()}`
                 },
-                credentials: 'include' // Include cookies for authentication
+                body: JSON.stringify({
+                    userId
+                })
             });
 
             if (!response.ok) {
@@ -38,7 +44,6 @@ export const useFollowUser = () => {
             }
         },
         onSuccess: () => {
-            // Invalidate related queries to refresh the data
             queryClient.invalidateQueries({ queryKey: ['following'] });
             queryClient.invalidateQueries({ queryKey: ['user'] });
             queryClient.invalidateQueries({ queryKey: ['searchUsers'] });

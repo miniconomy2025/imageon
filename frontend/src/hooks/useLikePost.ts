@@ -6,17 +6,17 @@ const config = {
     MOCK_DATA: import.meta.env.VITE_MOCK_DATA
 };
 
-interface CreateCommentParams {
+interface LikePostParams {
     postId: string;
-    content: string;
+    isLiked: boolean;
 }
 
-export const useCreateComment = () => {
+export const useLikePost = () => {
     const { currentUser } = useAuth();
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
-        mutationFn: async ({ postId, content }: CreateCommentParams): Promise<void> => {
+        mutationFn: async ({ postId, isLiked }: LikePostParams): Promise<void> => {
             if (config.MOCK_DATA) {
                 return new Promise(resolve => {
                     setTimeout(() => {
@@ -25,21 +25,19 @@ export const useCreateComment = () => {
                 });
             }
 
-            const url = `${config.API_URL}/api/posts/${postId}/comment`;
+            const url = `${config.API_URL}/api/posts/${postId}/like`;
+            const method = isLiked ? 'DELETE' : 'POST';
 
             const response = await fetch(url, {
-                method: 'POST',
+                method,
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${currentUser?.getIdToken()}`
-                },
-                body: JSON.stringify({
-                    content
-                })
+                }
             });
 
             if (!response.ok) {
-                throw new Error('Failed to create comment');
+                throw new Error('Failed to update like status');
             }
         },
         onSuccess: () => {
@@ -48,12 +46,12 @@ export const useCreateComment = () => {
             queryClient.invalidateQueries({ queryKey: ['user'] });
         },
         onError: error => {
-            console.error('Error creating comment:', error);
+            console.error('Error updating like status:', error);
         }
     });
 
     return {
-        createComment: mutation.mutate,
+        likePost: mutation.mutate,
         isLoading: mutation.isPending,
         isError: mutation.isError,
         error: mutation.error,

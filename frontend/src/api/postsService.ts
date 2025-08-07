@@ -1,5 +1,6 @@
 import { Post } from '../types/post';
 import { Comment } from '../types/comment';
+import { useAuth } from '../contexts/AuthContext';
 
 const config = {
     API_URL: import.meta.env.VITE_API_URL,
@@ -36,10 +37,12 @@ class PostsService {
     private readonly baseUrl: string;
 
     constructor() {
-        this.baseUrl = `${config.API_URL}/posts`;
+        this.baseUrl = `${config.API_URL}/api/posts`;
     }
 
     async createPost(postData: CreatePostRequest): Promise<CreatePostResponse> {
+        const { currentUser } = useAuth();
+
         try {
             if (config.MOCK_DATA) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -71,8 +74,8 @@ class PostsService {
             const response = await fetch(this.baseUrl, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
-                    // 'Authorization': `Bearer ${getAuthToken()}`
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${currentUser?.getIdToken()}`
                 },
                 body: JSON.stringify(postData)
             });

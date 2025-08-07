@@ -8,7 +8,7 @@ const config = {
 };
 
 export const useGetUser = (username: string) => {
-    const url = `${config.API_URL}/users/${username}`;
+    const url = `${config.API_URL}/auth/user/by-id?userId=${username}`;
 
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['user', username],

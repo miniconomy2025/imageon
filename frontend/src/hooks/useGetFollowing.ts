@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { User } from '../types/user';
+import { useAuth } from '../contexts/AuthContext';
 
 const config = {
     API_URL: import.meta.env.VITE_API_URL,
@@ -7,11 +8,13 @@ const config = {
     MOCK_IMAGE_URL: import.meta.env.VITE_MOCK_IMAGE_URL
 };
 
-export const useGetFollowing = (username: string) => {
-    const url = `${config.API_URL}/users/${username}/following`;
+export const useGetFollowing = () => {
+    const { currentUser } = useAuth();
+
+    const url = `${config.API_URL}/auth/user/following`;
 
     const { data, isError, isSuccess, isFetching } = useQuery({
-        queryKey: ['following', username],
+        queryKey: ['following', currentUser?.uid],
         queryFn: async (): Promise<User[]> => {
             if (config.MOCK_DATA) {
                 return Promise.resolve([
@@ -42,13 +45,18 @@ export const useGetFollowing = (username: string) => {
                 ]);
             }
 
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${currentUser?.getIdToken()}`
+                }
+            });
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
             return response.json();
         },
-        enabled: !!username
+        enabled: currentUser?.uid != null
     });
 
     return {
