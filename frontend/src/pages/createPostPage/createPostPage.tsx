@@ -12,7 +12,7 @@ export const CreatePostPage = () => {
     const { userProfile } = useAuth();
     const createPostMutation = useCreatePost();
     const [content, setContent] = useState('');
-    const [mediaFile, setMediaFile] = useState<File | null>(null);
+    const [files, setFiles] = useState<File[]>([]);
 
     const isSubmitting = createPostMutation.isPending;
 
@@ -30,9 +30,8 @@ export const CreatePostPage = () => {
         }
 
         const postData = {
-            actor: userProfile.username, // Use username as actor identifier
             content: content.trim(),
-            media: mediaFile || undefined
+            files: files.length > 0 ? files : undefined
         };
 
         try {
@@ -52,24 +51,23 @@ export const CreatePostPage = () => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Check file size (limit to 10MB for example)
-            if (file.size > 10 * 1024 * 1024) {
-                alert('File size must be less than 10MB');
+            if (file.size > 50 * 1024 * 1024) {
+                alert('File size must be less than 50MB');
                 return;
             }
 
-            // Check file type (only images for now)
-            if (!file.type.startsWith('image/')) {
-                alert('Only image files are supported');
+            // Check file type (images and videos)
+            if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+                alert('Only image and video files are supported');
                 return;
             }
 
-            setMediaFile(file);
+            setFiles([file]); // Replace existing file with new one
         }
     };
 
     const handleRemoveFile = () => {
-        setMediaFile(null);
+        setFiles([]);
         // Reset the file input
         const fileInput = document.getElementById('media-upload') as HTMLInputElement;
         if (fileInput) {
@@ -78,7 +76,7 @@ export const CreatePostPage = () => {
     };
 
     const handleCancel = () => {
-        if (content.trim() || mediaFile) {
+        if (content.trim() || files.length > 0) {
             const confirmed = window.confirm('Are you sure you want to discard this post?');
             if (confirmed) {
                 navigate(-1);
@@ -146,20 +144,24 @@ export const CreatePostPage = () => {
                                 <input
                                     id='media-upload'
                                     type='file'
-                                    accept='image/*'
+                                    accept='image/*,video/*'
                                     onChange={handleFileChange}
                                     style={{ display: 'none' }}
                                     disabled={isSubmitting}
                                 />
                             </div>
 
-                            {mediaFile && (
+                            {files.length > 0 && (
                                 <div className='create-post-form__media-preview'>
                                     <div className='media-preview-item'>
-                                        <img src={URL.createObjectURL(mediaFile)} alt='Media preview' className='media-preview-item__image' />
+                                        {files[0].type.startsWith('image/') ? (
+                                            <img src={URL.createObjectURL(files[0])} alt='Media preview' className='media-preview-item__image' />
+                                        ) : (
+                                            <video src={URL.createObjectURL(files[0])} controls className='media-preview-item__video' />
+                                        )}
                                         <div className='media-preview-item__info'>
-                                            <span className='media-preview-item__name'>{mediaFile.name}</span>
-                                            <span className='media-preview-item__size'>{(mediaFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                                            <span className='media-preview-item__name'>{files[0].name}</span>
+                                            <span className='media-preview-item__size'>{(files[0].size / 1024 / 1024).toFixed(2)} MB</span>
                                             <Button type='button' variant='secondary' size='small' onClick={handleRemoveFile} disabled={isSubmitting}>
                                                 Remove
                                             </Button>

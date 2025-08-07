@@ -47,7 +47,7 @@ export const UserFeed = () => {
             {feedPosts &&
                 feedPosts.map((post, index) => (
                     <Card key={post.id} ref={index === feedPosts.length - 1 ? lastPostElementRef : null}>
-                        <PostCard post={post} />
+                        <PostCard post={post} author={post.author} />
                     </Card>
                 ))}
             {isLoadingPosts && <p>Loading more posts...</p>}

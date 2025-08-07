@@ -3,13 +3,13 @@ import { User } from '../types/user';
 import { useAuth } from '../contexts/AuthContext';
 
 import { config } from '../config/config';
-export const useGetFollowing = () => {
+export const useGetFollowers = () => {
     const { currentUser } = useAuth();
 
-    const url = `${config.API_URL}/auth/user/following`;
+    const url = `${config.API_URL}/auth/user/followers`;
 
     const { data, isError, isSuccess, isFetching } = useQuery({
-        queryKey: ['following', currentUser?.uid],
+        queryKey: ['followers', currentUser?.uid],
         queryFn: async (): Promise<User[]> => {
             const response = await fetch(url, {
                 method: 'GET',
@@ -21,13 +21,13 @@ export const useGetFollowing = () => {
                 throw new Error('Network response was not ok');
             }
             const result = await response.json();
-            return result.following || [];
+            return result.followers || [];
         },
         enabled: currentUser?.uid != null
     });
 
     return {
-        following: data,
+        followers: data,
         isFetching,
         isError,
         isSuccess

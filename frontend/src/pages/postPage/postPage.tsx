@@ -63,14 +63,12 @@ export const PostPage = () => {
                     <div className='post-page__author-section'>
                         <div className='post-page__author-info'>
                             <Avatar
-                                src={post?.author?.avatar}
-                                alt={post?.author?.firstName || post?.author?.username}
-                                fallbackText={post?.author?.firstName || post?.author?.username || 'U'}
+                                src={post?.author?.icon?.url}
+                                alt={post?.author?.preferredUsername || post?.author?.username}
+                                fallbackText={post?.author?.preferredUsername || post?.author?.username || 'U'}
                             />
                             <div className='post-page__author-details'>
-                                <h3 className='post-page__author-name'>
-                                    {post?.author?.firstName} {post?.author?.lastName}
-                                </h3>
+                                <h3 className='post-page__author-name'>{post?.author?.preferredUsername}</h3>
                                 <p className='post-page__author-username'>@{post?.author?.username}</p>
                                 <p className='post-page__post-date'>{post?.postedAt ? new Date(post.postedAt).toLocaleString() : ''}</p>
                             </div>
@@ -98,9 +96,9 @@ export const PostPage = () => {
                     <form onSubmit={handleCommentSubmit} className='comment-form'>
                         <div className='comment-form__input-section'>
                             <Avatar
-                                src={currentUser?.avatar || undefined}
-                                alt={currentUser?.firstName || currentUser?.username || 'You'}
-                                fallbackText={currentUser?.firstName || currentUser?.username || 'You'}
+                                src={currentUser?.icon?.url || undefined}
+                                alt={currentUser?.preferredUsername || currentUser?.username || 'You'}
+                                fallbackText={currentUser?.preferredUsername || currentUser?.username || 'You'}
                                 size='small'
                             />
                             <div className='comment-form__input-container'>
@@ -131,16 +129,14 @@ export const PostPage = () => {
                             post.comments.map(comment => (
                                 <div key={comment.id} className='comment-item'>
                                     <Avatar
-                                        src={comment.author?.avatar}
-                                        alt={comment.author?.firstName || comment.author?.username}
-                                        fallbackText={comment.author?.firstName || comment.author?.username || 'U'}
+                                        src={comment.author?.icon?.url}
+                                        alt={comment.author?.username}
+                                        fallbackText={comment.author?.username || 'U'}
                                         size='small'
                                     />
                                     <div className='comment-item__content'>
                                         <div className='comment-item__header'>
-                                            <span className='comment-item__author'>
-                                                {comment.author?.firstName} {comment.author?.lastName}
-                                            </span>
+                                            <span className='comment-item__author'>{comment.author?.preferredUsername}</span>
                                             <span className='comment-item__username'>@{comment.author?.username}</span>
                                             <span className='comment-item__timestamp'>
                                                 {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}

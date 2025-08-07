@@ -1,5 +1,6 @@
 import { User } from './user';
 import { Comment } from './comment';
+import { Attachment } from './attachment';
 
 export type Post = {
     id: string;
@@ -9,5 +10,5 @@ export type Post = {
     postedAt?: string;
     likes?: number;
     comments?: Comment[];
-    attachments?: string[];
+    attachments?: Attachment[];
 };

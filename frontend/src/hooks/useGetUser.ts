@@ -11,17 +11,6 @@ export const useGetUser = (username: string) => {
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['user', username],
         queryFn: async (): Promise<User> => {
-            if (config.MOCK_DATA) {
-                return Promise.resolve({
-                    id: parseInt(username) || 1,
-                    username: `user${username}`,
-                    firstName: 'John',
-                    lastName: 'Doe',
-                    avatar: config.MOCK_IMAGE_URL,
-                    bio: `User ${username} is a creative individual who enjoys sharing thoughts and connecting with others. Passionate about technology and innovation.`
-                } as User);
-            }
-
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -41,12 +30,13 @@ export const useGetUser = (username: string) => {
             }
 
             const backendUser = result.user;
+
             return {
                 id: parseInt(backendUser.uid) || 0,
                 username: backendUser.username,
-                firstName: backendUser.displayName?.split(' ')[0] || '',
+                preferredUsername: backendUser.displayName?.split(' ')[0] || '',
                 lastName: backendUser.displayName?.split(' ').slice(1).join(' ') || '',
-                avatar: backendUser.photoURL,
+                icon: { type: 'image', url: backendUser.photoURL },
                 bio: backendUser.bio
             } as User;
         },

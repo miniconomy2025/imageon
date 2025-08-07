@@ -18,7 +18,13 @@ export const useUserPosts = (username: string) => {
                         content: 'Content 1',
                         author: { username },
                         postedAt: new Date().toISOString(),
-                        attachments: [config.MOCK_IMAGE_URL]
+                        attachments: [
+                            {
+                                type: 'Document',
+                                mediaType: 'image/jpeg',
+                                url: config.MOCK_IMAGE_URL
+                            }
+                        ]
                     },
                     {
                         id: '2',
@@ -26,7 +32,23 @@ export const useUserPosts = (username: string) => {
                         content: 'Content 2',
                         author: { username },
                         postedAt: new Date().toISOString(),
-                        attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL]
+                        attachments: [
+                            {
+                                type: 'Document',
+                                mediaType: 'image/jpeg',
+                                url: config.MOCK_IMAGE_URL
+                            },
+                            {
+                                type: 'Document',
+                                mediaType: 'image/jpeg',
+                                url: config.MOCK_IMAGE_URL
+                            },
+                            {
+                                type: 'Document',
+                                mediaType: 'image/jpeg',
+                                url: config.MOCK_IMAGE_URL
+                            }
+                        ]
                     },
                     {
                         id: '3',
@@ -34,7 +56,13 @@ export const useUserPosts = (username: string) => {
                         content: 'Content 3',
                         author: { username },
                         postedAt: new Date().toISOString(),
-                        attachments: [config.MOCK_IMAGE_URL]
+                        attachments: [
+                            {
+                                type: 'Document',
+                                mediaType: 'image/jpeg',
+                                url: config.MOCK_IMAGE_URL
+                            }
+                        ]
                     }
                 ] as Post[]);
             }
