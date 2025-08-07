@@ -3,7 +3,6 @@ import { useGetUser } from '../../hooks/useGetUser';
 import { useUserPosts } from '../../hooks/useUserPosts';
 import { Card, PostCard, Avatar } from '../../components';
 import './profilePage.css';
-import { useAuth } from '../../contexts/AuthContext';
 
 export const ProfilePage = () => {
     const params = useParams();
