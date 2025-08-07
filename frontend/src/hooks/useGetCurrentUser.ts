@@ -11,9 +11,9 @@ export const useGetCurrentUser = () => {
             user: {
                 id: 1,
                 username: 'mockUser',
-                firstName: 'Mock',
+                preferredUsername: 'Mock',
                 lastName: 'User',
-                avatar: config.MOCK_IMAGE_URL,
+                icon: { url: userProfile?.photoURL, type: 'image' },
                 bio: 'A passionate developer who loves creating amazing user experiences. Always learning and sharing knowledge with the community.'
             } as User,
             isFetching: false,
@@ -27,9 +27,9 @@ export const useGetCurrentUser = () => {
         ? ({
               id: parseInt(userProfile.uid) || 0,
               username: userProfile.username,
-              firstName: userProfile.displayName?.split(' ')[0] || '',
+              preferredUsername: userProfile.displayName?.split(' ')[0] || '',
               lastName: userProfile.displayName?.split(' ').slice(1).join(' ') || '',
-              avatar: userProfile.photoURL,
+              icon: { url: userProfile.photoURL, type: 'image' },
               bio: userProfile.bio
           } as User)
         : null;

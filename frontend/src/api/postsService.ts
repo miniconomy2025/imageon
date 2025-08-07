@@ -108,30 +108,6 @@ class PostsService {
 
     async createComment(commentData: CreateCommentRequest): Promise<CreateCommentResponse> {
         try {
-            if (config.MOCK_DATA) {
-                await new Promise(resolve => setTimeout(resolve, 800));
-
-                const mockComment: Comment = {
-                    id: `mock-comment-${Date.now()}`,
-                    postId: commentData.postId,
-                    content: commentData.content,
-                    createdAt: new Date().toISOString(),
-                    author: {
-                        id: parseInt(commentData.authorId || '1'),
-                        username: 'Bob',
-                        firstName: 'John',
-                        lastName: 'Doe',
-                        bio: 'Active community member who loves engaging in meaningful discussions.'
-                    }
-                };
-
-                return {
-                    success: true,
-                    comment: mockComment,
-                    message: 'Comment created successfully'
-                };
-            }
-
             const response = await fetch(`${this.baseUrl}/${commentData.postId}/comments`, {
                 method: 'POST',
                 headers: {
