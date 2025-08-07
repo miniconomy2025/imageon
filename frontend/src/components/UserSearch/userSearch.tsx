@@ -100,8 +100,8 @@ export const UserSearch = () => {
                                 <div key={user.id} className='user-search__result-item' onClick={() => handleResultClick(user)}>
                                     <div className='user-search__user-info'>
                                         <img
-                                            src={user.avatar}
-                                            alt={`${user.username}'s avatar`}
+                                            src={user.icon?.url}
+                                            alt={`${user.username}'s .icon?.url`}
                                             className='user-search__avatar'
                                             onError={e => {
                                                 (e.target as HTMLImageElement).src = 'https://via.placeholder.com/40x40/e9ecef/6c757d?text=U';
@@ -109,9 +109,7 @@ export const UserSearch = () => {
                                         />
                                         <div className='user-search__user-details'>
                                             <p className='user-search__username'>@{user.username}</p>
-                                            <p className='user-search__name'>
-                                                {user.firstName} {user.lastName}
-                                            </p>
+                                            <p className='user-search__name'>{user.preferredUsername}</p>
                                         </div>
                                     </div>
                                     <button

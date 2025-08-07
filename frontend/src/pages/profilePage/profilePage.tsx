@@ -27,16 +27,14 @@ export const ProfilePage = () => {
                     ) : user ? (
                         <div className='profile-page__user-info'>
                             <Avatar
-                                src={user.avatar}
-                                alt={user.firstName || user.username}
-                                fallbackText={user.firstName || user.username || 'U'}
+                                src={user.icon?.url}
+                                alt={user.preferredUsername || user.username}
+                                fallbackText={user.preferredUsername || user.username || 'U'}
                                 size='large'
                             />
                             <div className='profile-page__user-details'>
                                 <h1 className='profile-page__username'>@{user.username}</h1>
-                                <p className='profile-page__name'>
-                                    {user.firstName} {user.lastName}
-                                </p>
+                                <p className='profile-page__name'>{user.preferredUsername}</p>
                             </div>
                         </div>
                     ) : (
