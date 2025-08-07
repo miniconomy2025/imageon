@@ -72,7 +72,7 @@ function extractFirstPageUrl(outboxData: OutboxData): string {
     return firstUrl;
 }
 
-// Step 5: Fetch first page data
+// Step 5: Fetch first page data here
 async function fetchFirstPageData(firstUrl: string): Promise<FirstPageData> {
     console.log('Step 5: Fetching first page data...');
     const firstResponse = await axios.get(firstUrl, {
