@@ -1,8 +1,9 @@
 import { auth, googleProvider } from '../config/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 
-const API_BASE_URL = 'http://localhost:3000'; // Backend URL
-
+const config = {
+    API_BASE_URL: import.meta.env.VITE_API_URL
+};
 export interface UserProfile {
     uid: string;
     email: string;
@@ -48,7 +49,7 @@ class AuthService {
     // Verify token with backend
     async verifyToken(idToken: string): Promise<UserProfile> {
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+            const response = await fetch(`${config.API_BASE_URL}/auth/verify`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -83,7 +84,7 @@ class AuthService {
     // Complete user profile
     async completeProfile(profileData: CompleteProfileData, idToken: string): Promise<UserProfile> {
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/complete-profile`, {
+            const response = await fetch(`${config.API_BASE_URL}/auth/complete-profile`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -108,7 +109,7 @@ class AuthService {
     // Get user profile
     async getProfile(idToken: string): Promise<UserProfile> {
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+            const response = await fetch(`${config.API_BASE_URL}/auth/profile`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${idToken}`
@@ -153,7 +154,7 @@ class AuthService {
             }
 
             const idToken = await currentUser.getIdToken();
-            const response = await fetch(`${API_BASE_URL}/auth/user/logged-in`, {
+            const response = await fetch(`${config.API_BASE_URL}/auth/user/logged-in`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${idToken}`
@@ -182,7 +183,7 @@ class AuthService {
             }
 
             const idToken = await currentUser.getIdToken();
-            const response = await fetch(`${API_BASE_URL}/auth/user/posts`, {
+            const response = await fetch(`${config.API_BASE_URL}/auth/user/posts`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${idToken}`
@@ -211,7 +212,7 @@ class AuthService {
             }
 
             const idToken = await currentUser.getIdToken();
-            const response = await fetch(`${API_BASE_URL}/auth/user/followers`, {
+            const response = await fetch(`${config.API_BASE_URL}/auth/user/followers`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${idToken}`
@@ -240,7 +241,7 @@ class AuthService {
             }
 
             const idToken = await currentUser.getIdToken();
-            const response = await fetch(`${API_BASE_URL}/auth/user/following`, {
+            const response = await fetch(`${config.API_BASE_URL}/auth/user/following`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${idToken}`
@@ -263,7 +264,7 @@ class AuthService {
     // Get user by ID
     async getUserById(userId: string): Promise<UserProfile | null> {
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/user/by-id?userId=${encodeURIComponent(userId)}`, {
+            const response = await fetch(`${config.API_BASE_URL}/auth/user/by-id?userId=${encodeURIComponent(userId)}`, {
                 method: 'GET'
             });
 
@@ -283,7 +284,7 @@ class AuthService {
     // Update user profile
     async updateProfile(updates: Partial<UserProfile>, idToken: string): Promise<void> {
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+            const response = await fetch(`${config.API_BASE_URL}/auth/profile`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -306,7 +307,7 @@ class AuthService {
     // Check username availability
     async checkUsername(username: string): Promise<boolean> {
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/check-username?username=${encodeURIComponent(username)}`, {
+            const response = await fetch(`${config.API_BASE_URL}/auth/check-username?username=${encodeURIComponent(username)}`, {
                 method: 'GET'
             });
 

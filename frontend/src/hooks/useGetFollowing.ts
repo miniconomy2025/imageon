@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import config from '../../config.json';
 import { User } from '../types/user';
+
+const config = {
+    API_URL: import.meta.env.VITE_API_URL,
+    MOCK_DATA: import.meta.env.VITE_MOCK_DATA,
+    MOCK_IMAGE_URL: import.meta.env.VITE_MOCK_IMAGE_URL
+};
 
 export const useGetFollowing = (username: string) => {
     const url = `${config.API_URL}/users/${username}/following`;
