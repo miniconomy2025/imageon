@@ -5,11 +5,11 @@ import { config } from '../config/config';
 interface FollowUserParams {
     userId: number;
     isFollowing: boolean;
-    targetUsername?: string; // Add optional target username for ActivityPub
+    targetUsername: string;
 }
 
 export const useFollowUser = () => {
-    const { currentUser } = useAuth();
+    const { currentUser, userProfile } = useAuth();
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
@@ -26,8 +26,8 @@ export const useFollowUser = () => {
             const method = isFollowing ? 'DELETE' : 'POST';
 
             // Prepare ActivityPub-compatible payload
-            const actor = currentUser?.uid || currentUser?.email || 'unknown';
-            const target = targetUsername || userId.toString();
+            const actor = userProfile?.username;
+            const target = targetUsername;
 
             const response = await fetch(url, {
                 method,
@@ -48,6 +48,7 @@ export const useFollowUser = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['following'] });
+            queryClient.invalidateQueries({ queryKey: ['followers'] });
             queryClient.invalidateQueries({ queryKey: ['user'] });
             queryClient.invalidateQueries({ queryKey: ['searchUsers'] });
         },

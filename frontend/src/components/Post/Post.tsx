@@ -7,17 +7,18 @@ import { Pages } from '../../pages/pageRouting';
 import { AttachmentCarousel } from '../AttachmentCarousel/attachementCarousel';
 import { Post } from '../../types/post';
 import { useLikePost } from '../../hooks/useLikePost';
+import { UserProfile } from '../../api';
 
 interface PostProps extends React.HTMLAttributes<HTMLDivElement> {
     post: Post;
+    author?: UserProfile;
     className?: string;
 }
 
-const PostCard: React.FC<PostProps> = ({ post, className = '', ...props }) => {
+const PostCard: React.FC<PostProps> = ({ post, author, className = '', ...props }) => {
     const [isLiked, setIsLiked] = useState<boolean>(false);
     const [likeCount, setLikeCount] = useState<number>(post.likes ?? 0);
     const { likePost, isLoading } = useLikePost();
-
     const navigate = useNavigate();
 
     const handleLike = (): void => {
@@ -31,7 +32,7 @@ const PostCard: React.FC<PostProps> = ({ post, className = '', ...props }) => {
 
         likePost(
             {
-                postId: post.id.toString(),
+                postId: post.id,
                 isLiked: currentLikedState
             },
             {
@@ -61,14 +62,14 @@ const PostCard: React.FC<PostProps> = ({ post, className = '', ...props }) => {
     return (
         <div className={`post ${className}`} {...props}>
             <div className='post__header'>
-                <Avatar src={post.author?.avatar || undefined} alt={post.author?.firstName} fallbackText={post.author?.firstName} size='medium' />
+                <Avatar src={author?.photoURL || undefined} alt={author?.username} fallbackText={author?.username} size='medium' />
                 <div className='post__author-info'>
                     <h4
                         onClick={() => {
-                            navigate(Pages.profilePage.replace(':username', post.author?.firstName ?? ''));
+                            navigate(Pages.profilePage.replace(':username', author?.username ?? ''));
                         }}
                         className='post__author-name'>
-                        {post.author?.firstName}
+                        {author?.displayName}
                     </h4>
                     {post.postedAt && <span className='post__timestamp'>{formatTime(post.postedAt)}</span>}
                 </div>

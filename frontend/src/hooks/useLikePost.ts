@@ -8,7 +8,7 @@ interface LikePostParams {
 }
 
 export const useLikePost = () => {
-    const { currentUser } = useAuth();
+    const { currentUser, userProfile } = useAuth();
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
@@ -24,12 +24,19 @@ export const useLikePost = () => {
             const url = `${config.API_URL}/api/posts/${postId}/like`;
             const method = isLiked ? 'DELETE' : 'POST';
 
+            // Prepare ActivityPub-compatible payload
+            const actor = userProfile?.username;
+
             const response = await fetch(url, {
                 method,
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${(await currentUser?.getIdTokenResult())?.token}`
-                }
+                },
+                body: JSON.stringify({
+                    postId,
+                    actor
+                })
             });
 
             if (!response.ok) {
