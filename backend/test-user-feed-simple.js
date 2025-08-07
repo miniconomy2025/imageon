@@ -29,7 +29,6 @@ const mockActorModel = {
 };
 
 const mockActivityPub = {
-    console.log('🧪 Testing handleUserFeed logic (mocked)...\n');
     getFollowing: async identifier => {
         // Mock: return some following URIs in here
         return ['https://mastodon.social/users/Gargron', 'https://example.com/users/anotheruser'];
