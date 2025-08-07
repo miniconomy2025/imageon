@@ -1,4 +1,4 @@
-import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Object } from "@fedify/fedify";
+import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note } from "@fedify/fedify";
 import { RedisKvStore } from "@fedify/redis";
 import { Temporal } from "@js-temporal/polyfill";
 import { ActorModel } from "../models/Actor.js";
