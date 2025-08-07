@@ -12,7 +12,7 @@ export class S3Service {
     },
   });
 
-  private bucket: string = process.env.S3_BUCKET || "";
+  private bucket: string = process.env.AWS_S3_BUCKET || "";
   
   /**
    * Uploads a Buffer or stream to S3 and returns the public URL.
