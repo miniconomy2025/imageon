@@ -1,6 +1,10 @@
 import { User } from 'firebase/auth';
 
-const API_BASE_URL = 'http://localhost:3000';
+const config = {
+    API_URL: import.meta.env.VITE_API_URL,
+    MOCK_DATA: import.meta.env.VITE_MOCK_DATA,
+    MOCK_IMAGE_URL: import.meta.env.VITE_MOCK_IMAGE_URL
+};
 
 export interface UserProfile {
     uid: string;
@@ -26,7 +30,7 @@ export interface AuthResponse {
 
 export class AuthService {
     static async verifyToken(idToken: string): Promise<AuthResponse> {
-        const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+        const response = await fetch(`${config.API_URL}/auth/verify`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -49,7 +53,7 @@ export class AuthService {
     }
 
     static async completeProfile(idToken: string, profileData: CompleteProfileData): Promise<AuthResponse> {
-        const response = await fetch(`${API_BASE_URL}/auth/complete-profile`, {
+        const response = await fetch(`${config.API_URL}/auth/complete-profile`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -67,7 +71,7 @@ export class AuthService {
     }
 
     static async getProfile(idToken: string): Promise<AuthResponse> {
-        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        const response = await fetch(`${config.API_URL}/auth/profile`, {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${idToken}`
@@ -83,7 +87,13 @@ export class AuthService {
     }
 
     static async checkUsername(username: string): Promise<{ isAvailable: boolean }> {
-        const response = await fetch(`${API_BASE_URL}/auth/check-username?username=${encodeURIComponent(username)}`, {
+        console.debug(config.MOCK_DATA);
+
+        if (config.MOCK_DATA == true) {
+            return Promise.resolve({ isAvailable: true });
+        }
+
+        const response = await fetch(`${config.API_URL}/auth/check-username?username=${encodeURIComponent(username)}`, {
             method: 'GET'
         });
 
@@ -96,7 +106,7 @@ export class AuthService {
     }
 
     static async getLoggedInUser(idToken: string): Promise<AuthResponse> {
-        const response = await fetch(`${API_BASE_URL}/auth/user/logged-in`, {
+        const response = await fetch(`${config.API_URL}/auth/user/logged-in`, {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${idToken}`

@@ -1,5 +1,6 @@
 .attachment-carousel {
     display: flex;
+    flex-direction: column;
     position: relative;
 }
 
@@ -14,20 +15,15 @@
     justify-content: flex-start;
 }
 
-.attachment-carousel__next-button {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 10;
+.attachment-carousel__controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.5rem;
 }
 
-.attachment-carousel__prev-button {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 10;
+.attachment-carousel__button {
+    width: 100%;
+    margin: 0.5rem;
 }
 
 .attachment-carousel__image {

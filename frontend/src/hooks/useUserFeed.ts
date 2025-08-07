@@ -1,18 +1,44 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import config from '../../config.json';
 import { Post } from '../types/post';
 
-export const useUserFeed = (username: string) => {
+const config = {
+    API_URL: import.meta.env.VITE_API_URL,
+    MOCK_DATA: import.meta.env.VITE_MOCK_DATA,
+    MOCK_IMAGE_URL: import.meta.env.VITE_MOCK_IMAGE_URL
+};
 
+export const useUserFeed = (username: string) => {
     const { data, isError, isSuccess, isFetching, fetchNextPage, hasNextPage } = useInfiniteQuery({
         queryKey: ['userFeed', username],
         queryFn: async ({ pageParam = 1 }): Promise<Post[]> => {
-
             if (config.MOCK_DATA) {
                 return Promise.resolve([
-                    { id: pageParam * 3 - 2, title: `Post ${pageParam * 3 - 2}`, content: `Content ${pageParam * 3 - 2} content content content content content content content content content content content content content content content content content content content content content content content contentv`, author: { username }, postedAt: new Date().toISOString(), attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL] }, 
-                    { id: pageParam * 3 - 1, title: `Post ${pageParam * 3 - 1}`, content: `Content ${pageParam * 3 - 1}`, author: { username }, postedAt: new Date().toISOString(), attachments: [config.MOCK_IMAGE_URL] }, 
-                    { id: pageParam * 3, title: `Post ${pageParam * 3}`, content: `Content ${pageParam * 3}`, author: { username }, postedAt: new Date().toISOString(), attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL] }
+                    {
+                        id: pageParam * 3 - 2,
+                        title: `Post ${pageParam * 3 - 2}`,
+                        content: `Content ${
+                            pageParam * 3 - 2
+                        } content content content content content content content content content content content content content content content content content content content content content content content contentv`,
+                        author: { username },
+                        postedAt: new Date().toISOString(),
+                        attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL]
+                    },
+                    {
+                        id: pageParam * 3 - 1,
+                        title: `Post ${pageParam * 3 - 1}`,
+                        content: `Content ${pageParam * 3 - 1}`,
+                        author: { username },
+                        postedAt: new Date().toISOString(),
+                        attachments: [config.MOCK_IMAGE_URL]
+                    },
+                    {
+                        id: pageParam * 3,
+                        title: `Post ${pageParam * 3}`,
+                        content: `Content ${pageParam * 3}`,
+                        author: { username },
+                        postedAt: new Date().toISOString(),
+                        attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL]
+                    }
                 ] as Post[]);
             }
 
@@ -29,7 +55,7 @@ export const useUserFeed = (username: string) => {
             return lastPage.length > 0 ? pages.length + 1 : undefined;
         },
         enabled: !!username,
-        initialPageParam: 1,
+        initialPageParam: 1
     });
 
     const posts = data?.pages.flat() || [];
@@ -40,6 +66,6 @@ export const useUserFeed = (username: string) => {
         isError,
         isSuccess,
         fetchNextPage,
-        hasNextPage,
+        hasNextPage
     };
 };

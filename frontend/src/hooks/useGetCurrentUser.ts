@@ -1,9 +1,13 @@
 import { useAuth } from '../contexts/AuthContext';
-import config from '../../config.json';
 import { User } from '../types/user';
 
+const config = {
+    MOCK_DATA: import.meta.env.VITE_MOCK_DATA,
+    MOCK_IMAGE_URL: import.meta.env.VITE_MOCK_IMAGE_URL
+};
+
 export const useGetCurrentUser = () => {
-    const { user, isAuthenticated } = useAuth();
+    const { currentUser: user, loading: isAuthenticated } = useAuth();
 
     if (config?.MOCK_DATA) {
         return {

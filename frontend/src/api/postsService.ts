@@ -1,6 +1,11 @@
-import config from '../../config.json';
 import { Post } from '../types/post';
 import { Comment } from '../types/comment';
+
+const config = {
+    API_URL: import.meta.env.VITE_API_URL,
+    MOCK_DATA: import.meta.env.VITE_MOCK_DATA,
+    MOCK_IMAGE_URL: import.meta.env.VITE_MOCK_IMAGE_URL
+};
 
 export interface CreatePostRequest {
     title?: string;
