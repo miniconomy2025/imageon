@@ -105,7 +105,7 @@ function createResultObject(firstData: FirstPageData, firstUrl: string, notes: N
     };
 }
 
-// Main function that orchestrates the entire flow
+// Main function that orchestrates the entire flow done
 async function fetchUserPosts(userUrl: string): Promise<PaginationResult> {
     try {
         // Step 1: Get user profile
