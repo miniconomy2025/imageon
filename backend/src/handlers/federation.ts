@@ -448,15 +448,19 @@ export class FederationHandlers {
                                 const objectType = activity.object?.type || 'Note';
                                 const ObjectClass = OBJECT_CONSTRUCTORS[objectType as keyof typeof OBJECT_CONSTRUCTORS] || Note;
 
+                                // For Create activities, construct the Note object first
+                                const noteObject = new ObjectClass({
+                                    id: new URL(activity.object?.id || activity.id),
+                                    content: activity.object?.content || activity.additionalData?.content,
+                                    published: Temporal.Instant.from(activity.published || new Date().toISOString())
+                                });
+
+                                // Then construct the Create activity with the Note
                                 return new Create({
                                     id: new URL(activity.id),
                                     actor: ctx.getActorUri(identifier),
-                                    published: Temporal.Instant.from(activity.published || new Date().toISOString()),
-                                    object: new ObjectClass({
-                                        id: new URL(activity.object?.id || activity.id),
-                                        content: activity.object?.content || activity.additionalData?.content,
-                                        published: Temporal.Instant.from(activity.published || new Date().toISOString())
-                                    })
+                                    object: noteObject,
+                                    published: Temporal.Instant.from(activity.published || new Date().toISOString())
                                 });
                             }
 
