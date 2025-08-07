@@ -3,6 +3,7 @@ import Layout from '../layouts/mainLayout';
 import { MainPage, ProfilePage, PostPage, CreatePostPage } from './index';
 import { LoginPage } from './loginPage/loginPage';
 import { CompleteProfilePage } from './completeProfilePage/completeProfilePage';
+import { ProtectedRoute } from '../components/ProtectedRoute/ProtectedRoute';
 
 export const Pages = {
     mainPage: '/',
@@ -29,33 +30,33 @@ export const router = createBrowserRouter([
             {
                 path: '/',
                 element: (
-                    //<ProtectedRoute>
-                    <MainPage />
-                    //</ProtectedRoute>
+                    <ProtectedRoute>
+                        <MainPage />
+                    </ProtectedRoute>
                 )
             },
             {
                 path: '/:username',
                 element: (
-                    //<ProtectedRoute>
-                    <ProfilePage />
-                    //</ProtectedRoute>
+                    <ProtectedRoute>
+                        <ProfilePage />
+                    </ProtectedRoute>
                 )
             },
             {
                 path: '/post/:postId',
                 element: (
-                    //<ProtectedRoute>
-                    <PostPage />
-                    //</ProtectedRoute>
+                    <ProtectedRoute>
+                        <PostPage />
+                    </ProtectedRoute>
                 )
             },
             {
                 path: '/create-post',
                 element: (
-                    // <ProtectedRoute>
-                    <CreatePostPage />
-                    // </ProtectedRoute>
+                    <ProtectedRoute>
+                        <CreatePostPage />
+                    </ProtectedRoute>
                 )
             }
         ]

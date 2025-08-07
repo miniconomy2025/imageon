@@ -2,12 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { Post } from '../types/post';
 import { useAuth } from '../contexts/AuthContext';
 
-const config = {
-    API_URL: import.meta.env.VITE_API_URL,
-    MOCK_DATA: import.meta.env.VITE_MOCK_DATA,
-    MOCK_IMAGE_URL: import.meta.env.VITE_MOCK_IMAGE_URL
-};
-
+import { config } from '../config/config';
 export const useUserFeed = (username: string) => {
     const { currentUser } = useAuth();
 

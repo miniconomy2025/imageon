@@ -2,12 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { User } from '../types/user';
 import { useAuth } from '../contexts/AuthContext';
 
-const config = {
-    API_URL: import.meta.env.VITE_API_URL,
-    MOCK_DATA: import.meta.env.VITE_MOCK_DATA,
-    MOCK_IMAGE_URL: import.meta.env.VITE_MOCK_IMAGE_URL
-};
-
+import { config } from '../config/config';
 export const useGetFollowing = () => {
     const { currentUser } = useAuth();
 

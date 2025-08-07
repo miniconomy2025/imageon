@@ -1,10 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
-
-const config = {
-    API_URL: import.meta.env.VITE_API_URL,
-    MOCK_DATA: import.meta.env.VITE_MOCK_DATA
-};
+import { config } from '../config/config';
 
 interface LikePostParams {
     postId: string;

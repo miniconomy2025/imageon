@@ -1,12 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Post } from '../types/post';
 
-const config = {
-    API_URL: import.meta.env.VITE_API_URL,
-    MOCK_DATA: import.meta.env.VITE_MOCK_DATA,
-    MOCK_IMAGE_URL: import.meta.env.VITE_MOCK_IMAGE_URL
-};
-
+import { config } from '../config/config';
 export const useGetPost = (id: string) => {
     const url = `${config.API_URL}/posts/${id}`;
 

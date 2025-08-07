@@ -4,7 +4,7 @@ import { useGetCurrentUser } from '../../hooks/useGetCurrentUser';
 import { useCreateComment } from '../../hooks/useCreateComment';
 import { AttachmentCarousel } from '../../components/AttachmentCarousel/attachementCarousel';
 import { Card, Button, Avatar } from '../../components';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './postPage.css';
 
 export const PostPage = () => {
@@ -12,13 +12,19 @@ export const PostPage = () => {
     const navigate = useNavigate();
     const { user: currentUser } = useGetCurrentUser();
     const [newComment, setNewComment] = useState('');
-    const createCommentMutation = useCreateComment();
+    const { createComment, isLoading: isCreatingComment, isSuccess } = useCreateComment();
 
     if (!params.postId || params.postId === '' || params.postId === undefined) {
-        navigate('/'); // Redirect to home if postId is not provided
+        navigate('/');
     }
 
     const { data: post } = useGetPost(params.postId ?? '');
+
+    useEffect(() => {
+        if (isSuccess) {
+            setNewComment('');
+        }
+    }, [isSuccess]);
 
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,20 +34,12 @@ export const PostPage = () => {
         }
 
         try {
-            const result = await createCommentMutation.mutateAsync({
+            createComment({
                 postId: params.postId,
-                content: newComment.trim(),
-                authorId: currentUser?.id?.toString() || '1'
+                content: newComment.trim()
             });
-
-            if (result.success) {
-                setNewComment('');
-            } else {
-                throw new Error(result.message || 'Failed to create comment');
-            }
         } catch (error) {
             console.error('Error creating comment:', error);
-            alert('Failed to create comment. Please try again.');
         }
     };
 
@@ -55,16 +53,13 @@ export const PostPage = () => {
     return (
         <div className='post-page'>
             <div className='post-page__container'>
-                {/* Header with back button */}
                 <div className='post-page__header'>
                     <Button variant='secondary' onClick={() => navigate(-1)} className='post-page__back-btn'>
                         ← Back
                     </Button>
                 </div>
 
-                {/* Main post content */}
                 <Card className='post-page__main-card'>
-                    {/* Post author info */}
                     <div className='post-page__author-section'>
                         <div className='post-page__author-info'>
                             <Avatar
@@ -82,36 +77,29 @@ export const PostPage = () => {
                         </div>
                     </div>
 
-                    {/* Post title */}
                     {post?.title && <h1 className='post-page__title'>{post.title}</h1>}
 
-                    {/* Post content */}
                     <div className='post-page__content'>
                         <p className='post-page__text'>{post?.content}</p>
                     </div>
 
-                    {/* Attachments */}
                     {post?.attachments && post.attachments.length > 0 && (
                         <div className='post-page__attachments'>
                             <AttachmentCarousel attachments={post.attachments} />
                         </div>
                     )}
-
-                    {/* Post stats */}
                     <div className='post-page__stats'>
                         <span className='post-page__stat'>❤️ {post?.likes || 0} likes</span>
                         <span className='post-page__stat'>💬 {post?.comments?.length || 0} comments</span>
                     </div>
                 </Card>
-
-                {/* Comment creation section */}
                 <Card className='post-page__comment-creator'>
                     <h3 className='post-page__section-title'>Add a comment</h3>
                     <form onSubmit={handleCommentSubmit} className='comment-form'>
                         <div className='comment-form__input-section'>
                             <Avatar
-                                src={currentUser?.avatar}
-                                alt={currentUser?.firstName || currentUser?.username}
+                                src={currentUser?.avatar || undefined}
+                                alt={currentUser?.firstName || currentUser?.username || 'You'}
                                 fallbackText={currentUser?.firstName || currentUser?.username || 'You'}
                                 size='small'
                             />
@@ -122,21 +110,19 @@ export const PostPage = () => {
                                     value={newComment}
                                     onChange={e => setNewComment(e.target.value)}
                                     onKeyPress={handleKeyPress}
-                                    disabled={createCommentMutation.isPending}
+                                    disabled={isCreatingComment}
                                     rows={3}
                                 />
                                 <div className='comment-form__actions'>
                                     <span className='comment-form__hint'>Press Enter to submit, Shift+Enter for new line</span>
-                                    <Button type='submit' disabled={!newComment.trim() || createCommentMutation.isPending} size='small'>
-                                        {createCommentMutation.isPending ? 'Posting...' : 'Post Comment'}
+                                    <Button type='submit' disabled={!newComment.trim() || isCreatingComment} size='small'>
+                                        {isCreatingComment ? 'Posting...' : 'Post Comment'}
                                     </Button>
                                 </div>
                             </div>
                         </div>
                     </form>
                 </Card>
-
-                {/* Comments section */}
                 <Card className='post-page__comments-section'>
                     <h3 className='post-page__section-title'>Comments ({post?.comments?.length || 0})</h3>
 

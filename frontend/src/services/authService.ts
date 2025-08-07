@@ -1,11 +1,4 @@
-import { User } from 'firebase/auth';
-
-const config = {
-    API_URL: import.meta.env.VITE_API_URL,
-    MOCK_DATA: import.meta.env.VITE_MOCK_DATA,
-    MOCK_IMAGE_URL: import.meta.env.VITE_MOCK_IMAGE_URL
-};
-
+import { config } from '../config/config';
 export interface UserProfile {
     uid: string;
     email: string;
@@ -40,7 +33,6 @@ export class AuthService {
 
         if (response.status === 404) {
             // User not found in backend - needs profile completion
-            const errorData = await response.json();
             throw new Error('User not found');
         }
 
@@ -57,7 +49,7 @@ export class AuthService {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${currentUser?.getIdToken()}`
+                Authorization: `Bearer ${idToken}`
             },
             body: JSON.stringify(profileData)
         });
@@ -74,7 +66,7 @@ export class AuthService {
         const response = await fetch(`${config.API_URL}/auth/profile`, {
             method: 'GET',
             headers: {
-                Authorization: `Bearer ${currentUser?.getIdToken()}`
+                Authorization: `Bearer ${idToken}`
             }
         });
 
@@ -107,7 +99,7 @@ export class AuthService {
         const response = await fetch(`${config.API_URL}/auth/user/logged-in`, {
             method: 'GET',
             headers: {
-                Authorization: `Bearer ${currentUser?.getIdToken()}`
+                Authorization: `Bearer ${idToken}`
             }
         });
 

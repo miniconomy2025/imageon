@@ -19,7 +19,7 @@ export const SideBar = () => {
     const isMobile = useIsMobile(768);
     const currentUser = useGetCurrentUser();
     const navigate = useNavigate();
-    const { following, isFetching } = useGetFollowing(currentUser?.user?.username || '');
+    const { following, isFetching } = useGetFollowing();
 
     useEffect(() => {
         setIsCollapsed(isMobile);
