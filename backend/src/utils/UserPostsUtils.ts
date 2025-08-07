@@ -84,7 +84,7 @@ async function fetchFirstPageData(firstUrl: string): Promise<FirstPageData> {
     return firstResponse.data;
 }
 
-// Step 6: Extract and process notes from ordered items
+// Step 6: Extract and process notes from ordered items here
 function extractNotesFromOrderedItems(orderedItems: any[]): Note[] {
     console.log('Number of posts:', orderedItems ? orderedItems.length : 0);
 
