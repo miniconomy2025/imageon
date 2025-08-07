@@ -38,7 +38,7 @@ federation
 
 federation
   .setObjectDispatcher(
-    Note, "/users/{identifier}/notes/{noteId}", FederationHandlers.handleNoteRequest);
+    Note, "/users/{identifier}/posts/{noteId}", FederationHandlers.handleNoteRequest);
 
 federation
   .setFollowersDispatcher("/users/{identifier}/followers", FederationHandlers.handleFollowersRequest)
