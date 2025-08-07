@@ -70,7 +70,8 @@ export class FederationHandlers {
         const cached = await ctx.data.kv.get<string>(cacheKey);
         if (cached) {
           console.log(`🎯 Cache HIT for actor: ${identifier}`);
-          return JSON.parse(cached);
+          console.log(`🔍 Cached actor profile:`, cached);
+          // return JSON.parse(cached);
         }
       } catch (cacheError) {
         console.warn(`⚠️ Cache error for actor ${identifier}:`, cacheError);
