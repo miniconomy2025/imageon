@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { config } from '../config/config';
 export const useUserPosts = (username: string) => {
     const { currentUser } = useAuth();
-    const url = `${config.API_URL}/users/${username}/posts`;
+    const url = `${config.API_URL}/auth/user/posts`;
 
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['userPosts', username],
@@ -39,17 +39,20 @@ export const useUserPosts = (username: string) => {
                 ] as Post[]);
             }
 
+            const token = (await currentUser?.getIdTokenResult())?.token;
+
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    Authorization: `Bearer ${currentUser?.getIdToken()}`
+                    Authorization: `Bearer ${token}`
                 }
             });
 
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
-            return response.json();
+            const result = await response.json();
+            return result.posts || [];
         },
         enabled: !!username
     });

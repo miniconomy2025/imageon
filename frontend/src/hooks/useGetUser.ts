@@ -2,25 +2,34 @@ import { useQuery } from '@tanstack/react-query';
 import { User } from '../types/user';
 
 import { config } from '../config/config';
+import { useAuth } from '../contexts/AuthContext';
 
-export const useGetUser = (userId: string) => {
-    const url = `${config.API_URL}/auth/user/by-id?userId=${userId}`;
+export const useGetUser = (username: string) => {
+    const { currentUser } = useAuth();
+    const url = `${config.API_URL}/auth/user/by-id?userId=${username}`;
 
     const { data, isError, isSuccess, isFetching } = useQuery({
-        queryKey: ['user', userId],
+        queryKey: ['user', username],
         queryFn: async (): Promise<User> => {
             if (config.MOCK_DATA) {
                 return Promise.resolve({
-                    id: parseInt(userId) || 1,
-                    username: `user${userId}`,
+                    id: parseInt(username) || 1,
+                    username: `user${username}`,
                     firstName: 'John',
                     lastName: 'Doe',
                     avatar: config.MOCK_IMAGE_URL,
-                    bio: `User ${userId} is a creative individual who enjoys sharing thoughts and connecting with others. Passionate about technology and innovation.`
+                    bio: `User ${username} is a creative individual who enjoys sharing thoughts and connecting with others. Passionate about technology and innovation.`
                 } as User);
             }
 
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${(await currentUser?.getIdTokenResult())?.token}`
+                }
+            });
+
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
@@ -41,7 +50,7 @@ export const useGetUser = (userId: string) => {
                 bio: backendUser.bio
             } as User;
         },
-        enabled: !!userId
+        enabled: !!username
     });
 
     return {

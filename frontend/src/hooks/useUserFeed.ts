@@ -6,33 +6,34 @@ import { config } from '../config/config';
 export const useUserFeed = (username: string) => {
     const { currentUser } = useAuth();
 
-    const { data, isError, isSuccess, isFetching, fetchNextPage, hasNextPage } = useInfiniteQuery({
+    const { data, isError, isSuccess, isFetching, fetchNextPage, hasNextPage } = useInfiniteQuery<Post[], Error>({
         queryKey: ['userFeed', username],
         queryFn: async ({ pageParam = 1 }): Promise<Post[]> => {
+            const page = pageParam as number;
             if (config.MOCK_DATA) {
                 return Promise.resolve([
                     {
-                        id: String(pageParam * 3 - 2),
-                        title: `Post ${pageParam * 3 - 2}`,
+                        id: String(page * 3 - 2),
+                        title: `Post ${page * 3 - 2}`,
                         content: `Content ${
-                            pageParam * 3 - 2
+                            page * 3 - 2
                         } content content content content content content content content content content content content content content content content content content content content content content content contentv`,
                         author: { username },
                         postedAt: new Date().toISOString(),
                         attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL]
                     },
                     {
-                        id: String(pageParam * 3 - 1),
-                        title: `Post ${pageParam * 3 - 1}`,
-                        content: `Content ${pageParam * 3 - 1}`,
+                        id: String(page * 3 - 1),
+                        title: `Post ${page * 3 - 1}`,
+                        content: `Content ${page * 3 - 1}`,
                         author: { username },
                         postedAt: new Date().toISOString(),
                         attachments: [config.MOCK_IMAGE_URL]
                     },
                     {
-                        id: String(pageParam * 3),
-                        title: `Post ${pageParam * 3}`,
-                        content: `Content ${pageParam * 3}`,
+                        id: String(page * 3),
+                        title: `Post ${page * 3}`,
+                        content: `Content ${page * 3}`,
                         author: { username },
                         postedAt: new Date().toISOString(),
                         attachments: [config.MOCK_IMAGE_URL, config.MOCK_IMAGE_URL]
@@ -40,29 +41,31 @@ export const useUserFeed = (username: string) => {
                 ] as Post[]);
             }
 
-            const url = `${config.API_URL}/api/feed`;
+            const url = `${config.API_URL}/api/feed?actor=${encodeURIComponent(username)}`;
 
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    Authorization: `Bearer ${currentUser?.getIdToken()}`
+                    Authorization: `Bearer ${(await currentUser?.getIdTokenResult())?.token}`
                 }
             });
 
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
-            return response.json();
+            const result = await response.json();
+            return result.items || [];
         },
-        getNextPageParam: (lastPage, pages) => {
+        getNextPageParam: (_lastPage: Post[], _pages: Post[][]) => {
             // Returns undefined if there are no more pages
-            return lastPage.length > 0 ? pages.length + 1 : undefined;
+            //return lastPage.length > 0 ? pages.length + 1 : undefined;
+            return undefined;
         },
         enabled: !!username,
         initialPageParam: 1
     });
 
-    const posts = data?.pages.flat() || [];
+    const posts: Post[] = data?.pages.flat() || [];
 
     return {
         posts,

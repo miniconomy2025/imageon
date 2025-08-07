@@ -43,13 +43,14 @@ export const useGetFollowing = () => {
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    Authorization: `Bearer ${currentUser?.getIdToken()}`
+                    Authorization: `Bearer ${(await currentUser?.getIdTokenResult())?.token}`
                 }
             });
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
-            return response.json();
+            const result = await response.json();
+            return result.following || [];
         },
         enabled: currentUser?.uid != null
     });

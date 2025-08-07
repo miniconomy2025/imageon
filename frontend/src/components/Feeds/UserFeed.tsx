@@ -2,12 +2,14 @@ import { useRef, useCallback, useEffect } from 'react';
 import { useUserFeed } from '../../hooks/useUserFeed';
 import Card from '../Card/Card';
 import PostCard from '../Post/Post';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const UserFeed = () => {
+    const { userProfile } = useAuth();
     const observerRef = useRef<IntersectionObserver | null>(null);
 
     //Once login is implemented, replace with logged-in users username
-    const username = 'Bob';
+    const username = userProfile?.username;
 
     if (!username) {
         return <div>Error: Username is required</div>;

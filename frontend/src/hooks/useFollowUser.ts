@@ -5,6 +5,7 @@ import { config } from '../config/config';
 interface FollowUserParams {
     userId: number;
     isFollowing: boolean;
+    targetUsername?: string; // Add optional target username for ActivityPub
 }
 
 export const useFollowUser = () => {
@@ -12,7 +13,7 @@ export const useFollowUser = () => {
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
-        mutationFn: async ({ userId, isFollowing }: FollowUserParams): Promise<void> => {
+        mutationFn: async ({ userId, isFollowing, targetUsername }: FollowUserParams): Promise<void> => {
             if (config.MOCK_DATA) {
                 return new Promise(resolve => {
                     setTimeout(() => {
@@ -24,14 +25,20 @@ export const useFollowUser = () => {
             const url = `${config.API_URL}/api/follow`;
             const method = isFollowing ? 'DELETE' : 'POST';
 
+            // Prepare ActivityPub-compatible payload
+            const actor = currentUser?.uid || currentUser?.email || 'unknown';
+            const target = targetUsername || userId.toString();
+
             const response = await fetch(url, {
                 method,
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${currentUser?.getIdToken()}`
+                    Authorization: `Bearer ${(await currentUser?.getIdTokenResult())?.token}`
                 },
                 body: JSON.stringify({
-                    userId
+                    userId,
+                    actor,
+                    target
                 })
             });
 

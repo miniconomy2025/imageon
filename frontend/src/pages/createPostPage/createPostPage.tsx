@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGetCurrentUser } from '../../hooks/useGetCurrentUser';
 import { useCreatePost } from '../../hooks/useCreatePost';
-import { Card, Button, Input } from '../../components';
+import { useAuth } from '../../contexts/AuthContext';
+import { Card, Button } from '../../components';
 import './createPostPage.css';
 
 export const CreatePostPage = () => {
     const navigate = useNavigate();
     const { user: currentUser } = useGetCurrentUser();
+    const { userProfile } = useAuth();
     const createPostMutation = useCreatePost();
-    const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
-    const [attachments, setAttachments] = useState<string[]>([]);
+    const [mediaFile, setMediaFile] = useState<File | null>(null);
 
     const isSubmitting = createPostMutation.isPending;
 
@@ -23,11 +24,15 @@ export const CreatePostPage = () => {
             return;
         }
 
+        if (!userProfile?.username) {
+            alert('User profile not found. Please ensure you are logged in.');
+            return;
+        }
+
         const postData = {
-            title: title.trim() || undefined,
+            actor: userProfile.username, // Use username as actor identifier
             content: content.trim(),
-            attachments: attachments.filter(url => url.trim() !== ''),
-            postedAt: new Date().toISOString()
+            media: mediaFile || undefined
         };
 
         try {
@@ -36,7 +41,7 @@ export const CreatePostPage = () => {
             if (result.success) {
                 navigate('/');
             } else {
-                throw new Error(result.message || 'Failed to create post');
+                throw new Error(result.error || result.message || 'Failed to create post');
             }
         } catch (error) {
             console.error('Error creating post:', error);
@@ -44,19 +49,36 @@ export const CreatePostPage = () => {
         }
     };
 
-    const handleAddAttachment = () => {
-        const url = prompt('Enter image URL:');
-        if (url && url.trim()) {
-            setAttachments(prev => [...prev, url.trim()]);
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Check file size (limit to 10MB for example)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File size must be less than 10MB');
+                return;
+            }
+
+            // Check file type (only images for now)
+            if (!file.type.startsWith('image/')) {
+                alert('Only image files are supported');
+                return;
+            }
+
+            setMediaFile(file);
         }
     };
 
-    const handleRemoveAttachment = (index: number) => {
-        setAttachments(prev => prev.filter((_, i) => i !== index));
+    const handleRemoveFile = () => {
+        setMediaFile(null);
+        // Reset the file input
+        const fileInput = document.getElementById('media-upload') as HTMLInputElement;
+        if (fileInput) {
+            fileInput.value = '';
+        }
     };
 
     const handleCancel = () => {
-        if (content.trim() || title.trim() || attachments.length > 0) {
+        if (content.trim() || mediaFile) {
             const confirmed = window.confirm('Are you sure you want to discard this post?');
             if (confirmed) {
                 navigate(-1);
@@ -89,17 +111,6 @@ export const CreatePostPage = () => {
             <Card className='create-post-page__content'>
                 <form onSubmit={handleSubmit} className='create-post-form'>
                     <div className='create-post-form__field'>
-                        <Input
-                            type='text'
-                            placeholder='Post title (optional)'
-                            value={title}
-                            onChange={e => setTitle(e.target.value)}
-                            className='create-post-form__title'
-                            disabled={isSubmitting}
-                        />
-                    </div>
-
-                    <div className='create-post-form__field'>
                         <label htmlFor='post-content'>Post Content *</label>
                         <textarea
                             id='post-content'
@@ -114,39 +125,46 @@ export const CreatePostPage = () => {
                     </div>
 
                     <div className='create-post-form__field'>
-                        <div className='create-post-form__attachments'>
-                            <div className='create-post-form__attachments-header'>
-                                <h3>Attachments</h3>
-                                <Button type='button' variant='secondary' size='small' onClick={handleAddAttachment} disabled={isSubmitting}>
-                                    Add Image URL
-                                </Button>
+                        <div className='create-post-form__media'>
+                            <div className='create-post-form__media-header'>
+                                <h3>Media Upload</h3>
+                                <label htmlFor='media-upload' className='create-post-form__upload-button'>
+                                    <span
+                                        className='create-post-form__upload-label'
+                                        style={{
+                                            display: 'inline-block',
+                                            padding: '8px 16px',
+                                            backgroundColor: '#f0f0f0',
+                                            border: '1px solid #ccc',
+                                            borderRadius: '4px',
+                                            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                            opacity: isSubmitting ? 0.6 : 1
+                                        }}>
+                                        Choose File
+                                    </span>
+                                </label>
+                                <input
+                                    id='media-upload'
+                                    type='file'
+                                    accept='image/*'
+                                    onChange={handleFileChange}
+                                    style={{ display: 'none' }}
+                                    disabled={isSubmitting}
+                                />
                             </div>
 
-                            {attachments.length > 0 && (
-                                <div className='create-post-form__attachments-list'>
-                                    {attachments.map((url, index) => (
-                                        <div key={index} className='attachment-item'>
-                                            <img
-                                                src={url}
-                                                alt={`Attachment ${index + 1}`}
-                                                className='attachment-item__preview'
-                                                onError={e => {
-                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                }}
-                                            />
-                                            <div className='attachment-item__info'>
-                                                <span className='attachment-item__url'>{url}</span>
-                                                <Button
-                                                    type='button'
-                                                    variant='secondary'
-                                                    size='small'
-                                                    onClick={() => handleRemoveAttachment(index)}
-                                                    disabled={isSubmitting}>
-                                                    Remove
-                                                </Button>
-                                            </div>
+                            {mediaFile && (
+                                <div className='create-post-form__media-preview'>
+                                    <div className='media-preview-item'>
+                                        <img src={URL.createObjectURL(mediaFile)} alt='Media preview' className='media-preview-item__image' />
+                                        <div className='media-preview-item__info'>
+                                            <span className='media-preview-item__name'>{mediaFile.name}</span>
+                                            <span className='media-preview-item__size'>{(mediaFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                                            <Button type='button' variant='secondary' size='small' onClick={handleRemoveFile} disabled={isSubmitting}>
+                                                Remove
+                                            </Button>
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
