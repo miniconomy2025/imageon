@@ -526,6 +526,7 @@ serve({
               preferredUsername: username,
               name: localActor.name || username,
               summary: localActor.summary || '',
+              icon: localActor.icon,
               isLocal: true,
               domain: domain,
               handle: handle
@@ -726,6 +727,7 @@ serve({
               preferredUsername: username,
               name: localActor.name || username,
               summary: localActor.summary || '',
+              icon: localActor.icon,
               isLocal: true,
               domain: domain,
               handle: handle
