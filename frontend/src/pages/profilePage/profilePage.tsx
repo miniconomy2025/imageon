@@ -1,18 +1,24 @@
-import { useParams } from 'react-router-dom';
-import { useGetUser } from '../../hooks/useGetUser';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { useGetUserByUrl } from '../../hooks/useGetUserByUrl';
 import { useUserPosts } from '../../hooks/useUserPosts';
 import { Card, PostCard, Avatar } from '../../components';
 import './profilePage.css';
 
 export const ProfilePage = () => {
     const params = useParams();
+    const [searchParams] = useSearchParams();
     const username = params.username;
+    const userUrl = searchParams.get('url');
 
     if (!username) {
         return <div>Error: Username is required</div>;
     }
 
-    const { user, isFetching: isLoadingUser } = useGetUser(username);
+    if (!userUrl) {
+        return <div>Error: User URL is required</div>;
+    }
+
+    const { user, isFetching: isLoadingUser } = useGetUserByUrl(userUrl);
     const { posts: userPosts, isFetching: isLoadingPosts } = useUserPosts(username);
 
     return (

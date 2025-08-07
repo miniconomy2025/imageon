@@ -1,12 +1,28 @@
-import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Object } from "@fedify/fedify";
-import { RedisKvStore } from "@fedify/redis";
-import { Temporal } from "@js-temporal/polyfill";
-import { ActorModel } from "../models/Actor.js";
-import { crypto } from "../services/cryptography.js";
-import { activityPub } from "../services/activitypub.js";
-import { redis } from "../services/redis.js";
-import { FederationCache, CacheKeys } from "../utils/cache.js";
-import { db } from "../services/database.js";
+import {
+    Follow,
+    Accept,
+    Article,
+    RequestContext,
+    Context,
+    InboxContext,
+    Undo,
+    Announce,
+    Update,
+    Delete,
+    Recipient,
+    Like,
+    Create,
+    Note,
+    Object
+} from '@fedify/fedify';
+import { RedisKvStore } from '@fedify/redis';
+import { Temporal } from '@js-temporal/polyfill';
+import { ActorModel } from '../models/Actor.js';
+import { crypto } from '../services/cryptography.js';
+import { activityPub } from '../services/activitypub.js';
+import { redis } from '../services/redis.js';
+import { FederationCache, CacheKeys } from '../utils/cache.js';
+import { db } from '../services/database.js';
 
 // Define context data type to include KV store access
 interface ContextData {
@@ -644,74 +660,89 @@ export class FederationHandlers {
         }
     }
 
-  /**
-   * Note object dispatcher - handles requests for individual Note objects
-   */
-  static async handleNoteRequest(ctx: RequestContext<ContextData>, values: { identifier: string; noteId: string }) {
-    try {
-      const {noteId } = values;
-      console.log(`📝 Note request for noteId: ${noteId}`);
-      
-      // Rate limiting check
-      const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, 'note_request', 200, 3600);
-      if (isRateLimited) {
-        return null;
-      }
+    /**
+     * Note object dispatcher - handles requests for individual Note objects
+     */
+    static async handleNoteRequest(ctx: RequestContext<ContextData>, values: { identifier: string; noteId: string }) {
+        try {
+            const { noteId } = values;
+            console.log(`📝 Note request for noteId: ${noteId}`);
 
+            // Rate limiting check
+            const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, 'note_request', 200, 3600);
+            if (isRateLimited) {
+                return null;
+            }
 
-      // Try to get note from cache first
-      const cacheKey = CacheKeys.FEDERATION.note(noteId); // Use activities cache for now
-      const ttlSeconds = FederationCache.TTL.ACTIVITIES; // Use activities TTL
-      const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
-      
-      try {
-        const cached = await ctx.data.kv.get<string>(cacheKey);
-        if (cached) {
-          console.log(`🎯 Cache HIT for note: ${noteId}`);
-          const cachedNote = JSON.parse(cached);
-          // Look for this specific note in cached activities
-          if (cachedNote) {
-            return cachedNote;
-          }
-        }
-      } catch (cacheError) {
-        console.warn(`⚠️ Cache error for note ${noteId}:`, cacheError);
-      }
+            // Try to get note from cache first
+            const cacheKey = CacheKeys.FEDERATION.note(noteId); // Use activities cache for now
+            const ttlSeconds = FederationCache.TTL.ACTIVITIES; // Use activities TTL
+            const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
 
-      // Get the post/note from database
-      const postItem = await db.getItem(`POST#${noteId}`, 'OBJECT');
-      if (!postItem) {
-        console.log(`❌ Note not found: ${noteId}`);
-        return null;
-      }
+            try {
+                const cached = await ctx.data.kv.get<string>(cacheKey);
+                if (cached) {
+                    console.log(`🎯 Cache HIT for note: ${noteId}`);
+                    const cachedNote = JSON.parse(cached);
+                    // Look for this specific note in cached activities
+                    if (cachedNote) {
+                        return cachedNote;
+                    }
+                }
+            } catch (cacheError) {
+                console.warn(`⚠️ Cache error for note ${noteId}:`, cacheError);
+            }
 
-      console.log(`📋 Note data for ${noteId}:`, JSON.stringify(postItem, null, 2));
+            // First try to get the note as a standalone object
+            let postItem = await db.getItem(`POST#${noteId}`, 'OBJECT');
 
-      // Handle different possible timestamp field names
-      const timestamp = postItem.created_at || postItem.createdAt || postItem.timestamp || postItem.published || new Date().toISOString();
-      
-      if (!timestamp) {
-        console.log(`❌ No timestamp found for note ${noteId}. Available fields:`, postItem);
-        return null;
-      }
+            // If not found, try to find it as part of an activity
+            if (!postItem) {
+                console.log(`Note not found as standalone object, trying activity lookup: ${noteId}`);
+                const activity = await db.getItem(`ACTIVITY#${noteId}`, 'CREATE');
+                if (activity) {
+                    // If we found the activity, use its object data
+                    postItem = {
+                        id: activity.id,
+                        content: activity.object?.content || activity.additionalData?.content,
+                        created_at: activity.published,
+                        media_url: activity.object?.media_url || activity.additionalData?.media_url
+                    };
+                } else {
+                    console.log(`❌ Note not found in any form: ${noteId}`);
+                    return null;
+                }
+            }
+
+            console.log(`📋 Note data for ${noteId}:`, JSON.stringify(postItem, null, 2));
+
+            // Handle different possible timestamp field names
+            const timestamp = postItem.created_at || postItem.createdAt || postItem.timestamp || postItem.published || new Date().toISOString();
+
+            if (!timestamp) {
+                console.log(`❌ No timestamp found for note ${noteId}. Available fields:`, postItem);
+                return null;
+            }
 
             console.log(`📅 Using timestamp for note ${noteId}: ${timestamp}`);
 
-      const containsMedia = !!postItem?.media_url;
-      const mediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && 'Image' || 'Video' : null;
-      // Create Note object
-      const note = new Note({
-        id: postItem.id ? new URL(postItem.id) : new URL(`https://example.com/notes/${noteId}`),
-        content: postItem.content,
-        published: Temporal.Instant.from(timestamp),
-        attachments: containsMedia && [
-          new Object({
-            id: new URL(postItem.id),
-            mediaType: mediaType,
-            url: new URL(postItem.media_url),
-          })
-        ] || [],
-      });
+            const containsMedia = !!postItem?.media_url;
+            const mediaType = containsMedia ? (['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && 'Image') || 'Video' : null;
+            // Create Note object
+            const note = new Note({
+                id: postItem.id ? new URL(postItem.id) : new URL(`https://example.com/notes/${noteId}`),
+                content: postItem.content,
+                published: Temporal.Instant.from(timestamp),
+                attachments:
+                    (containsMedia && [
+                        new Object({
+                            id: new URL(postItem.id),
+                            mediaType: mediaType,
+                            url: new URL(postItem.media_url)
+                        })
+                    ]) ||
+                    []
+            });
 
             // Cache the result
             try {

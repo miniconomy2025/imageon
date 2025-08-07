@@ -66,7 +66,7 @@ const PostCard: React.FC<PostProps> = ({ post, author, className = '', ...props 
                 <div className='post__author-info'>
                     <h4
                         onClick={() => {
-                            navigate(Pages.profilePage.replace(':username', author?.username ?? ''));
+                            navigate(Pages.profilePage.replace(':username', author?.username ?? '') + `?url=${encodeURIComponent(author?.url || '')}`);
                         }}
                         className='post__author-name'>
                         {author?.username}
@@ -79,7 +79,11 @@ const PostCard: React.FC<PostProps> = ({ post, author, className = '', ...props 
             <div className='post__content'>{post.content}</div>
 
             <div className='post__actions'>
-                <Button variant='primary' size='small' onClick={() => navigate(Pages.postPage.replace(':id', post.id.toString()))} className={`post__action`}>
+                <Button
+                    variant='primary'
+                    size='small'
+                    onClick={() => navigate(Pages.postPage.replace(':postId', post.id) + `?url=${encodeURIComponent(post.url || '')}`)}
+                    className={`post__action`}>
                     Open
                 </Button>
                 <Button variant='outline' size='small' onClick={handleLike} className={`post__action ${isLiked ? 'post__action--liked' : ''}`}>
