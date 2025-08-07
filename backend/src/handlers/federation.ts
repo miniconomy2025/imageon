@@ -432,14 +432,23 @@ export class FederationHandlers {
                                 const objectType = activity.object?.type || 'Note';
                                 const ObjectClass = OBJECT_CONSTRUCTORS[objectType as keyof typeof OBJECT_CONSTRUCTORS] || Note;
 
+                                const noteId = activity.id.split('/').pop();
+                                const noteUrl = new URL(`/users/${identifier}/notes/${noteId}`, `${config.federation.protocol}://${config.federation.domain}`);
+                                const activityUrl = new URL(
+                                    `/users/${identifier}/activities/${noteId}`,
+                                    `${config.federation.protocol}://${config.federation.domain}`
+                                );
+
                                 return new Create({
-                                    id: new URL(activity.id),
+                                    id: activityUrl,
                                     actor: ctx.getActorUri(identifier),
                                     published: Temporal.Instant.from(activity.published || new Date().toISOString()),
                                     object: new ObjectClass({
-                                        id: new URL(activity.object?.id || activity.id),
+                                        id: noteUrl,
                                         content: activity.object?.content || activity.additionalData?.content,
-                                        published: Temporal.Instant.from(activity.published || new Date().toISOString())
+                                        published: Temporal.Instant.from(activity.published || new Date().toISOString()),
+                                        attributedTo: ctx.getActorUri(identifier),
+                                        to: new URL('https://www.w3.org/ns/activitystreams#Public')
                                     })
                                 });
                             }
