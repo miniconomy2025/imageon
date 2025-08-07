@@ -15,7 +15,7 @@ export class CacheKeys {
     // Actor-related keys
     actor: (identifier: string): KvKey => ["actor", identifier],
     actorKeyPairs: (identifier: string): KvKey => ["keys", identifier],
-    
+    note: (noteId: string): KvKey => ["note", noteId],
     // Social graph keys  
     followers: (identifier: string): KvKey => ["followers", identifier],
     followersCount: (identifier: string): KvKey => ["followers_count", identifier],
