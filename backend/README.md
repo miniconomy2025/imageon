@@ -7,24 +7,28 @@ A production-ready ActivityPub federated server built with Fedify, featuring Red
 ## ✨ Features
 
 ### **Core Federation**
+
 - **ActivityPub Protocol**: Full ActivityPub specification compliance
 - **WebFinger Support**: Actor discovery and federation handshakes
 - **Follow Management**: Automatic follow request acceptance with relationship tracking
 - **Activity Processing**: Create, Follow, Accept activities with proper inbox/outbox support
 
 ### **Performance & Scalability**
+
 - **Redis Integration**: Fedify KvStore + application-level caching for dramatic performance improvements
 - **Background Processing**: Asynchronous federation delivery with job queues
 - **Rate Limiting**: IP-based protection against abuse (100 req/hour actors, 50 req/hour outbox)
 - **Smart Caching**: Multi-layer caching with optimized TTLs for different data types
 
 ### **Data Persistence**
+
 - **DynamoDB Integration**: Scalable NoSQL storage with efficient queries
 - **Cryptographic Keys**: RSA key pair generation and secure storage
 - **Activity Storage**: Comprehensive activity logging with GSI queries
 - **Follower Tracking**: Relationship management with bi-directional queries
 
 ### **Production Ready**
+
 - **Modular Architecture**: Clean separation of concerns with TypeScript
 - **Error Handling**: Comprehensive error handling with structured logging
 - **Health Monitoring**: Health check endpoints and delivery status tracking
@@ -33,16 +37,19 @@ A production-ready ActivityPub federated server built with Fedify, featuring Red
 ## 📡 API Endpoints
 
 ### **Federation Endpoints**
+
 - `GET /users/{identifier}` - Actor profiles (with Redis caching)
 - `GET /users/{identifier}/outbox` - Actor activities (with activity caching)
 - `POST /users/{identifier}/inbox` - Activity inbox (with background processing)
 - `GET /.well-known/webfinger` - WebFinger actor discovery
 
 ### **Web Endpoints**
+
 - `GET /` - Home page with follower statistics
 - `GET /health` - Health check (includes Redis status)
 
 ### **Rate Limiting**
+
 - Actor requests: 100 requests per hour per IP
 - Outbox requests: 50 requests per hour per IP
 - Automatic IP-based tracking with Redis counters
@@ -50,29 +57,34 @@ A production-ready ActivityPub federated server built with Fedify, featuring Red
 ## 🚀 Getting Started
 
 ### **Prerequisites**
-- Node.js 18+ 
+
+- Node.js 18+
 - Docker (for Redis)
 - AWS credentials configured for DynamoDB
 
 ### **Installation**
 
 1. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 2. **Start Redis server**:
+
    ```bash
    npm run redis:start
    ```
 
 3. **Set up DynamoDB table** (if not already created):
+
    ```bash
    npm run setup:table
    npm run seed:data
    ```
 
 4. **Configure environment variables** (`.env`):
+
    ```env
    PORT=3000
    FEDERATION_DOMAIN=localhost:3000
@@ -82,6 +94,7 @@ A production-ready ActivityPub federated server built with Fedify, featuring Red
    ```
 
 5. **Start the development server**:
+
    ```bash
    npm run dev
    ```
@@ -89,6 +102,7 @@ A production-ready ActivityPub federated server built with Fedify, featuring Red
 6. **Server available at**: `http://localhost:3000`
 
 ### **Development Commands**
+
 ```bash
 npm run dev          # Development with hot reload
 npm start           # Production mode
@@ -102,6 +116,7 @@ npm run db:stop      # Stop DynamoDB Local
 ## 🧪 Testing & Performance
 
 ### **Basic Testing**
+
 ```bash
 # Health check
 curl http://localhost:3000/health
@@ -117,6 +132,7 @@ curl "http://localhost:3000/.well-known/webfinger?resource=acct:alice@localhost:
 ```
 
 ### **Performance Testing**
+
 ```bash
 # First request = cache miss (slower)
 curl -H "Accept: application/activity+json" http://localhost:3000/users/alice
@@ -130,19 +146,21 @@ curl -H "Accept: application/activity+json" http://localhost:3000/users/alice
 ```
 
 ### **Redis Integration Demo**
+
 ```bash
 # Run comprehensive Redis demonstration
 npx tsx demo-redis.js
 
 # Shows all features:
 # - Connectivity testing
-# - Rate limiting demonstration  
+# - Rate limiting demonstration
 # - Actor and activity caching
 # - Background job queuing
 # - Delivery status tracking
 ```
 
 ### **Rate Limiting Test**
+
 ```bash
 # Make multiple requests to test rate limiting
 for i in {1..5}; do
@@ -171,6 +189,7 @@ To follow this actor from another ActivityPub server (like Mastodon):
    ```
 
 ### **Testing Federation Delivery**
+
 ```bash
 # Check background job queue stats
 curl http://localhost:3000/health | jq .
@@ -183,6 +202,7 @@ curl http://localhost:3000/health | jq .
 ## 🛠️ Built With
 
 ### **Core Technologies**
+
 - **[Fedify](https://fedify.dev/)** - TypeScript-first ActivityPub framework
 - **[Redis](https://redis.io/)** - High-performance caching and job queues
 - **[DynamoDB](https://aws.amazon.com/dynamodb/)** - Scalable NoSQL database
@@ -190,12 +210,14 @@ curl http://localhost:3000/health | jq .
 - **TypeScript & Node.js** - Type-safe modern JavaScript
 
 ### **Key Packages**
+
 - **@fedify/redis** - Official Fedify Redis KvStore integration
 - **ioredis** - High-performance Redis client
 - **@aws-sdk/client-dynamodb** - AWS DynamoDB SDK v3
 - **@aws-sdk/lib-dynamodb** - DynamoDB document client
 
 ### **Development Tools**
+
 - **tsx** - TypeScript execution with hot reload
 - **Docker** - Redis containerization
 - **AWS CLI** - DynamoDB Local management
@@ -205,6 +227,7 @@ curl http://localhost:3000/health | jq .
 The server uses a **modular, production-ready architecture** with comprehensive Redis integration:
 
 ### **Core Components**
+
 - **Actor Dispatcher**: Handles actor profile requests with Redis caching
 - **Outbox Dispatcher**: Serves actor activities with smart caching (15min TTL)
 - **Inbox Listeners**: Processes incoming activities with background job queuing
@@ -212,12 +235,14 @@ The server uses a **modular, production-ready architecture** with comprehensive 
 - **Rate Limiting**: IP-based abuse protection (100/hour actors, 50/hour outbox)
 
 ### **Performance Features**
+
 - **Multi-layer Caching**: Fedify KvStore (Redis) + Application cache
 - **Background Processing**: Non-blocking federation delivery via job queues
 - **Smart TTLs**: Optimized cache lifetimes (actors: 1h, activities: 15min, keys: 24h)
 - **Connection Pooling**: Efficient Redis and DynamoDB connections
 
 ### **Architecture Layers**
+
 ```
 ├── handlers/          # Request processing & federation logic
 ├── services/          # Business logic, caching, database operations
@@ -227,6 +252,7 @@ The server uses a **modular, production-ready architecture** with comprehensive 
 ```
 
 ### **Data Flow**
+
 1. **Request** → **Rate Limiting** → **Cache Check** → **Handler**
 2. **Cache Hit** → **Immediate Response** (sub-millisecond)
 3. **Cache Miss** → **Database Query** → **Cache Storage** → **Response**
@@ -235,18 +261,21 @@ The server uses a **modular, production-ready architecture** with comprehensive 
 ## 📊 Performance Benefits
 
 ### **Before Redis Integration**
+
 - ❌ Every request required database queries
 - ❌ No rate limiting or abuse protection
 - ❌ Synchronous federation delivery blocked responses
 - ❌ Memory-only storage lost data on restart
 
 ### **After Redis Integration**
+
 - ✅ **Cache hits eliminate database queries** (dramatic performance improvement)
 - ✅ **Rate limiting protects** against abuse and resource exhaustion
 - ✅ **Background processing** prevents blocking on federation operations
 - ✅ **Persistent storage** survives server restarts and scales across instances
 
 ### **Observed Performance**
+
 ```bash
 # Server logs showing real performance improvements:
 🟢 Cache hit for actor: alice          # Sub-millisecond response
@@ -275,6 +304,7 @@ This server is **production-ready** with:
 - ✅ **Docker support** for containerized deployments
 
 For production deployment, configure:
+
 1. Redis cluster for high availability
 2. DynamoDB with appropriate read/write capacity
 3. Load balancer with health check integration

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import config from '../../config.json';
 import { Post } from '../types/post';
 
+import { config } from '../config/config';
 export const useGetPost = (id: string) => {
     const url = `${config.API_URL}/posts/${id}`;
 

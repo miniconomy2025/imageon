@@ -18,11 +18,13 @@ This project is a skeleton for a social media application built with React, Type
    ```
 
 ## Project Structure
+
 - `src/` - Main source code (React components in TypeScript)
 - `src/components/` - Reusable UI components
 - `public/` - Static assets
 
 ## Components
+
 - **Button** - Customizable button with variants and sizes
 - **Avatar** - User avatar with fallback text and online status
 - **Card** - Container component with different styles
@@ -31,4 +33,5 @@ This project is a skeleton for a social media application built with React, Type
 - **PostComposer** - Create new posts with expandable textarea
 
 ## Customization
+
 All components are fully typed with TypeScript and prop-driven. Start building your social media app by editing components in the `src/components` folder and updating `App.tsx`.

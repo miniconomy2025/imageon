@@ -134,3 +134,8 @@ jest.config.js.bak
 .npm/
 .eslintcache
 .stylelintcache
+
+**/.env
+
+dead.postman_collection.json
+**/shared-local-instance.db

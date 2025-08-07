@@ -5,6 +5,7 @@ import { ActorModel } from "../models/Actor.js";
 import { crypto } from "../services/cryptography.js";
 import { activityPub } from "../services/activitypub.js";
 import { redis } from "../services/redis.js";
+import { randomUUID } from "crypto";
 import { FederationCache, CacheKeys } from "../utils/cache.js";
 import { db } from "../services/database.js";
 import { config } from "../config/index.js";
@@ -212,20 +213,18 @@ export class FederationHandlers {
     try {
       // Store the follower relationship
       await activityPub.saveFollower(
-        follow.id.href, 
-        follow.actorId.href, 
-        follow.objectId.href
+        follow.id.href,
+        follow.actorId.href,
+        follow.objectId.href,
       );
 
-      // Save the follow activity
       await activityPub.saveActivity(
         follow.id.href,
         'Follow',
         follow.actorId.href,
         follow.objectId.href,
-        {
-          accepted: true,
-          accepted_at: new Date().toISOString(),
+        { 
+          accepted_at: new Date().toISOString()
         }
       );
 
@@ -238,7 +237,6 @@ export class FederationHandlers {
       await ctx.data.kv.delete(activitiesKey);
       console.log(`🗑️ Cache invalidated for activities: ${targetIdentifier}`);
 
-      // Send Accept activity back to the follower
       await ctx.sendActivity(
         { identifier: parsed.identifier },
         follower,
@@ -313,7 +311,6 @@ export class FederationHandlers {
         console.log('Invalid Undo activity: missing required fields');
         return;
       }
-      // Determine what is being undone. Most commonly a Follow.
       const object = undo.object;
       // If the object is a Follow, remove the follower relationship
       if (object.type === 'Follow' && object.actor && object.object) {

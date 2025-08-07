@@ -50,12 +50,12 @@ fi
 
 # Check DynamoDB connectivity (for native AWS DynamoDB)
 echo "🗄️ Checking DynamoDB connectivity..."
-if [ -n "$AWS_REGION" ] && [ -z "$DYNAMO_ENDPOINT" ]; then
+if [ -n "$AWS_REGION" ] && [ -z "$DYNAMODB_ENDPOINT" ]; then
     echo "✅ Using native AWS DynamoDB in region: ${AWS_REGION}"
     echo "📋 Table: ${DYNAMODB_TABLE_NAME:-imageonapp}"
     # Note: DynamoDB connectivity will be verified when the application starts
-elif [ -n "$DYNAMO_ENDPOINT" ]; then
-    echo "🏠 Using local DynamoDB at: ${DYNAMO_ENDPOINT}"
+elif [ -n "$DYNAMODB_ENDPOINT" ]; then
+    echo "🏠 Using local DynamoDB at: ${DYNAMODB_ENDPOINT}"
 else
     echo "⚠️ DynamoDB configuration not found. Please check your environment variables."
 fi
@@ -70,7 +70,7 @@ if pm2 describe imageon-backend > /dev/null 2>&1; then
     pm2 restart imageon-backend
 else
     echo "Starting new application..."
-    pm2 start ecosystem.config.js --env production
+    pm2 start ecosystem.config.cjs --env production
 fi
 
 # Save PM2 process list
