@@ -757,7 +757,7 @@ export class AuthHandlers {
             // Build ActivityPub URIs
             const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
             const postId = randomUUID();
-            const objectId = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
+            const objectId = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}/posts/${postId}`;
             const activityId = `${actorUri}/activities/${postId}`;
             // Persist post object
             const item: Record<string, any> = {
