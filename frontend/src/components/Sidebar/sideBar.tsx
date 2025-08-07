@@ -95,7 +95,9 @@ export const SideBar = () => {
                                                 user={user}
                                                 onClick={() => {
                                                     handleUserClick();
-                                                    navigate(Pages.profilePage.replace(':username', user.username));
+                                                    navigate(
+                                                        Pages.profilePage.replace(':username', user.username) + `?url=${encodeURIComponent(user.url || '')}`
+                                                    );
                                                 }}
                                             />
                                         ))}
@@ -115,7 +117,9 @@ export const SideBar = () => {
                                                 user={user}
                                                 onClick={() => {
                                                     handleUserClick();
-                                                    navigate(Pages.profilePage.replace(':username', user.username));
+                                                    navigate(
+                                                        Pages.profilePage.replace(':username', user.username) + `?url=${encodeURIComponent(user.url || '')}`
+                                                    );
                                                 }}
                                             />
                                         ))}

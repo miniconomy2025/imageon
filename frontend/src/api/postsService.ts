@@ -38,22 +38,6 @@ class PostsService {
 
     async createPost(postData: CreatePostRequest, authToken?: string): Promise<CreatePostResponse> {
         try {
-            if (config.MOCK_DATA) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-                const mockActivityId = `mock-activity-${Date.now()}`;
-                const mockObjectId = `mock-object-${Date.now()}`;
-
-                return {
-                    success: true,
-                    activityId: mockActivityId,
-                    objectId: mockObjectId,
-                    actor: postData.actor,
-                    content: postData.content,
-                    message: 'Post created successfully'
-                };
-            }
-
             const headers: Record<string, string> = {};
 
             if (authToken) {

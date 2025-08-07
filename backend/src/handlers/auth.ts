@@ -542,7 +542,8 @@ export class AuthHandlers {
                     return {
                         username,
                         displayName,
-                        createdAt: item.created_at
+                        createdAt: item.created_at,
+                        url: followUri
                     };
                 })
             );
@@ -756,7 +757,7 @@ export class AuthHandlers {
             // Build ActivityPub URIs
             const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
             const postId = randomUUID();
-            const objectId = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}/posts/${postId}`;
+            const objectId = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
             const activityId = `${actorUri}/activities/${postId}`;
             // Persist post object
             const item: Record<string, any> = {
@@ -1078,11 +1079,11 @@ export class AuthHandlers {
                 const uriStr = String(uri);
                 const id = uriStr.startsWith('http://') || uriStr.startsWith('https://') ? extractIdentifier(uriStr) : uriStr;
                 if (!id) continue;
-                
+
                 // Get full actor object
                 const actor = await ActorModel.getActor(id);
                 const activities = (await activityPub.getActorActivities(id)) as any[];
-                
+
                 for (const act of activities) {
                     const activity: any = act as any;
                     if (activity.type === 'Create') {

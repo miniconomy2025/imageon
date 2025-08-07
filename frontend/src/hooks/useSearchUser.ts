@@ -60,7 +60,9 @@ export const useSearchUser = (searchTerm: string) => {
                 username: user.preferredUsername || user.name || searchTerm,
                 preferredUsername: user.name || user.preferredUsername || searchTerm,
                 icon: { url: user.icon?.url || config.MOCK_IMAGE_URL, type: 'image' },
-                bio: user.summary || 'No bio available'
+                bio: user.summary || 'No bio available',
+                handle: user.handle,
+                url: user.url
             };
 
             return [transformedUser];

@@ -59,7 +59,7 @@ export const UserSearch = () => {
         followUser({
             userId: user.id,
             isFollowing: isCurrentlyFollowing,
-            targetUsername: user.username
+            targetUsername: user.url || user.username
         });
 
         // Optimistically update the UI
