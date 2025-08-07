@@ -37,7 +37,7 @@ async function fetchUserProfile(userUrl: string): Promise<UserData> {
     return userResponse.data;
 }
 
-// Step 2: Extract outbox URL from user data
+// Step 2: Extract outbox URL from user data here
 function extractOutboxUrl(userData: UserData): string {
     const outboxUrl = userData.outbox;
     console.log('Step 2: Outbox URL found:', outboxUrl);
