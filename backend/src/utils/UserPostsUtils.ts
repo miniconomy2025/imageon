@@ -126,7 +126,7 @@ async function fetchUserPosts(userUrl: string): Promise<PaginationResult> {
         // Step 6: Extract notes from ordered items items
         const notes = extractNotesFromOrderedItems(firstData.orderedItems);
 
-        // Step 7: Create and return result
+        // Step 7: Create and return result result
         const result = createResultObject(firstData, firstUrl, notes);
 
         console.log('\n=== RESULT OBJECT ===');
