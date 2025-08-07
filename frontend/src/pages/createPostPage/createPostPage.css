@@ -73,34 +73,55 @@
     min-height: 120px;
 }
 
-.create-post-form__attachments {
+.create-post-form__media {
     border: 1px solid var(--border-color, #ddd);
     border-radius: 8px;
     padding: 1rem;
     background: var(--background-secondary, #f9f9f9);
 }
 
-.create-post-form__attachments-header {
+.create-post-form__media-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
 }
 
-.create-post-form__attachments-header h3 {
+.create-post-form__media-header h3 {
     margin: 0;
     color: var(--text-primary, #333);
     font-size: 1rem;
     font-weight: 500;
 }
 
-.create-post-form__attachments-list {
+.create-post-form__upload-button {
+    cursor: pointer;
+}
+
+.create-post-form__upload-label {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: var(--background-secondary, #f0f0f0);
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    color: var(--text-primary, #333);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.create-post-form__upload-label:hover {
+    background-color: var(--background-hover, #e0e0e0);
+}
+
+.create-post-form__media-preview {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
 }
 
-.attachment-item {
+.media-preview-item {
     display: flex;
     gap: 1rem;
     padding: 0.75rem;
@@ -110,7 +131,7 @@
     align-items: center;
 }
 
-.attachment-item__preview {
+.media-preview-item__image {
     width: 60px;
     height: 60px;
     object-fit: cover;
@@ -119,21 +140,22 @@
     flex-shrink: 0;
 }
 
-.attachment-item__info {
+.media-preview-item__info {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
 
-.attachment-item__url {
+.media-preview-item__name {
     font-size: 0.875rem;
+    color: var(--text-primary, #333);
+    font-weight: 500;
+}
+
+.media-preview-item__size {
+    font-size: 0.75rem;
     color: var(--text-secondary, #666);
-    word-break: break-all;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .create-post-form__actions {
@@ -164,16 +186,16 @@
         flex-direction: column;
     }
 
-    .attachment-item {
+    .media-preview-item {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .attachment-item__preview {
+    .media-preview-item__image {
         align-self: center;
     }
 
-    .attachment-item__info {
+    .media-preview-item__info {
         width: 100%;
         align-items: center;
         text-align: center;

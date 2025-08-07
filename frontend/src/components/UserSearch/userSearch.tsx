@@ -3,12 +3,16 @@ import { useSearchUser } from '../../hooks/useSearchUser';
 import { useFollowUser } from '../../hooks/useFollowUser';
 import { User } from '../../types/user';
 import './userSearch.css';
+import { useNavigate } from 'react-router-dom';
+import { Pages } from '../../pages/pageRouting';
 
 export const UserSearch = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showResults, setShowResults] = useState(false);
     const [followingUsers, setFollowingUsers] = useState<Set<number>>(new Set());
     const searchRef = useRef<HTMLDivElement>(null);
+
+    const navigate = useNavigate();
 
     const { users, isLoading } = useSearchUser(searchTerm);
     const { followUser, isLoading: isFollowLoading } = useFollowUser();
@@ -52,8 +56,7 @@ export const UserSearch = () => {
     };
 
     const handleResultClick = (user: User) => {
-        // You can add navigation to user profile here if needed
-        console.log('Navigate to user profile:', user.username);
+        navigate(Pages.profilePage.replace(':username', user.username));
     };
 
     return (

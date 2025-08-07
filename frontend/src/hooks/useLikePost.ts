@@ -28,7 +28,7 @@ export const useLikePost = () => {
                 method,
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${currentUser?.getIdToken()}`
+                    Authorization: `Bearer ${(await currentUser?.getIdTokenResult())?.token}`
                 }
             });
 

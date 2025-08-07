@@ -86,16 +86,17 @@ export const SideBar = () => {
                                 <p>Loading following...</p>
                             ) : (
                                 <ul>
-                                    {following?.map((user, index) => (
-                                        <UserCard
-                                            key={`${user.id}-${index}`}
-                                            user={user}
-                                            onClick={() => {
-                                                handleUserClick();
-                                                navigate(Pages.profilePage.replace(':username', user.username));
-                                            }}
-                                        />
-                                    ))}
+                                    {following &&
+                                        following?.map((user, index) => (
+                                            <UserCard
+                                                key={`${user.id}-${index}`}
+                                                user={user}
+                                                onClick={() => {
+                                                    handleUserClick();
+                                                    navigate(Pages.profilePage.replace(':username', user.username));
+                                                }}
+                                            />
+                                        ))}
                                 </ul>
                             )}
                         </div>

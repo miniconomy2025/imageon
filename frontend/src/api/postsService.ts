@@ -1,19 +1,20 @@
-import { Post } from '../types/post';
 import { Comment } from '../types/comment';
-import { useAuth } from '../contexts/AuthContext';
 import { config } from '../config/config';
 
 export interface CreatePostRequest {
-    title?: string;
+    actor: string;
     content: string;
-    attachments?: string[];
-    postedAt?: string;
+    media?: File;
 }
 
 export interface CreatePostResponse {
     success: boolean;
-    post?: Post;
+    activityId?: string;
+    objectId?: string;
+    actor?: string;
+    content?: string;
     message?: string;
+    error?: string;
 }
 
 export interface CreateCommentRequest {
@@ -35,62 +36,72 @@ class PostsService {
         this.baseUrl = `${config.API_URL}/api/posts`;
     }
 
-    async createPost(postData: CreatePostRequest): Promise<CreatePostResponse> {
-        const { currentUser } = useAuth();
-
+    async createPost(postData: CreatePostRequest, authToken?: string): Promise<CreatePostResponse> {
         try {
             if (config.MOCK_DATA) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
-                const mockPost: Post = {
-                    id: `mock-post-${Date.now()}`,
-                    title: postData.title,
-                    content: postData.content,
-                    attachments: postData.attachments || [],
-                    postedAt: postData.postedAt || new Date().toISOString(),
-                    likes: 0,
-                    comments: [],
-                    author: {
-                        id: 1,
-                        username: 'Bob',
-                        firstName: 'John',
-                        lastName: 'Doe',
-                        bio: 'Content creator and thought leader. Passionate about sharing knowledge and inspiring others.'
-                    }
-                };
+                const mockActivityId = `mock-activity-${Date.now()}`;
+                const mockObjectId = `mock-object-${Date.now()}`;
 
                 return {
                     success: true,
-                    post: mockPost,
+                    activityId: mockActivityId,
+                    objectId: mockObjectId,
+                    actor: postData.actor,
+                    content: postData.content,
                     message: 'Post created successfully'
                 };
             }
 
+            const headers: Record<string, string> = {};
+
+            if (authToken) {
+                headers.Authorization = `Bearer ${authToken}`;
+            }
+
+            let body: BodyInit;
+
+            if (postData.media) {
+                const formData = new FormData();
+                formData.append('actor', postData.actor);
+                formData.append('content', postData.content);
+                formData.append('media', postData.media);
+
+                body = formData;
+            } else {
+                headers['Content-Type'] = 'application/json';
+                body = JSON.stringify({
+                    actor: postData.actor,
+                    content: postData.content
+                });
+            }
+
             const response = await fetch(this.baseUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${currentUser?.getIdToken()}`
-                },
-                body: JSON.stringify(postData)
+                headers,
+                body
             });
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
             }
 
             const result = await response.json();
             return {
-                success: true,
-                post: result.post || result,
+                success: result.success || true,
+                activityId: result.activityId,
+                objectId: result.objectId,
+                actor: result.actor,
+                content: result.content,
                 message: result.message || 'Post created successfully'
             };
         } catch (error) {
             console.error('Error creating post:', error);
             return {
                 success: false,
-                message: error instanceof Error ? error.message : 'An unexpected error occurred'
+                error: error instanceof Error ? error.message : 'An unexpected error occurred'
             };
         }
     }
