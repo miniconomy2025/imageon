@@ -117,7 +117,7 @@ async function fetchUserPosts(userUrl: string): Promise<PaginationResult> {
         // Step 3: Fetch outbox data dta
         const outboxData = await fetchOutboxData(outboxUrl);
 
-        // Step 4: Extract first page URL
+        // Step 4: Extract first page URL url
         const firstUrl = extractFirstPageUrl(outboxData);
 
         // Step 5: Fetch first page data
