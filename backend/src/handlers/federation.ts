@@ -213,16 +213,16 @@ export class FederationHandlers {
     try {
       // Store the follower relationship
       await activityPub.saveFollower(
-        follow.id.href,
-        follow.actorId.href,
-        follow.objectId.href,
+        follow.id?.href,
+        follow.actorId?.href,
+        follow.objectId?.href,
       );
 
       await activityPub.saveActivity(
-        follow.id.href,
+        follow.id?.href,
         'Follow',
-        follow.actorId.href,
-        follow.objectId.href,
+        follow.actorId?.href,
+        follow.objectId?.href,
         { 
           accepted_at: new Date().toISOString()
         }
@@ -241,7 +241,7 @@ export class FederationHandlers {
         { identifier: parsed.identifier },
         follower,
         new Accept({
-          id: new URL(`#accepts${follow.id.href}`, ctx.getActorUri(parsed.identifier)),
+          id: new URL(`#accepts${follow.id?.href}`, ctx.getActorUri(parsed.identifier)),
           actor: follow.objectId,
           object: follow
         }),
@@ -249,12 +249,12 @@ export class FederationHandlers {
 
       //save the accept activity in our database
       await FederationHandlers.handleAcceptActivity(ctx, new Accept({
-        id: new URL(`#accepts${follow.id.href}`, ctx.getActorUri(parsed.identifier)),
+        id: new URL(`#accepts${follow.id?.href}`, ctx.getActorUri(parsed.identifier)),
         actor: follow.objectId,
         object: follow,
       }));
 
-      console.log(`✅ Follow auto accepted: ${follow.actorId.href} -> ${follow.objectId.href}`);
+      console.log(`✅ Follow auto accepted: ${follow.actorId?.href} -> ${follow.objectId?.href}`);
     } catch (error) {
       console.error('Error processing follow activity:', error);
     }
