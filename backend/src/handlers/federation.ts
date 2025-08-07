@@ -271,8 +271,8 @@ export class FederationHandlers {
         return;
       }
       // Save the Accept activity in our database for audit purposes
-      const activityId = accept.id.href ?? String(accept.id);
-      const actorId = accept.actorId.href ?? String(accept.actorId);
+      const activityId = accept.id?.href ?? String(accept.id);
+      const actorId = accept.actorId?.href ?? String(accept.actorId);
       // The object of an Accept is usually the Follow activity being accepted
       await activityPub.saveActivity(activityId, 'Accept', actorId, String(accept.objectId?.href));
       console.log(`✅ Accept processed: ${actorId} accepted ${String(accept.objectId?.href)}`);
@@ -291,9 +291,9 @@ export class FederationHandlers {
         console.log('Invalid Like activity: missing required fields');
         return;
       }
-      const activityId = like.id.href ?? String(like.id);
-      const actorId = like.actorId.href ?? String(like.actorId);
-      const objectId = like.objectId.href ?? String(like.objectId);
+      const activityId = like.id?.href ?? String(like.id);
+      const actorId = like.actorId?.href ?? String(like.actorId);
+      const objectId = like.objectId?.href ?? String(like.objectId);
       await activityPub.saveActivity(activityId, 'Like', actorId, objectId);
       console.log(`👍 Like received from ${actorId} on ${objectId}`);
     } catch (error) {
@@ -314,8 +314,8 @@ export class FederationHandlers {
       const object = undo.object;
       // If the object is a Follow, remove the follower relationship
       if (object.type === 'Follow' && object.actor && object.object) {
-        const followerId = object.actor.href ?? String(object.actor);
-        const targetId = object.object.href ?? String(object.object);
+        const followerId = object.actor?.href ?? String(object.actor);
+        const targetId = object.object?.href ?? String(object.object);
         await activityPub.removeFollower(followerId, targetId);
         console.log(`👋 Unfollow processed: ${followerId} -> ${targetId}`);
         
@@ -341,12 +341,12 @@ export class FederationHandlers {
         }
         
         // Save the Undo activity
-        const activityId = undo.id.href ?? String(undo.id);
+        const activityId = undo.id?.href ?? String(undo.id);
         await activityPub.saveActivity(activityId, 'Undo', followerId, targetId);
       } else {
         // Other undo types can simply be recorded
-        const activityId = undo.id.href ?? String(undo.id);
-        const actorId = undo.actorId.href ?? String(undo.actorId);
+        const activityId = undo.id?.href ?? String(undo.id);
+        const actorId = undo.actorId?.href ?? String(undo.actorId);
         const objectId = object.id?.href ?? object.objectId?.href ?? String(object);
         await activityPub.saveActivity(activityId, 'Undo', actorId, objectId);
         console.log(`🔁 Undo received for unsupported type: ${JSON.stringify(object)}`);
