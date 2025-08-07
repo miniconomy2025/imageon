@@ -1,9 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import { Post } from '../types/post';
 import { useAuth } from '../contexts/AuthContext';
+import { useGetUserByUrl } from './useGetUserByUrl';
 
 export const useGetPost = (url: string) => {
     const { currentUser } = useAuth();
+
+    const getAuthorUrlFromPostUrl = (postUrl: string) => {
+        if (!postUrl) return '';
+        const postIdParts = postUrl.split('/');
+        const userIndex = postIdParts.findIndex((part: string) => part === 'users');
+        if (userIndex !== -1 && userIndex + 1 < postIdParts.length) {
+            return postIdParts.slice(0, userIndex + 2).join('/');
+        }
+        return '';
+    };
+
+    console.debug('useGetPost called with URL:', url);
+
+    const authorUrl = getAuthorUrlFromPostUrl(url);
+    const { user, isFetching: isFetchingUser } = useGetUserByUrl(authorUrl);
 
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['post', url],
@@ -22,7 +38,6 @@ export const useGetPost = (url: string) => {
             }
 
             const result = await response.json();
-            console.log('useGetPost raw response:', result);
 
             // Handle attachments - can be single object or array
             let attachments = [];
@@ -51,16 +66,7 @@ export const useGetPost = (url: string) => {
                 id: result.id || '',
                 content: result.content || '',
                 title: result.name || result.summary || '',
-                author: result.attributedTo
-                    ? {
-                          id: result.attributedTo.id || '',
-                          username: result.attributedTo.preferredUsername || '',
-                          preferredUsername: result.attributedTo.name?.split(' ')[0] || result.attributedTo.preferredUsername || '',
-                          name: result.attributedTo.name || '',
-                          icon: result.attributedTo.icon ? { type: 'image', url: result.attributedTo.icon } : undefined,
-                          url: result.attributedTo.url || result.attributedTo.id || ''
-                      }
-                    : undefined,
+                author: user,
                 postedAt: result.published || new Date().toISOString(),
                 likes: result.likes?.totalItems || 0,
                 comments: result.replies?.items || [],
@@ -71,7 +77,9 @@ export const useGetPost = (url: string) => {
             console.log('useGetPost mapped post:', mappedPost);
             return mappedPost;
         },
-        enabled: !!url,
+        enabled: !!url && !isFetchingUser,
+        retry: 3,
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
         staleTime: 5 * 60 * 1000, // 5 minutes
         gcTime: 10 * 60 * 1000 // 10 minutes
     });

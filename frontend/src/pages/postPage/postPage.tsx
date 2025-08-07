@@ -2,6 +2,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGetPost } from '../../hooks/useGetPost';
 import { useGetCurrentUser } from '../../hooks/useGetCurrentUser';
 import { useCreateComment } from '../../hooks/useCreateComment';
+import { useLikePost } from '../../hooks/useLikePost';
 import { AttachmentCarousel } from '../../components/AttachmentCarousel/attachementCarousel';
 import { Card, Button, Avatar } from '../../components';
 import { useState, useEffect } from 'react';
@@ -14,6 +15,11 @@ export const PostPage = () => {
     const { user: currentUser } = useGetCurrentUser();
     const [newComment, setNewComment] = useState('');
     const { createComment, isLoading: isCreatingComment, isSuccess } = useCreateComment();
+
+    // Like functionality
+    const [isLiked, setIsLiked] = useState<boolean>(false);
+    const [likeCount, setLikeCount] = useState<number>(0);
+    const { likePost, isLoading: isLikingPost } = useLikePost();
 
     const postUrl = searchParams.get('url');
     const postId = params.postId;
@@ -28,11 +34,41 @@ export const PostPage = () => {
 
     const { data: post } = useGetPost(postUrl);
 
+    // Update like count when post data loads
+    useEffect(() => {
+        if (post?.likes !== undefined) {
+            setLikeCount(post.likes);
+        }
+    }, [post?.likes]);
+
     useEffect(() => {
         if (isSuccess) {
             setNewComment('');
         }
     }, [isSuccess]);
+
+    const handleLike = (): void => {
+        if (isLikingPost || !post) return;
+
+        const currentLikedState = isLiked;
+        const newLikedState = !isLiked;
+
+        setIsLiked(newLikedState);
+        setLikeCount(prev => (currentLikedState ? prev - 1 : prev + 1));
+
+        likePost(
+            {
+                postId: post.id,
+                isLiked: currentLikedState
+            },
+            {
+                onError: () => {
+                    setIsLiked(currentLikedState);
+                    setLikeCount(prev => (currentLikedState ? prev + 1 : prev - 1));
+                }
+            }
+        );
+    };
 
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -97,7 +133,14 @@ export const PostPage = () => {
                         </div>
                     )}
                     <div className='post-page__stats'>
-                        <span className='post-page__stat'>❤️ {post?.likes || 0} likes</span>
+                        <Button
+                            variant='outline'
+                            size='small'
+                            onClick={handleLike}
+                            className={`post-page__stat-button ${isLiked ? 'post-page__stat-button--liked' : ''}`}
+                            disabled={isLikingPost}>
+                            ❤️ {likeCount} likes
+                        </Button>
                         <span className='post-page__stat'>💬 {post?.comments?.length || 0} comments</span>
                     </div>
                 </Card>
