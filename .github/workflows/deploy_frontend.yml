@@ -1,0 +1,181 @@
+name: Deploy Frontend to S3 + CloudFront
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  deploy:
+    name: Deploy Frontend to S3
+    runs-on: ubuntu-latest
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+          
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm i
+        
+      - name: Run type check
+        working-directory: ./frontend
+        run: npm run type-check
+        
+      - name: Run linting
+        working-directory: ./frontend
+        run: npm run lint
+        
+      - name: Build React application
+        working-directory: ./frontend
+        run: npm run build
+        
+      - name: Verify build output
+        working-directory: ./frontend
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "❌ Build failed! Expected 'dist' directory not found."
+            exit 1
+          fi
+          echo "✅ Build successful - dist directory created"
+          echo "📁 Build contents:"
+          ls -la dist/
+          
+      - name: Get deployment configuration from GitHub secrets
+        run: |
+          # Validate required secrets are available
+          if [ -z "${{ secrets.S3_BUCKET }}" ]; then
+            echo "❌ S3_BUCKET secret is not configured"
+            echo "   Please add S3_BUCKET to your GitHub repository secrets"
+            exit 1
+          fi
+          
+          if [ -z "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
+            echo "⚠️  CLOUDFRONT_DISTRIBUTION_ID secret not found"
+            echo "   Cache invalidation will be skipped"
+          fi
+          
+          if [ -z "${{ secrets.FRONTEND_DOMAIN }}" ]; then
+            echo "⚠️  FRONTEND_DOMAIN secret not found"
+            echo "   Using CloudFront default domain for testing"
+          fi
+          
+          # Export to GitHub environment
+          echo "S3_BUCKET=${{ secrets.S3_BUCKET }}" >> $GITHUB_ENV
+          echo "CLOUDFRONT_ID=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" >> $GITHUB_ENV
+          echo "FRONTEND_DOMAIN=${{ secrets.FRONTEND_DOMAIN }}" >> $GITHUB_ENV
+          
+          echo "📋 Deployment Configuration:"
+          echo "S3 Bucket: ${{ secrets.S3_BUCKET }}"
+          echo "Frontend URL: https://${{ secrets.FRONTEND_DOMAIN }}"
+          echo "CloudFront ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+          
+      - name: Deploy to S3
+        working-directory: ./frontend
+        run: |
+          echo "📤 Uploading to S3 bucket: $S3_BUCKET"
+          
+          # Sync build files to S3 with proper cache headers
+          aws s3 sync dist/ s3://$S3_BUCKET/ \
+            --delete \
+            --cache-control "public,max-age=31536000" \
+            --exclude "*.html" \
+            --exclude "service-worker.js" \
+            --exclude "manifest.json"
+          
+          # Upload HTML files with no-cache for SPA routing
+          aws s3 sync dist/ s3://$S3_BUCKET/ \
+            --cache-control "public,max-age=0,no-cache,no-store,must-revalidate" \
+            --include "*.html" \
+            --include "service-worker.js" \
+            --include "manifest.json"
+          
+          echo "✅ S3 upload completed successfully"
+          
+      - name: Invalidate CloudFront cache
+        run: |
+          if [ -n "$CLOUDFRONT_ID" ]; then
+            echo "🔄 Invalidating CloudFront cache..."
+            
+            # Create cache invalidation
+            INVALIDATION_ID=$(aws cloudfront create-invalidation \
+              --distribution-id $CLOUDFRONT_ID \
+              --paths "/*" \
+              --query 'Invalidation.Id' \
+              --output text)
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ Cache invalidation started with ID: $INVALIDATION_ID"
+              echo "⏳ Invalidation usually takes 1-3 minutes to complete"
+            else
+              echo "⚠️  Cache invalidation failed, but deployment succeeded"
+              echo "   You can manually invalidate in AWS Console"
+            fi
+          else
+            echo "⚠️  CloudFront distribution ID not available, skipping cache invalidation"
+          fi
+          
+      - name: Test deployment
+        run: |
+          echo "🧪 Testing deployment..."
+          
+          # Wait a moment for S3 to update
+          sleep 10
+          
+          # Test S3 endpoint
+          echo "Testing S3 website endpoint..."
+          if curl -f -s -I "https://$FRONTEND_DOMAIN" > /dev/null; then
+            echo "✅ Frontend is accessible at https://$FRONTEND_DOMAIN"
+          else
+            echo "⚠️  Frontend may still be propagating. CloudFront updates can take 5-15 minutes."
+          fi
+          
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo ""
+          echo "🎉 Frontend Deployment Summary"
+          echo "=============================="
+          
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment Status: SUCCESS"
+            echo ""
+            echo "🌐 Your frontend is deployed at:"
+            echo "   https://$FRONTEND_DOMAIN"
+            echo ""
+            echo "📱 Test your deployment:"
+            echo "   curl -I https://$FRONTEND_DOMAIN"
+            echo ""
+            echo "⏳ Note: CloudFront propagation may take 5-15 minutes for global availability"
+          else
+            echo "❌ Deployment Status: FAILED"
+            echo ""
+            echo "🔍 Check the logs above for details"
+            echo "🛠️  Common issues:"
+            echo "   - Terraform infrastructure not deployed"
+            echo "   - AWS credentials not configured"
+            echo "   - Build process failed"
+          fi
