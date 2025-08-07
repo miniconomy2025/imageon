@@ -7,6 +7,7 @@ import { activityPub } from "../services/activitypub.js";
 import { redis } from "../services/redis.js";
 import { FederationCache, CacheKeys } from "../utils/cache.js";
 import { db } from "../services/database.js";
+import { config } from '../config/index.js';
 
 // Define context data type to include KV store access
 interface ContextData {
@@ -479,10 +480,31 @@ export class FederationHandlers {
 
             const nextCursor = endIndex < sortedActivities.length ? String(endIndex) : null;
 
-            return {
-                items: [...postActivities],
-                next: nextCursor
+            const outboxId = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}/outbox`;
+            if (!cursor) {
+                const firstPageUrl = `${outboxId}?cursor=0`;
+                return {
+                    '@context': 'https://www.w3.org/ns/activitystreams',
+                    id: outboxId,
+                    type: 'OrderedCollection',
+                    totalItems: sortedActivities.length,
+                    first: firstPageUrl
+                };
+            }
+
+            const pageId = `${outboxId}?cursor=${offset}`;
+            const page: any = {
+                '@context': 'https://www.w3.org/ns/activitystreams',
+                id: pageId,
+                type: 'OrderedCollectionPage',
+                partOf: outboxId,
+                totalItems: sortedActivities.length,
+                orderedItems: [...postActivities]
             };
+            if (nextCursor) {
+                page.next = `${outboxId}?cursor=${nextCursor}`;
+            }
+            return page;
         } catch (error) {
             console.error(`❌ Error in handleOutboxRequest for ${identifier}:`, error);
             if (error instanceof Error) {
@@ -644,74 +666,71 @@ export class FederationHandlers {
         }
     }
 
-  /**
-   * Note object dispatcher - handles requests for individual Note objects
-   */
-  static async handleNoteRequest(ctx: RequestContext<ContextData>, values: { identifier: string; noteId: string }) {
-    try {
-      const {noteId } = values;
-      console.log(`📝 Note request for noteId: ${noteId}`);
-      
-      // Rate limiting check
-      const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, 'note_request', 200, 3600);
-      if (isRateLimited) {
-        return null;
-      }
+    static async handleNoteRequest(ctx: RequestContext<ContextData>, values: { identifier: string; noteId: string }) {
+        try {
+            const { identifier, noteId } = values;
+            console.log(`📝 Note request for identifier: ${identifier}, noteId: ${noteId}`);
 
+            // Rate limiting check, does it work right
+            const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, 'note_request', 200, 3600);
+            if (isRateLimited) {
+                return null;
+            }
 
-      // Try to get note from cache first
-      const cacheKey = CacheKeys.FEDERATION.note(noteId); // Use activities cache for now
-      const ttlSeconds = FederationCache.TTL.ACTIVITIES; // Use activities TTL
-      const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
-      
-      try {
-        const cached = await ctx.data.kv.get<string>(cacheKey);
-        if (cached) {
-          console.log(`🎯 Cache HIT for note: ${noteId}`);
-          const cachedNote = JSON.parse(cached);
-          // Look for this specific note in cached activities
-          if (cachedNote) {
-            return cachedNote;
-          }
-        }
-      } catch (cacheError) {
-        console.warn(`⚠️ Cache error for note ${noteId}:`, cacheError);
-      }
+            const exists = await ActorModel.exists(identifier);
+            if (!exists) {
+                console.log(`❌ Actor not found for note request: ${identifier}`);
+                return null;
+            }
 
-      // Get the post/note from database
-      const postItem = await db.getItem(`POST#${noteId}`, 'OBJECT');
-      if (!postItem) {
-        console.log(`❌ Note not found: ${noteId}`);
-        return null;
-      }
+            const cacheKey = CacheKeys.FEDERATION.activities(identifier); // Use activities cache for now
+            const ttlSeconds = FederationCache.TTL.ACTIVITIES; // Use activities TTL
+            const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
 
-      console.log(`📋 Note data for ${noteId}:`, JSON.stringify(postItem, null, 2));
+            try {
+                const cached = await ctx.data.kv.get<string>(cacheKey);
+                if (cached) {
+                    console.log(`🎯 Cache HIT for note: ${noteId}`);
+                    const cachedActivities = JSON.parse(cached);
+                    const cachedNote = cachedActivities.find((activity: any) => activity.object?.id?.includes(noteId) || activity.id?.includes(noteId));
+                    if (cachedNote) {
+                        return cachedNote;
+                    }
+                }
+            } catch (cacheError) {
+                console.warn(`⚠️ Cache error for note ${noteId}:`, cacheError);
+            }
 
-      // Handle different possible timestamp field names
-      const timestamp = postItem.created_at || postItem.createdAt || postItem.timestamp || postItem.published || new Date().toISOString();
-      
-      if (!timestamp) {
-        console.log(`❌ No timestamp found for note ${noteId}. Available fields:`, postItem);
-        return null;
-      }
+            const postItem = await db.getItem(`OBJECT#${noteId}`, 'NOTE');
+            if (!postItem) {
+                console.log(`❌ Note not found: ${noteId}`);
+                return null;
+            }
+
+            const expectedOwnerKey = `ACTOR#${identifier}`;
+            if (postItem.GSI1PK !== expectedOwnerKey) {
+                console.log(`❌ Note ${noteId} does not belong to actor ${identifier}. Expected: ${expectedOwnerKey}, Found: ${postItem.GSI1PK}`);
+                return null;
+            }
+
+            const timestamp = postItem.created_at || postItem.createdAt || postItem.timestamp || postItem.published || new Date().toISOString();
+
+            if (!timestamp) {
+                console.log(`❌ No timestamp found for note ${noteId}. Available fields:`, Object.keys(postItem));
+                return null;
+            }
 
             console.log(`📅 Using timestamp for note ${noteId}: ${timestamp}`);
 
-      const containsMedia = !!postItem?.media_url;
-      const mediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && 'Image' || 'Video' : null;
-      // Create Note object
-      const note = new Note({
-        id: postItem.id ? new URL(postItem.id) : new URL(`https://example.com/notes/${noteId}`),
-        content: postItem.content,
-        published: Temporal.Instant.from(timestamp),
-        attachments: containsMedia && [
-          new Object({
-            id: new URL(postItem.id),
-            mediaType: mediaType,
-            url: new URL(postItem.media_url),
-          })
-        ] || [],
-      });
+            const note = new Note({
+                id: new URL(`/users/${identifier}/notes/${noteId}`, `${config.federation.protocol}://${config.federation.domain}`),
+                content: postItem.content,
+                published: Temporal.Instant.from(timestamp),
+                attribution: ctx.getActorUri(identifier),
+                to: new URL('https://www.w3.org/ns/activitystreams#Public') // Public visibility
+            });
+
+            console.log(`✅ Note object created for: ${identifier}/${noteId}`);
 
             // Cache the result
             try {
