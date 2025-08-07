@@ -1,70 +1,85 @@
 #root {
-  width: 100%;
-  padding: 0;
-  text-align: left;
-  margin-left: 0;
+    width: 100%;
+    padding: 0;
+    text-align: left;
+    margin-left: 0;
 }
 
 @media (max-width: 768px) {
-  #root {
-    width: 100%;
-    margin-left: 0;
-    padding: 0;
-  }
+    #root {
+        width: 100%;
+        margin-left: 0;
+        padding: 0;
+    }
 }
 
 .app {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-  overflow-y: visible;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: visible;
 }
 
 .app__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  border-bottom: 1px solid #e9ecef;
-  flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+    flex-shrink: 0;
+    background: white;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.app-title {
+    margin: 0;
+    color: #007bff;
+    font-size: 1.5rem;
+    font-weight: 600;
 }
 
 .app__header h1 {
-  margin: 0;
-  color: #007bff;
+    margin: 0;
+    color: #007bff;
 }
 
 .app__user {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .app__main {
-  display: flex;
-  flex: 1;
-  overflow-x: hidden;
-  overflow-y: visible;
-  min-height: 0;
+    display: flex;
+    flex: 1;
+    overflow-x: hidden;
+    overflow-y: visible;
+    min-height: 0;
 }
 
 .main-content {
-  flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
-  overflow-x: hidden;
-  box-sizing: border-box;
-  min-width: 0;
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 @media (max-width: 768px) {
-  .app__header {
-    padding: 1rem;
-  }
-  
-  .main-content {
-    padding: 1rem;
-  }
+    .app__header {
+        padding: 1rem;
+    }
+
+    .main-content {
+        padding: 1rem;
+    }
 }

@@ -1,52 +1,234 @@
-import "dotenv/config";
+import dotenv from 'dotenv';
+dotenv.config();
 import { serve } from "@hono/node-server";
-import { createFederation, Follow, Accept, Like, Undo } from "@fedify/fedify";
+import { createFederation, Follow, Accept, Like, Undo, kvCache, Note } from "@fedify/fedify";
 import { RedisKvStore } from "@fedify/redis";
 import { config } from "./config/index.js";
 import { createRedisInstance } from "./config/redis.js";
 import { FederationHandlers } from "./handlers/federation.js";
 import { WebHandlers } from "./handlers/web.js";
+import { AuthHandlers } from "./handlers/auth.js";
 import { ActorModel } from "./models/Actor.js";
-// Import ActivityPub service for managing followers, posts and likes
 import { activityPub } from "./services/activitypub.js";
-// Import randomUUID for generating unique IDs for activities and posts
-import { randomUUID } from "crypto";
 
-import { db } from "./services/database.js";
+import { requireAuth } from "./middleware/auth.js";
 
 const redis = createRedisInstance();
+const kvStore = new RedisKvStore(redis);
 
-const federation = createFederation<void>({
-  kv: new RedisKvStore(redis),
+// Define context data type to include KV store access
+interface ContextData {
+  kv: RedisKvStore;
+}
+
+const federation = createFederation<ContextData>({
+  kv: kvStore,
   origin: `${config.federation.protocol}://${config.federation.domain}`,
 });
 
 federation
-  .setActorDispatcher("/users/{identifier}", FederationHandlers.handleActorRequest)
+  .setActorDispatcher(
+    "/users/{identifier}",
+    FederationHandlers.handleActorRequest
+  )
   .setKeyPairsDispatcher(FederationHandlers.handleKeyPairsRequest);
 
-federation.setOutboxDispatcher("/users/{identifier}/outbox", FederationHandlers.handleOutboxRequest);
+federation
+  .setOutboxDispatcher("/users/{identifier}/outbox", FederationHandlers.handleOutboxRequest);
+
+federation
+  .setObjectDispatcher(
+    Note, "/users/{identifier}/notes/{noteId}", FederationHandlers.handleNoteRequest);
+
+federation
+  .setFollowersDispatcher("/users/{identifier}/followers", FederationHandlers.handleFollowersRequest)
+  .authorize(FederationHandlers.handleFollowersAuthorization)
+  .setFirstCursor(() => "0")
+  .setLastCursor(async (ctx: any, identifier: string) => {
+    const followers = await activityPub.getFollowers(identifier);
+    const pageSize = 20;
+    const lastPage = Math.max(0, Math.floor((followers.length - 1) / pageSize) * pageSize);
+    return String(lastPage);
+  })
+  .setCounter(FederationHandlers.handleFollowersCountRequest);
+
+federation
+  .setFollowingDispatcher("/users/{identifier}/following", FederationHandlers.handleFollowingRequest);
 
 federation
   .setInboxListeners("/users/{identifier}/inbox", "/inbox")
   .on(Follow, FederationHandlers.handleFollowActivity)
-  // Handle Accept activities from remote servers
+
   .on(Accept, FederationHandlers.handleAcceptActivity)
-  // Handle Like activities from remote servers
+
   .on(Like, FederationHandlers.handleLikeActivity)
-  // Handle Undo activities (e.g. unfollow) from remote servers
+
   .on(Undo, FederationHandlers.handleUndoActivity);
 
-// Main server
 serve({
   fetch: async (request: Request) => {
     const url = new URL(request.url);
-    
+
+    // Add CORS headers for all requests
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    };
+
+    // Handle preflight requests
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders,
+      });
+    }
+
+    // Auth endpoints
+    if (url.pathname === "/auth/verify" && request.method === "POST") {
+      const response = await AuthHandlers.handleVerifyToken(request);
+      // Add CORS headers to the response
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (
+      url.pathname === "/auth/complete-profile" &&
+      request.method === "POST"
+    ) {
+      const response = await requireAuth(AuthHandlers.handleCompleteProfile)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/profile" && request.method === "GET") {
+      const response = await requireAuth(AuthHandlers.handleGetProfile)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/profile" && request.method === "PUT") {
+      const response = await requireAuth(AuthHandlers.handleUpdateProfile)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/check-username" && request.method === "GET") {
+      const response = await AuthHandlers.handleCheckUsername(request);
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    // New user routes
+    if (url.pathname === "/auth/user/posts" && request.method === "GET") {
+      const response = await requireAuth(AuthHandlers.handleGetUserPosts)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/user/followers" && request.method === "GET") {
+      const response = await requireAuth(AuthHandlers.handleGetFollowers)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/user/following" && request.method === "GET") {
+      const response = await requireAuth(AuthHandlers.handleGetFollowing)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/user/logged-in" && request.method === "GET") {
+      const response = await requireAuth(AuthHandlers.handleGetLoggedInUser)(
+        request
+      );
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    if (url.pathname === "/auth/user/by-id" && request.method === "GET") {
+      const response = await AuthHandlers.handleGetUserById(request);
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
     // Health check endpoint
     if (url.pathname === "/health") {
       return await WebHandlers.handleHealthCheck();
     }
-    
+
     // Home page
     if (url.pathname === "/") {
       return await WebHandlers.handleHomePage(url);
@@ -63,7 +245,7 @@ serve({
             {
               status: 400,
               headers: { "Content-Type": "application/json" },
-            },
+            }
           );
         }
 
@@ -75,7 +257,7 @@ serve({
             {
               status: 400,
               headers: { "Content-Type": "application/json" },
-            },
+            }
           );
         }
         const [, identifier, domain] = match;
@@ -84,23 +266,22 @@ serve({
         if (domain !== expectedDomain) {
           // For other domains we cannot serve WebFinger
           return new Response(
-            JSON.stringify({ error: "Requested resource not served by this domain" }),
+            JSON.stringify({
+              error: "Requested resource not served by this domain",
+            }),
             {
               status: 404,
               headers: { "Content-Type": "application/json" },
-            },
+            }
           );
         }
         // Look up the actor
         const actor = await ActorModel.getActor(identifier);
         if (!actor) {
-          return new Response(
-            JSON.stringify({ error: "Actor not found" }),
-            {
-              status: 404,
-              headers: { "Content-Type": "application/json" },
-            },
-          );
+          return new Response(JSON.stringify({ error: "Actor not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
         }
         const actorUrl = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
         const jrd = {
@@ -130,15 +311,21 @@ serve({
           {
             status: 500,
             headers: { "Content-Type": "application/json" },
-          },
+          }
         );
       }
     }
 
-    // Followers collection endpoint (ActivityPub OrderedCollection)
-    const followersMatch = /^\/users\/([^/]+)\/followers$/.exec(url.pathname);
-    if (followersMatch && request.method === "GET") {
-      const identifier = followersMatch[1];
+    // Followers collection endpoint (ActivityPub OrderedCollection, API only)
+    const followersParts = url.pathname.split("/");
+    if (
+      followersParts.length === 5 &&
+      followersParts[1] === "api" &&
+      followersParts[2] === "users" &&
+      followersParts[4] === "followers" &&
+      request.method === "GET"
+    ) {
+      const identifier = followersParts[3];
       try {
         // Verify that the actor exists
         const exists = await ActorModel.exists(identifier);
@@ -163,17 +350,26 @@ serve({
         });
       } catch (error) {
         console.error("Error fetching followers list:", error);
-        return new Response(JSON.stringify({ error: "Internal server error" }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
     }
 
-    // Following collection endpoint (ActivityPub OrderedCollection)
-    const followingMatch = /^\/users\/([^/]+)\/following$/.exec(url.pathname);
-    if (followingMatch && request.method === "GET") {
-      const identifier = followingMatch[1];
+    // Following collection endpoint (ActivityPub OrderedCollection, API only)
+    const followingParts = url.pathname.split("/");
+    if (
+      followingParts.length === 5 &&
+      followingParts[1] === "api" &&
+      followingParts[2] === "users" &&
+      followingParts[4] === "following" &&
+      request.method === "GET"
+    ) {
+      const identifier = followingParts[3];
       try {
         const exists = await ActorModel.exists(identifier);
         if (!exists) {
@@ -196,392 +392,562 @@ serve({
         });
       } catch (error) {
         console.error("Error fetching following list:", error);
-        return new Response(JSON.stringify({ error: "Internal server error" }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
     }
 
     // Create post endpoint
-    if (url.pathname === "/posts" && request.method === "POST") {
-      try {
-        const body = await request.json();
-        const { actor, content } = body || {};
-        if (!actor || !content) {
-          return new Response(
-            JSON.stringify({ error: "Missing required fields: actor and content" }),
-            {
-              status: 400,
-              headers: { "Content-Type": "application/json" },
-            },
-          );
-        }
-        // Actor can be a username or a full URI. Extract identifier if necessary.
-        let identifier: string;
-        if (actor.startsWith("http://") || actor.startsWith("https://")) {
-          try {
-            const actorUrl = new URL(actor);
-            const parts = actorUrl.pathname.split("/");
-            const usersIndex = parts.indexOf("users");
-            identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
-          } catch {
-            identifier = "";
-          }
-        } else {
-          identifier = actor;
-        }
-        if (!identifier) {
-          return new Response(
-            JSON.stringify({ error: "Invalid actor identifier" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        const exists = await ActorModel.exists(identifier);
-        if (!exists) {
-          return new Response(JSON.stringify({ error: "Actor not found" }), {
-            status: 404,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
-        // Generate unique IDs for the activity and the post object
-        const postId = randomUUID();
-        const objectId = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
-        const activityId = `${actorUri}/activities/${postId}`;
-        await db.putItem({
-          PK: `POST#${postId}`,
-          SK: 'OBJECT',
-          id: objectId,
-          actor: actorUri,
-          content,
-          created_at: new Date().toISOString(),
-        });
-        // Save the Create activity
-        await activityPub.saveActivity(activityId, "Create", actorUri, objectId, { content });
-        return new Response(
-          JSON.stringify({
-            success: true,
-            activityId,
-            objectId,
-            actor: actorUri,
-            content,
-          }),
-          {
-            status: 201,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
-      } catch (error) {
-        console.error("Error creating post:", error);
-        return new Response(
-          JSON.stringify({ error: "Internal server error" }),
-          { status: 500, headers: { "Content-Type": "application/json" } },
-        );
-      }
+    if (url.pathname === "/api/posts" && request.method === "POST") {
+      // Protect the create post endpoint behind authentication
+      const response = await requireAuth((r: any) => AuthHandlers.handleCreatePost(r))(request);
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value as any);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
     }
 
-    // Like and unlike endpoints for posts
-    const likeMatch = /^\/posts\/([^/]+)\/like$/.exec(url.pathname);
-    if (likeMatch) {
-      const postId = likeMatch[1];
-      // Determine full post URI.  Posts are stored under `/posts/{id}` and
-      // persisted with a POST#<id> partition key (see the Create post handler).
-      const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
+    // Like and unlike endpoints for posts (API only)
+    const likeParts = url.pathname.split("/");
+    if (
+      likeParts.length === 5 &&
+      likeParts[1] === "api" &&
+      likeParts[2] === "posts" &&
+      likeParts[4] === "like"
+    ) {
+      const postId = likeParts[3];
       if (request.method === "POST") {
-        try {
-          const body = await request.json();
-          const { actor } = body || {};
-          if (!actor) {
-            return new Response(
-              JSON.stringify({ error: "Missing required field: actor" }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
-            );
-          }
-          // Resolve actor identifier
-          let identifier: string;
-          if (actor.startsWith("http://") || actor.startsWith("https://")) {
-            try {
-              const actorUrl = new URL(actor);
-              const parts = actorUrl.pathname.split("/");
-              const usersIndex = parts.indexOf("users");
-              identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
-            } catch {
-              identifier = "";
-            }
-          } else {
-            identifier = actor;
-          }
-          if (!identifier) {
-            return new Response(
-              JSON.stringify({ error: "Invalid actor identifier" }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
-            );
-          }
-          const exists = await ActorModel.exists(identifier);
-          if (!exists) {
-            return new Response(JSON.stringify({ error: "Actor not found" }), {
-              status: 404,
-              headers: { "Content-Type": "application/json" },
-            });
-          }
-          const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
-          if (!postItem) {
-            return new Response(
-              JSON.stringify({ error: 'Post not found' }),
-              { status: 404, headers: { 'Content-Type': 'application/json' } },
-            );
-          }
-          const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
-          const likeId = randomUUID();
-          const activityId = `${actorUri}/activities/${likeId}`;
-          // Save Like activity
-          await activityPub.saveActivity(activityId, "Like", actorUri, postUri);
-          return new Response(
-            JSON.stringify({ success: true, activityId, actor: actorUri, object: postUri }),
-            { status: 201, headers: { "Content-Type": "application/json" } },
-          );
-        } catch (error) {
-          console.error("Error processing Like activity:", error);
-          return new Response(
-            JSON.stringify({ error: "Internal server error" }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
-        }
+        // Authenticate like request 
+        const response = await requireAuth((r: any) => AuthHandlers.handleLikePost(r, postId))(request);
+        const responseHeaders = new Headers(response.headers);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          responseHeaders.set(key, value as any);
+        });
+        return new Response(response.body, {
+          status: response.status,
+          headers: responseHeaders,
+        });
       }
       if (request.method === "DELETE") {
-        try {
-          const body = await request.json();
-          const { actor } = body || {};
-          if (!actor) {
-            return new Response(
-              JSON.stringify({ error: "Missing required field: actor" }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
-            );
-          }
-          // Resolve actor identifier
-          let identifier: string;
-          if (actor.startsWith("http://") || actor.startsWith("https://")) {
-            try {
-              const actorUrl = new URL(actor);
-              const parts = actorUrl.pathname.split("/");
-              const usersIndex = parts.indexOf("users");
-              identifier = usersIndex !== -1 && parts[usersIndex + 1] ? parts[usersIndex + 1] : "";
-            } catch {
-              identifier = "";
-            }
-          } else {
-            identifier = actor;
-          }
-          if (!identifier) {
-            return new Response(
-              JSON.stringify({ error: "Invalid actor identifier" }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
-            );
-          }
-          const exists = await ActorModel.exists(identifier);
-          if (!exists) {
-            return new Response(JSON.stringify({ error: "Actor not found" }), {
-              status: 404,
-              headers: { "Content-Type": "application/json" },
-            });
-          }
-          const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
-          if (!postItem) {
-            return new Response(
-              JSON.stringify({ error: 'Post not found' }),
-              { status: 404, headers: { 'Content-Type': 'application/json' } },
-            );
-          }
-          const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
-          const undoId = randomUUID();
-          const activityId = `${actorUri}/activities/${undoId}`;
-          // Record Undo activity for unlike
-          await activityPub.saveActivity(activityId, "Undo", actorUri, postUri);
-          return new Response(
-            JSON.stringify({ success: true, activityId, actor: actorUri, object: postUri }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        } catch (error) {
-          console.error("Error processing Undo Like activity:", error);
-          return new Response(
-            JSON.stringify({ error: "Internal server error" }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
-        }
+        // Authenticate unlike request
+        const response = await requireAuth((r: any) => AuthHandlers.handleUnlikePost(r, postId))(request);
+        const responseHeaders = new Headers(response.headers);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          responseHeaders.set(key, value as any);
+        });
+        return new Response(response.body, {
+          status: response.status,
+          headers: responseHeaders,
+        });
       }
     }
 
-    // Follow and unfollow endpoints
-    if (url.pathname === "/follow" && (request.method === "POST" || request.method === "DELETE")) {
+    // Create comment endpoint (API only)
+    const commentParts = url.pathname.split("/");
+    if (
+      commentParts.length === 5 &&
+      commentParts[1] === "api" &&
+      commentParts[2] === "posts" &&
+      commentParts[4] === "comment" &&
+      request.method === "POST"
+    ) {
+      const parentPostId = commentParts[3];
+      // Authenticate comment creation
+      const response = await requireAuth((r: any) => AuthHandlers.handleCreateComment(r, parentPostId))(request);
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value as any);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    // User feed endpoint - returns posts from followed actors and self
+    if (url.pathname === "/api/feed" && request.method === "GET") {
+      // Authenticate feed retrieval
+      const response = await requireAuth((r: any) => AuthHandlers.handleUserFeed(r))(request);
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value as any);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
+    }
+
+    // User discovery endpoints
+    if (url.pathname === "/api/users/discover" && request.method === "POST") {
       try {
         const body = await request.json();
-        const { actor, target } = body || {};
-        if (!actor || !target) {
+        const { handle } = body || {};
+        
+        if (!handle) {
           return new Response(
-            JSON.stringify({ error: "Missing required fields: actor and target" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
+            JSON.stringify({ error: "Missing required field: handle" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
           );
         }
-        // Resolve follower identifier
-        let followerId: string;
-        if (actor.startsWith("http://") || actor.startsWith("https://")) {
-          try {
-            const u = new URL(actor);
-            const parts = u.pathname.split("/");
-            const idx = parts.indexOf("users");
-            followerId = idx !== -1 && parts[idx + 1] ? parts[idx + 1] : "";
-          } catch {
-            followerId = "";
+        
+        console.log(`🔍 User discovery request for: ${handle}`);
+        
+        // Simple inline discovery for testing
+        // Parse handle
+        const handleParts = handle.replace(/^@/, '').split('@');
+        if (handleParts.length !== 2) {
+          return new Response(
+            JSON.stringify({ error: "Invalid handle format" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        
+        const [username, domain] = handleParts;
+        console.log(`📝 Parsed handle: ${username}@${domain}`);
+        
+        // Check if local user
+        if (domain === config.federation.domain) {
+          console.log(`🏠 Local user check for: ${username}`);
+          const localActor = await ActorModel.getActor(username);
+          if (localActor) {
+            const user = {
+              id: `${config.federation.protocol}://${config.federation.domain}/users/${username}`,
+              type: 'Person',
+              preferredUsername: username,
+              name: localActor.name || username,
+              summary: localActor.summary || '',
+              isLocal: true,
+              domain: domain,
+              handle: handle
+            };
+            return new Response(
+              JSON.stringify({ success: true, user }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            );
           }
-        } else {
-          followerId = actor;
         }
-        // Resolve target identifier or leave full URI
-        let targetId: string;
-        let targetUri: string;
-        if (target.startsWith("http://") || target.startsWith("https://")) {
-          targetUri = target;
-          try {
-            const tu = new URL(target);
-            const parts = tu.pathname.split("/");
-            const idx = parts.indexOf("users");
-            targetId = idx !== -1 && parts[idx + 1] ? parts[idx + 1] : "";
-          } catch {
-            targetId = "";
-          }
-        } else {
-          targetId = target;
-          targetUri = `${config.federation.protocol}://${config.federation.domain}/users/${target}`;
-        }
-        if (!followerId) {
-          return new Response(
-            JSON.stringify({ error: "Invalid actor identifier" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        const followerExists = await ActorModel.exists(followerId);
-        if (!followerExists) {
-          return new Response(JSON.stringify({ error: "Actor not found" }), {
-            status: 404,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        if (targetId && followerId === targetId) {
-          return new Response(
-            JSON.stringify({ error: "Cannot follow yourself" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
-          );
-        }
+        
+        // For remote users, try WebFinger discovery
+        console.log(`🌐 Remote user discovery for: ${username}@${domain}`);
         try {
-          const targetHost = new URL(targetUri).hostname;
-          const localHost = config.federation.domain.split(':')[0];
-          if (targetHost === localHost) {
-            const targetExists = await ActorModel.exists(targetId);
-            if (!targetExists) {
-              return new Response(JSON.stringify({ error: "Target actor not found" }), {
-                status: 404,
-                headers: { "Content-Type": "application/json" },
-              });
-            }
+          const webfingerUrl = `https://${domain}/.well-known/webfinger?resource=acct:${username}@${domain}`;
+          console.log(`🔍 WebFinger URL: ${webfingerUrl}`);
+          
+          const webfingerResponse = await fetch(webfingerUrl, {
+            headers: {
+              'Accept': 'application/jrd+json, application/json',
+              'User-Agent': `ImageOn/1.0 (+${config.federation.protocol}://${config.federation.domain})`
+            },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          console.log(`📊 WebFinger response status: ${webfingerResponse.status}`);
+          
+          if (!webfingerResponse.ok) {
+            console.log(`❌ WebFinger failed: ${webfingerResponse.status} ${webfingerResponse.statusText}`);
+            return new Response(
+              JSON.stringify({ error: "User not found" }),
+              { status: 404, headers: { "Content-Type": "application/json" } }
+            );
           }
-        } catch {
+          
+          const webfingerData = await webfingerResponse.json();
+          console.log(`📊 WebFinger data:`, JSON.stringify(webfingerData, null, 2));
+          
+          // Find ActivityPub self link
+          const selfLink = webfingerData.links?.find((link: any) => 
+            link.rel === 'self' && 
+            (link.type === 'application/activity+json' || 
+             link.type === 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"')
+          );
+          
+          if (!selfLink?.href) {
+            console.log(`❌ No ActivityPub self link found`);
+            return new Response(
+              JSON.stringify({ error: "User not found" }),
+              { status: 404, headers: { "Content-Type": "application/json" } }
+            );
+          }
+          
+          console.log(`✅ Found actor URI: ${selfLink.href}`);
+          
+          // Fetch actor profile
+          const actorResponse = await fetch(selfLink.href, {
+            headers: {
+              'Accept': 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+              'User-Agent': `ImageOn/1.0 (+${config.federation.protocol}://${config.federation.domain})`
+            },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          console.log(`📊 Actor response status: ${actorResponse.status}`);
+          
+          if (!actorResponse.ok) {
+            console.log(`❌ Actor fetch failed: ${actorResponse.status}`);
+            return new Response(
+              JSON.stringify({ error: "User not found" }),
+              { status: 404, headers: { "Content-Type": "application/json" } }
+            );
+          }
+          
+          const actor = await actorResponse.json();
+          console.log(`✅ Actor fetched: ${actor.preferredUsername || actor.name}`);
+          
+          const user = {
+            id: actor.id,
+            type: actor.type,
+            preferredUsername: actor.preferredUsername || username,
+            name: actor.name || actor.preferredUsername || username,
+            summary: actor.summary || '',
+            url: actor.url || actor.id,
+            inbox: actor.inbox,
+            outbox: actor.outbox,
+            followers: actor.followers,
+            following: actor.following,
+            icon: actor.icon,
+            isLocal: false,
+            domain: domain,
+            handle: handle,
+            discoveredAt: new Date().toISOString()
+          };
+          
           return new Response(
-            JSON.stringify({ error: "Invalid target URI" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
+            JSON.stringify({ success: true, user }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+          
+        } catch (fetchError) {
+          console.error(`❌ Discovery error:`, fetchError);
+          return new Response(
+            JSON.stringify({ error: "User not found" }),
+            { status: 404, headers: { "Content-Type": "application/json" } }
           );
         }
-        const followerUri = `${config.federation.protocol}://${config.federation.domain}/users/${followerId}`;
-        const followId = randomUUID();
-        const activityId = `${followerUri}/activities/${followId}`;
-        if (request.method === "POST") {
-          // Save follower relationship and activity
-          await activityPub.saveFollower(activityId, followerUri, targetUri);
-          await activityPub.saveActivity(activityId, "Follow", followerUri, targetUri);
-          return new Response(
-            JSON.stringify({ success: true, activityId, follower: followerUri, target: targetUri }),
-            { status: 201, headers: { "Content-Type": "application/json" } },
-          );
-        } else {
-          // DELETE - unfollow
-          await activityPub.removeFollower(followerUri, targetUri);
-          await activityPub.saveActivity(activityId, "Undo", followerUri, targetUri);
-          return new Response(
-            JSON.stringify({ success: true, activityId, follower: followerUri, target: targetUri }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
+
       } catch (error) {
-        console.error("Error processing follow/unfollow:", error);
+        console.error("Error in user discovery:", error);
         return new Response(
           JSON.stringify({ error: "Internal server error" }),
-          { status: 500, headers: { "Content-Type": "application/json" } },
+          { status: 500, headers: { "Content-Type": "application/json" } }
         );
       }
     }
     
-    // Handle outbox requests manually
-    const outboxRegex = /^\/users\/([^/]+)\/outbox$/;
-    const outboxMatch = outboxRegex.exec(url.pathname);
-    if (outboxMatch) {
-      const identifier = outboxMatch[1];
+    // User search endpoint 
+    //TODO: to be implemented
+    if (url.pathname === "/api/users/search" && request.method === "GET") { 
       try {
-        const cursor = url.searchParams.get('cursor');
-        const outboxData = await FederationHandlers.handleOutboxRequest(null, identifier, cursor);
-        if (outboxData) {
-          return new Response(JSON.stringify(outboxData), {
-            status: 200,
-            headers: {
-              'Content-Type': 'application/activity+json',
-              'Access-Control-Allow-Origin': '*',
-            }
-          });
-        } else {
-          return new Response(JSON.stringify({ error: 'Actor not found' }), {
-            status: 404,
-            headers: { 'Content-Type': 'application/json' }
-          });
+        const query = url.searchParams.get("q");
+        const limitParam = url.searchParams.get("limit");
+        const limit = limitParam ? parseInt(limitParam, 10) : 10;
+        
+        if (!query) {
+          return new Response(
+            JSON.stringify({ error: "Missing query parameter 'q'" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
         }
+        
+        if (limit < 1 || limit > 50) {
+          return new Response(
+            JSON.stringify({ error: "Limit must be between 1 and 50" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Simple search implementation - just return empty results for now
+        const results: any[] = [];
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            results,
+            query,
+            count: results.length 
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+        
       } catch (error) {
-        console.error('Error handling outbox request:', error);
-        return new Response(JSON.stringify({ error: 'Internal server error' }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        console.error("Error in user search:", error);
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
       }
+    }
+
+    // User discovery endpoints
+    if (url.pathname === "/api/users/discover" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { handle } = body || {};
+        
+        if (!handle) {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: handle" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        
+        console.log(`🔍 User discovery request for: ${handle}`);
+        
+        // Simple inline discovery for testing
+        // Parse handle
+        const handleParts = handle.replace(/^@/, '').split('@');
+        if (handleParts.length !== 2) {
+          return new Response(
+            JSON.stringify({ error: "Invalid handle format" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        
+        const [username, domain] = handleParts;
+        console.log(`📝 Parsed handle: ${username}@${domain}`);
+        
+        // Check if local user
+        if (domain === config.federation.domain) {
+          console.log(`🏠 Local user check for: ${username}`);
+          const localActor = await ActorModel.getActor(username);
+          if (localActor) {
+            const user = {
+              id: `${config.federation.protocol}://${config.federation.domain}/users/${username}`,
+              type: 'Person',
+              preferredUsername: username,
+              name: localActor.name || username,
+              summary: localActor.summary || '',
+              isLocal: true,
+              domain: domain,
+              handle: handle
+            };
+            return new Response(
+              JSON.stringify({ success: true, user }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            );
+          }
+        }
+        
+        // For remote users, try WebFinger discovery
+        console.log(`🌐 Remote user discovery for: ${username}@${domain}`);
+        try {
+          const webfingerUrl = `https://${domain}/.well-known/webfinger?resource=acct:${username}@${domain}`;
+          console.log(`🔍 WebFinger URL: ${webfingerUrl}`);
+          
+          const webfingerResponse = await fetch(webfingerUrl, {
+            headers: {
+              'Accept': 'application/jrd+json, application/json',
+              'User-Agent': `ImageOn/1.0 (+${config.federation.protocol}://${config.federation.domain})`
+            },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          console.log(`📊 WebFinger response status: ${webfingerResponse.status}`);
+          
+          if (!webfingerResponse.ok) {
+            console.log(`❌ WebFinger failed: ${webfingerResponse.status} ${webfingerResponse.statusText}`);
+            return new Response(
+              JSON.stringify({ error: "User not found" }),
+              { status: 404, headers: { "Content-Type": "application/json" } }
+            );
+          }
+          
+          const webfingerData = await webfingerResponse.json();
+          console.log(`📊 WebFinger data:`, JSON.stringify(webfingerData, null, 2));
+          
+          // Find ActivityPub self link
+          const selfLink = webfingerData.links?.find((link: any) => 
+            link.rel === 'self' && 
+            (link.type === 'application/activity+json' || 
+             link.type === 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"')
+          );
+          
+          if (!selfLink?.href) {
+            console.log(`❌ No ActivityPub self link found`);
+            return new Response(
+              JSON.stringify({ error: "User not found" }),
+              { status: 404, headers: { "Content-Type": "application/json" } }
+            );
+          }
+          
+          console.log(`✅ Found actor URI: ${selfLink.href}`);
+          
+          // Fetch actor profile
+          const actorResponse = await fetch(selfLink.href, {
+            headers: {
+              'Accept': 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+              'User-Agent': `ImageOn/1.0 (+${config.federation.protocol}://${config.federation.domain})`
+            },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          console.log(`📊 Actor response status: ${actorResponse.status}`);
+          
+          if (!actorResponse.ok) {
+            console.log(`❌ Actor fetch failed: ${actorResponse.status}`);
+            return new Response(
+              JSON.stringify({ error: "User not found" }),
+              { status: 404, headers: { "Content-Type": "application/json" } }
+            );
+          }
+          
+          const actor = await actorResponse.json();
+          console.log(`✅ Actor fetched: ${actor.preferredUsername || actor.name}`);
+          
+          const user = {
+            id: actor.id,
+            type: actor.type,
+            preferredUsername: actor.preferredUsername || username,
+            name: actor.name || actor.preferredUsername || username,
+            summary: actor.summary || '',
+            url: actor.url || actor.id,
+            inbox: actor.inbox,
+            outbox: actor.outbox,
+            followers: actor.followers,
+            following: actor.following,
+            icon: actor.icon,
+            isLocal: false,
+            domain: domain,
+            handle: handle,
+            discoveredAt: new Date().toISOString()
+          };
+          
+          return new Response(
+            JSON.stringify({ success: true, user }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+          
+        } catch (fetchError) {
+          console.error(`❌ Discovery error:`, fetchError);
+          return new Response(
+            JSON.stringify({ error: "User not found" }),
+            { status: 404, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        
+      } catch (error) {
+        console.error("Error in user discovery:", error);
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+    
+    // User search endpoint 
+    //TODO: to be implemented
+    if (url.pathname === "/api/users/search" && request.method === "GET") {
+      try {
+        const query = url.searchParams.get("q");
+        const limitParam = url.searchParams.get("limit");
+        const limit = limitParam ? parseInt(limitParam, 10) : 10;
+        
+        if (!query) {
+          return new Response(
+            JSON.stringify({ error: "Missing query parameter 'q'" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        
+        if (limit < 1 || limit > 50) {
+          return new Response(
+            JSON.stringify({ error: "Limit must be between 1 and 50" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Simple search implementation - just return empty results for now
+        const results: any[] = [];
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            results,
+            query,
+            count: results.length 
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+        
+      } catch (error) {
+        console.error("Error in user search:", error);
+        return new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Follow and unfollow endpoints
+    if (url.pathname === "/api/follow" && (request.method === "POST" || request.method === "DELETE")) {
+      // Authenticate follow and unfollow actions
+      const response = await requireAuth((r: any) => AuthHandlers.handleFollowUnfollow(r))(request);
+      const responseHeaders = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value as any);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
     }
 
     // All other federation-related requests are handled by the Federation object
     try {
       console.log(`🌐 Delegating to federation.fetch for: ${url.pathname}`);
-      const federationResponse = await federation.fetch(request, { contextData: undefined });
-      console.log(`✅ Federation response status: ${federationResponse.status}`);
+      const federationResponse = await federation.fetch(request, {
+        contextData: {kv: kvStore },
+      });
+      console.log(
+        `✅ Federation response status: ${federationResponse.status}`
+      );
       return federationResponse;
     } catch (federationError) {
-      console.error(`❌ CRITICAL: Federation fetch error for ${url.pathname}:`, federationError);
+      console.error(
+        `❌ CRITICAL: Federation fetch error for ${url.pathname}:`,
+        federationError
+      );
       if (federationError instanceof Error) {
         console.error(`❌ Federation error stack:`, federationError.stack);
         console.error(`❌ Federation error message:`, federationError.message);
       }
-      
+
       // Return a more informative error response
       return new Response(
-        JSON.stringify({ 
-          error: 'Federation processing failed', 
-          details: federationError instanceof Error ? federationError.message : String(federationError),
-          path: url.pathname 
-        }), 
+        JSON.stringify({
+          error: "Federation processing failed",
+          details:
+            federationError instanceof Error
+              ? federationError.message
+              : String(federationError),
+          path: url.pathname,
+        }),
         {
           status: 500,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
   },
-  port: config.port
+  port: config.port,
 });
 
 console.log(`🚀 ImageOn Federation Server started on port ${config.port}`);
-console.log(`🌐 Server URL: ${config.federation.protocol}://${config.federation.domain}`);
-console.log(`📊 Health check: ${config.federation.protocol}://${config.federation.domain}/health`);
-console.log(`🎭 Actors: ${config.federation.protocol}://${config.federation.domain}/users/{identifier}`);
+console.log(
+  `🌐 Server URL: ${config.federation.protocol}://${config.federation.domain}`
+);
+console.log(
+  `📊 Health check: ${config.federation.protocol}://${config.federation.domain}/health`
+);
+console.log(
+  `🎭 Actors: ${config.federation.protocol}://${config.federation.domain}/users/{identifier}`
+);

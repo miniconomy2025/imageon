@@ -6,25 +6,45 @@ import { useNavigate } from 'react-router-dom';
 import { Pages } from '../../pages/pageRouting';
 import { AttachmentCarousel } from '../AttachmentCarousel/attachementCarousel';
 import { Post } from '../../types/post';
+import { useLikePost } from '../../hooks/useLikePost';
 
 interface PostProps extends React.HTMLAttributes<HTMLDivElement> {
     post: Post;
-    onLike?: (liked: boolean) => void;
-    onComment?: () => void;
-    onShare?: () => void;
     className?: string;
 }
 
-const PostCard: React.FC<PostProps> = ({ post, onLike, onComment, onShare, className = '', ...props }) => {
+const PostCard: React.FC<PostProps> = ({ post, className = '', ...props }) => {
     const [isLiked, setIsLiked] = useState<boolean>(false);
     const [likeCount, setLikeCount] = useState<number>(post.likes ?? 0);
+    const { likePost, isLoading } = useLikePost();
 
     const navigate = useNavigate();
 
     const handleLike = (): void => {
-        setIsLiked(!isLiked);
-        setLikeCount(prev => (isLiked ? prev - 1 : prev + 1));
-        onLike && onLike(!isLiked);
+        if (isLoading) return;
+
+        const currentLikedState = isLiked;
+        const newLikedState = !isLiked;
+
+        setIsLiked(newLikedState);
+        setLikeCount(prev => (currentLikedState ? prev - 1 : prev + 1));
+
+        likePost(
+            {
+                postId: post.id.toString(),
+                isLiked: currentLikedState
+            },
+            {
+                onError: () => {
+                    setIsLiked(currentLikedState);
+                    setLikeCount(prev => (currentLikedState ? prev + 1 : prev - 1));
+                }
+            }
+        );
+    };
+
+    const handleComment = (): void => {
+        navigate(Pages.postPage.replace(':id', post.id.toString()));
     };
 
     const formatTime = (date: Date | string): string => {
@@ -64,7 +84,7 @@ const PostCard: React.FC<PostProps> = ({ post, onLike, onComment, onShare, class
                 <Button variant='outline' size='small' onClick={handleLike} className={`post__action ${isLiked ? 'post__action--liked' : ''}`}>
                     ❤️ {likeCount}
                 </Button>
-                <Button variant='outline' size='small' onClick={onComment} className='post__action'>
+                <Button variant='outline' size='small' onClick={handleComment} className='post__action'>
                     💬 {post.comments?.length}
                 </Button>
             </div>

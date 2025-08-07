@@ -5,6 +5,8 @@ APP_DIR="$1"
 PM2_APP_NAME="$2"
 FEDERATION_DOMAIN="$3"
 AWS_REGION="$4"
+FIREBASE_PRIVATE_KEY_ID="$5"
+FIREBASE_PRIVATE_KEY="$6"
 
 echo "🚀 Starting deployment..."
 
@@ -50,7 +52,7 @@ if [ ! -f ".env" ]; then
 NODE_ENV=production
 PORT=3000
 FEDERATION_PROTOCOL=https
-DYNAMODB_TABLE_NAME=imageonapp
+DYNAMODB_TABLE_NAME=imageon-app
 REDIS_HOST=localhost
 REDIS_PORT=6379
 LOG_LEVEL=info
@@ -63,6 +65,16 @@ ENV_VARS
   echo "FEDERATION_DOMAIN=$FEDERATION_DOMAIN" >> .env
   echo "AWS_REGION=$AWS_REGION" >> .env
   
+  # Add Firebase secrets if provided as environment variables
+  if [ -n "$FIREBASE_PRIVATE_KEY_ID" ]; then
+    echo "FIREBASE_PRIVATE_KEY_ID=$FIREBASE_PRIVATE_KEY_ID" >> .env
+  fi
+  if [ -n "$FIREBASE_PRIVATE_KEY" ]; then
+    # Properly handle multi-line private key by replacing literal \n with actual newlines
+    FORMATTED_KEY=$(echo "$FIREBASE_PRIVATE_KEY" | sed 's/\\n/\n/g')
+    echo "FIREBASE_PRIVATE_KEY=\"$FORMATTED_KEY\"" >> .env
+  fi
+  
   # Also export to current shell session
   export FEDERATION_DOMAIN="$FEDERATION_DOMAIN"
   export FEDERATION_PROTOCOL="https"
@@ -73,6 +85,18 @@ ENV_VARS
   grep -q "FEDERATION_DOMAIN" /home/ubuntu/.bashrc || echo "export FEDERATION_DOMAIN=\"$FEDERATION_DOMAIN\"" >> /home/ubuntu/.bashrc
   grep -q "FEDERATION_PROTOCOL" /home/ubuntu/.bashrc || echo "export FEDERATION_PROTOCOL=\"https\"" >> /home/ubuntu/.bashrc
   grep -q "export PORT" /home/ubuntu/.bashrc || echo "export PORT=3000" >> /home/ubuntu/.bashrc
+  
+  # Add Firebase secrets to bashrc if provided
+  if [ -n "$FIREBASE_PRIVATE_KEY_ID" ]; then
+    grep -q "FIREBASE_PRIVATE_KEY_ID" /home/ubuntu/.bashrc || echo "export FIREBASE_PRIVATE_KEY_ID=\"$FIREBASE_PRIVATE_KEY_ID\"" >> /home/ubuntu/.bashrc
+  fi
+  if [ -n "$FIREBASE_PRIVATE_KEY" ]; then
+    # Format the private key properly for bashrc
+    FORMATTED_KEY=$(echo "$FIREBASE_PRIVATE_KEY" | sed 's/\\n/\n/g')
+    if ! grep -q "FIREBASE_PRIVATE_KEY" /home/ubuntu/.bashrc; then
+      echo "export FIREBASE_PRIVATE_KEY=\"$FORMATTED_KEY\"" >> /home/ubuntu/.bashrc
+    fi
+  fi
   
   echo "✅ Production environment configured"
 else
@@ -85,6 +109,27 @@ else
   sed -i 's/DYNAMODB_TABLE_NAME=.*/DYNAMODB_TABLE_NAME=imageon-app/' .env
   # Remove DYNAMO_ENDPOINT for production (use native DynamoDB)
   sed -i 's/^DYNAMO_ENDPOINT=/#DYNAMO_ENDPOINT=/' .env
+  
+  # Update Firebase secrets if provided as environment variables
+  if [ -n "$FIREBASE_PRIVATE_KEY_ID" ]; then
+    if grep -q "FIREBASE_PRIVATE_KEY_ID" .env; then
+      sed -i "s/FIREBASE_PRIVATE_KEY_ID=.*/FIREBASE_PRIVATE_KEY_ID=$FIREBASE_PRIVATE_KEY_ID/" .env
+    else
+      echo "FIREBASE_PRIVATE_KEY_ID=$FIREBASE_PRIVATE_KEY_ID" >> .env
+    fi
+  fi
+  if [ -n "$FIREBASE_PRIVATE_KEY" ]; then
+    if grep -q "FIREBASE_PRIVATE_KEY=" .env; then
+      # Handle multi-line private key by replacing literal \n with actual newlines
+      FORMATTED_KEY=$(echo "$FIREBASE_PRIVATE_KEY" | sed 's/\\n/\n/g')
+      # Use a different delimiter since the key contains forward slashes
+      sed -i "\|FIREBASE_PRIVATE_KEY=.*|c\\
+FIREBASE_PRIVATE_KEY=\"$FORMATTED_KEY\"" .env
+    else
+      FORMATTED_KEY=$(echo "$FIREBASE_PRIVATE_KEY" | sed 's/\\n/\n/g')
+      echo "FIREBASE_PRIVATE_KEY=\"$FORMATTED_KEY\"" >> .env
+    fi
+  fi
 fi
 
 # Install PM2 globally if not installed

@@ -1,587 +1,603 @@
 {
-  "ImageonApp": [
-    
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTOR#alice" },
-          "SK": { "S": "PROFILE" },
-          "GSI1PK": { "S": "ACTOR" },
-          "GSI1SK": { "S": "alice" },
-          "GSI2PK": { "S": "LOCAL_ACTORS" },
-          "GSI2SK": { "S": "2025-01-01T00:00:00Z" },
-          "id": { "S": "http://localhost:3000/users/alice" },
-          "type": { "S": "Person" },
-          "preferredUsername": { "S": "alice" },
-          "name": { "S": "Alice Johnson" },
-          "summary": { "S": "Photography enthusiast and coffee lover ☕📸" },
-          "inbox": { "S": "http://localhost:3000/users/alice/inbox" },
-          "outbox": { "S": "http://localhost:3000/users/alice/outbox" },
-          "followers": { "S": "http://localhost:3000/users/alice/followers" },
-          "following": { "S": "http://localhost:3000/users/alice/following" },
-          "url": { "S": "http://localhost:3000/users/alice" },
-          "icon": { "M": {
-            "type": { "S": "Image" },
-            "url": { "S": "http://localhost:3000/media/alice-avatar.jpg" }
-          }},
-          "publicKey": { "M": {
-            "id": { "S": "http://localhost:3000/users/alice#main-key" },
-            "owner": { "S": "http://localhost:3000/users/alice" },
-            "publicKeyPem": { "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----" }
-          }},
-          "published": { "S": "2025-01-01T00:00:00Z" },
-          "followers_count": { "N": "2" },
-          "following_count": { "N": "1" }
-        }
-      }
-    },
+    "ImageonApp": [
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTOR#alice" },
+                    "SK": { "S": "PROFILE" },
+                    "GSI1PK": { "S": "ACTOR" },
+                    "GSI1SK": { "S": "alice" },
+                    "GSI2PK": { "S": "LOCAL_ACTORS" },
+                    "GSI2SK": { "S": "2025-01-01T00:00:00Z" },
+                    "id": { "S": "http://localhost:3000/users/alice" },
+                    "type": { "S": "Person" },
+                    "preferredUsername": { "S": "alice" },
+                    "name": { "S": "Alice Johnson" },
+                    "summary": { "S": "Photography enthusiast and coffee lover ☕📸" },
+                    "inbox": { "S": "http://localhost:3000/users/alice/inbox" },
+                    "outbox": { "S": "http://localhost:3000/users/alice/outbox" },
+                    "followers": { "S": "http://localhost:3000/users/alice/followers" },
+                    "following": { "S": "http://localhost:3000/users/alice/following" },
+                    "url": { "S": "http://localhost:3000/users/alice" },
+                    "icon": {
+                        "M": {
+                            "type": { "S": "Image" },
+                            "url": { "S": "http://localhost:3000/media/alice-avatar.jpg" }
+                        }
+                    },
+                    "publicKey": {
+                        "M": {
+                            "id": { "S": "http://localhost:3000/users/alice#main-key" },
+                            "owner": { "S": "http://localhost:3000/users/alice" },
+                            "publicKeyPem": { "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----" }
+                        }
+                    },
+                    "published": { "S": "2025-01-01T00:00:00Z" },
+                    "followers_count": { "N": "2" },
+                    "following_count": { "N": "1" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTOR#bob" },
-          "SK": { "S": "PROFILE" },
-          "GSI1PK": { "S": "ACTOR" },
-          "GSI1SK": { "S": "bob" },
-          "GSI2PK": { "S": "LOCAL_ACTORS" },
-          "GSI2SK": { "S": "2025-01-02T00:00:00Z" },
-          "id": { "S": "http://localhost:3000/users/bob" },
-          "type": { "S": "Person" },
-          "preferredUsername": { "S": "bob" },
-          "name": { "S": "Bob Wilson" },
-          "summary": { "S": "Tech enthusiast and musician 🎸💻" },
-          "inbox": { "S": "http://localhost:3000/users/bob/inbox" },
-          "outbox": { "S": "http://localhost:3000/users/bob/outbox" },
-          "followers": { "S": "http://localhost:3000/users/bob/followers" },
-          "following": { "S": "http://localhost:3000/users/bob/following" },
-          "url": { "S": "http://localhost:3000/users/bob" },
-          "icon": { "M": {
-            "type": { "S": "Image" },
-            "url": { "S": "http://localhost:3000/media/bob-avatar.jpg" }
-          }},
-          "publicKey": { "M": {
-            "id": { "S": "http://localhost:3000/users/bob#main-key" },
-            "owner": { "S": "http://localhost:3000/users/bob" },
-            "publicKeyPem": { "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----" }
-          }},
-          "published": { "S": "2025-01-02T00:00:00Z" },
-          "followers_count": { "N": "1" },
-          "following_count": { "N": "2" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTOR#bob" },
+                    "SK": { "S": "PROFILE" },
+                    "GSI1PK": { "S": "ACTOR" },
+                    "GSI1SK": { "S": "bob" },
+                    "GSI2PK": { "S": "LOCAL_ACTORS" },
+                    "GSI2SK": { "S": "2025-01-02T00:00:00Z" },
+                    "id": { "S": "http://localhost:3000/users/bob" },
+                    "type": { "S": "Person" },
+                    "preferredUsername": { "S": "bob" },
+                    "name": { "S": "Bob Wilson" },
+                    "summary": { "S": "Tech enthusiast and musician 🎸💻" },
+                    "inbox": { "S": "http://localhost:3000/users/bob/inbox" },
+                    "outbox": { "S": "http://localhost:3000/users/bob/outbox" },
+                    "followers": { "S": "http://localhost:3000/users/bob/followers" },
+                    "following": { "S": "http://localhost:3000/users/bob/following" },
+                    "url": { "S": "http://localhost:3000/users/bob" },
+                    "icon": {
+                        "M": {
+                            "type": { "S": "Image" },
+                            "url": { "S": "http://localhost:3000/media/bob-avatar.jpg" }
+                        }
+                    },
+                    "publicKey": {
+                        "M": {
+                            "id": { "S": "http://localhost:3000/users/bob#main-key" },
+                            "owner": { "S": "http://localhost:3000/users/bob" },
+                            "publicKeyPem": { "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----" }
+                        }
+                    },
+                    "published": { "S": "2025-01-02T00:00:00Z" },
+                    "followers_count": { "N": "1" },
+                    "following_count": { "N": "2" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTOR#charlie" },
-          "SK": { "S": "PROFILE" },
-          "GSI1PK": { "S": "ACTOR" },
-          "GSI1SK": { "S": "charlie" },
-          "GSI2PK": { "S": "LOCAL_ACTORS" },
-          "GSI2SK": { "S": "2025-01-03T00:00:00Z" },
-          "id": { "S": "http://localhost:3000/users/charlie" },
-          "type": { "S": "Person" },
-          "preferredUsername": { "S": "charlie" },
-          "name": { "S": "Charlie Brown" },
-          "summary": { "S": "Artist and nature lover 🎨🌲" },
-          "inbox": { "S": "http://localhost:3000/users/charlie/inbox" },
-          "outbox": { "S": "http://localhost:3000/users/charlie/outbox" },
-          "followers": { "S": "http://localhost:3000/users/charlie/followers" },
-          "following": { "S": "http://localhost:3000/users/charlie/following" },
-          "url": { "S": "http://localhost:3000/users/charlie" },
-          "icon": { "M": {
-            "type": { "S": "Image" },
-            "url": { "S": "http://localhost:3000/media/charlie-avatar.jpg" }
-          }},
-          "publicKey": { "M": {
-            "id": { "S": "http://localhost:3000/users/charlie#main-key" },
-            "owner": { "S": "http://localhost:3000/users/charlie" },
-            "publicKeyPem": { "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----" }
-          }},
-          "published": { "S": "2025-01-03T00:00:00Z" },
-          "followers_count": { "N": "1" },
-          "following_count": { "N": "1" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTOR#charlie" },
+                    "SK": { "S": "PROFILE" },
+                    "GSI1PK": { "S": "ACTOR" },
+                    "GSI1SK": { "S": "charlie" },
+                    "GSI2PK": { "S": "LOCAL_ACTORS" },
+                    "GSI2SK": { "S": "2025-01-03T00:00:00Z" },
+                    "id": { "S": "http://localhost:3000/users/charlie" },
+                    "type": { "S": "Person" },
+                    "preferredUsername": { "S": "charlie" },
+                    "name": { "S": "Charlie Brown" },
+                    "summary": { "S": "Artist and nature lover 🎨🌲" },
+                    "inbox": { "S": "http://localhost:3000/users/charlie/inbox" },
+                    "outbox": { "S": "http://localhost:3000/users/charlie/outbox" },
+                    "followers": { "S": "http://localhost:3000/users/charlie/followers" },
+                    "following": { "S": "http://localhost:3000/users/charlie/following" },
+                    "url": { "S": "http://localhost:3000/users/charlie" },
+                    "icon": {
+                        "M": {
+                            "type": { "S": "Image" },
+                            "url": { "S": "http://localhost:3000/media/charlie-avatar.jpg" }
+                        }
+                    },
+                    "publicKey": {
+                        "M": {
+                            "id": { "S": "http://localhost:3000/users/charlie#main-key" },
+                            "owner": { "S": "http://localhost:3000/users/charlie" },
+                            "publicKeyPem": { "S": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----" }
+                        }
+                    },
+                    "published": { "S": "2025-01-03T00:00:00Z" },
+                    "followers_count": { "N": "1" },
+                    "following_count": { "N": "1" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "OBJECT#post-001" },
-          "SK": { "S": "NOTE" },
-          "GSI1PK": { "S": "ACTOR#alice" },
-          "GSI1SK": { "S": "2025-01-15T10:30:00Z" },
-          "GSI2PK": { "S": "PUBLIC_POSTS" },
-          "GSI2SK": { "S": "2025-01-15T10:30:00Z" },
-          "id": { "S": "http://localhost:3000/objects/post-001" },
-          "type": { "S": "Note" },
-          "attributedTo": { "S": "http://localhost:3000/users/alice" },
-          "content": { "S": "<p>Beautiful sunrise this morning! 🌅 Perfect lighting for photography.</p>" },
-          "published": { "S": "2025-01-15T10:30:00Z" },
-          "to": { "L": [
-            { "S": "https://www.w3.org/ns/activitystreams#Public" }
-          ]},
-          "cc": { "L": [
-            { "S": "http://localhost:3000/users/alice/followers" }
-          ]},
-          "url": { "S": "http://localhost:3000/objects/post-001" },
-          "attachment": { "L": [
-            { "M": {
-              "type": { "S": "Image" },
-              "url": { "S": "http://localhost:3000/media/sunrise-001.jpg" },
-              "mediaType": { "S": "image/jpeg" },
-              "name": { "S": "Sunrise over the mountains" }
-            }}
-          ]},
-          "tag": { "L": [
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/photography" },
-              "name": { "S": "#photography" }
-            }},
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/sunrise" },
-              "name": { "S": "#sunrise" }
-            }}
-          ]},
-          "replies_count": { "N": "2" },
-          "likes_count": { "N": "3" },
-          "shares_count": { "N": "1" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "OBJECT#post-001" },
+                    "SK": { "S": "NOTE" },
+                    "GSI1PK": { "S": "ACTOR#alice" },
+                    "GSI1SK": { "S": "2025-01-15T10:30:00Z" },
+                    "GSI2PK": { "S": "PUBLIC_POSTS" },
+                    "GSI2SK": { "S": "2025-01-15T10:30:00Z" },
+                    "id": { "S": "http://localhost:3000/objects/post-001" },
+                    "type": { "S": "Note" },
+                    "attributedTo": { "S": "http://localhost:3000/users/alice" },
+                    "content": { "S": "<p>Beautiful sunrise this morning! 🌅 Perfect lighting for photography.</p>" },
+                    "published": { "S": "2025-01-15T10:30:00Z" },
+                    "to": { "L": [{ "S": "https://www.w3.org/ns/activitystreams#Public" }] },
+                    "cc": { "L": [{ "S": "http://localhost:3000/users/alice/followers" }] },
+                    "url": { "S": "http://localhost:3000/objects/post-001" },
+                    "attachment": {
+                        "L": [
+                            {
+                                "M": {
+                                    "type": { "S": "Image" },
+                                    "url": { "S": "http://localhost:3000/media/sunrise-001.jpg" },
+                                    "mediaType": { "S": "image/jpeg" },
+                                    "name": { "S": "Sunrise over the mountains" }
+                                }
+                            }
+                        ]
+                    },
+                    "tag": {
+                        "L": [
+                            {
+                                "M": {
+                                    "type": { "S": "Hashtag" },
+                                    "href": { "S": "http://localhost:3000/tags/photography" },
+                                    "name": { "S": "#photography" }
+                                }
+                            },
+                            {
+                                "M": {
+                                    "type": { "S": "Hashtag" },
+                                    "href": { "S": "http://localhost:3000/tags/sunrise" },
+                                    "name": { "S": "#sunrise" }
+                                }
+                            }
+                        ]
+                    },
+                    "replies_count": { "N": "2" },
+                    "likes_count": { "N": "3" },
+                    "shares_count": { "N": "1" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "OBJECT#post-002" },
-          "SK": { "S": "NOTE" },
-          "GSI1PK": { "S": "ACTOR#bob" },
-          "GSI1SK": { "S": "2025-01-16T14:15:00Z" },
-          "GSI2PK": { "S": "PUBLIC_POSTS" },
-          "GSI2SK": { "S": "2025-01-16T14:15:00Z" },
-          "id": { "S": "http://localhost:3000/objects/post-002" },
-          "type": { "S": "Note" },
-          "attributedTo": { "S": "http://localhost:3000/users/bob" },
-          "content": { "S": "<p>Working on a new guitar riff 🎸 Music and code have more in common than you'd think!</p>" },
-          "published": { "S": "2025-01-16T14:15:00Z" },
-          "to": { "L": [
-            { "S": "https://www.w3.org/ns/activitystreams#Public" }
-          ]},
-          "cc": { "L": [
-            { "S": "http://localhost:3000/users/bob/followers" }
-          ]},
-          "url": { "S": "http://localhost:3000/objects/post-002" },
-          "tag": { "L": [
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/music" },
-              "name": { "S": "#music" }
-            }},
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/guitar" },
-              "name": { "S": "#guitar" }
-            }}
-          ]},
-          "replies_count": { "N": "1" },
-          "likes_count": { "N": "2" },
-          "shares_count": { "N": "0" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "OBJECT#post-002" },
+                    "SK": { "S": "NOTE" },
+                    "GSI1PK": { "S": "ACTOR#bob" },
+                    "GSI1SK": { "S": "2025-01-16T14:15:00Z" },
+                    "GSI2PK": { "S": "PUBLIC_POSTS" },
+                    "GSI2SK": { "S": "2025-01-16T14:15:00Z" },
+                    "id": { "S": "http://localhost:3000/objects/post-002" },
+                    "type": { "S": "Note" },
+                    "attributedTo": { "S": "http://localhost:3000/users/bob" },
+                    "content": { "S": "<p>Working on a new guitar riff 🎸 Music and code have more in common than you'd think!</p>" },
+                    "published": { "S": "2025-01-16T14:15:00Z" },
+                    "to": { "L": [{ "S": "https://www.w3.org/ns/activitystreams#Public" }] },
+                    "cc": { "L": [{ "S": "http://localhost:3000/users/bob/followers" }] },
+                    "url": { "S": "http://localhost:3000/objects/post-002" },
+                    "tag": {
+                        "L": [
+                            {
+                                "M": {
+                                    "type": { "S": "Hashtag" },
+                                    "href": { "S": "http://localhost:3000/tags/music" },
+                                    "name": { "S": "#music" }
+                                }
+                            },
+                            {
+                                "M": {
+                                    "type": { "S": "Hashtag" },
+                                    "href": { "S": "http://localhost:3000/tags/guitar" },
+                                    "name": { "S": "#guitar" }
+                                }
+                            }
+                        ]
+                    },
+                    "replies_count": { "N": "1" },
+                    "likes_count": { "N": "2" },
+                    "shares_count": { "N": "0" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "OBJECT#post-003" },
-          "SK": { "S": "NOTE" },
-          "GSI1PK": { "S": "ACTOR#charlie" },
-          "GSI1SK": { "S": "2025-01-17T09:45:00Z" },
-          "GSI2PK": { "S": "PUBLIC_POSTS" },
-          "GSI2SK": { "S": "2025-01-17T09:45:00Z" },
-          "id": { "S": "http://localhost:3000/objects/post-003" },
-          "type": { "S": "Note" },
-          "attributedTo": { "S": "http://localhost:3000/users/charlie" },
-          "content": { "S": "<p>Finished my latest landscape painting! Nature is the best teacher 🎨🌲</p>" },
-          "published": { "S": "2025-01-17T09:45:00Z" },
-          "to": { "L": [
-            { "S": "https://www.w3.org/ns/activitystreams#Public" }
-          ]},
-          "cc": { "L": [
-            { "S": "http://localhost:3000/users/charlie/followers" }
-          ]},
-          "url": { "S": "http://localhost:3000/objects/post-003" },
-          "attachment": { "L": [
-            { "M": {
-              "type": { "S": "Image" },
-              "url": { "S": "http://localhost:3000/media/landscape-001.jpg" },
-              "mediaType": { "S": "image/jpeg" },
-              "name": { "S": "Mountain landscape painting" }
-            }}
-          ]},
-          "tag": { "L": [
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/art" },
-              "name": { "S": "#art" }
-            }},
-            { "M": {
-              "type": { "S": "Hashtag" },
-              "href": { "S": "http://localhost:3000/tags/painting" },
-              "name": { "S": "#painting" }
-            }}
-          ]},
-          "replies_count": { "N": "0" },
-          "likes_count": { "N": "4" },
-          "shares_count": { "N": "2" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "OBJECT#post-003" },
+                    "SK": { "S": "NOTE" },
+                    "GSI1PK": { "S": "ACTOR#charlie" },
+                    "GSI1SK": { "S": "2025-01-17T09:45:00Z" },
+                    "GSI2PK": { "S": "PUBLIC_POSTS" },
+                    "GSI2SK": { "S": "2025-01-17T09:45:00Z" },
+                    "id": { "S": "http://localhost:3000/objects/post-003" },
+                    "type": { "S": "Note" },
+                    "attributedTo": { "S": "http://localhost:3000/users/charlie" },
+                    "content": { "S": "<p>Finished my latest landscape painting! Nature is the best teacher 🎨🌲</p>" },
+                    "published": { "S": "2025-01-17T09:45:00Z" },
+                    "to": { "L": [{ "S": "https://www.w3.org/ns/activitystreams#Public" }] },
+                    "cc": { "L": [{ "S": "http://localhost:3000/users/charlie/followers" }] },
+                    "url": { "S": "http://localhost:3000/objects/post-003" },
+                    "attachment": {
+                        "L": [
+                            {
+                                "M": {
+                                    "type": { "S": "Image" },
+                                    "url": { "S": "http://localhost:3000/media/landscape-001.jpg" },
+                                    "mediaType": { "S": "image/jpeg" },
+                                    "name": { "S": "Mountain landscape painting" }
+                                }
+                            }
+                        ]
+                    },
+                    "tag": {
+                        "L": [
+                            {
+                                "M": {
+                                    "type": { "S": "Hashtag" },
+                                    "href": { "S": "http://localhost:3000/tags/art" },
+                                    "name": { "S": "#art" }
+                                }
+                            },
+                            {
+                                "M": {
+                                    "type": { "S": "Hashtag" },
+                                    "href": { "S": "http://localhost:3000/tags/painting" },
+                                    "name": { "S": "#painting" }
+                                }
+                            }
+                        ]
+                    },
+                    "replies_count": { "N": "0" },
+                    "likes_count": { "N": "4" },
+                    "shares_count": { "N": "2" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#follow-001" },
-          "SK": { "S": "FOLLOW" },
-          "GSI1PK": { "S": "ACTOR#bob" },
-          "GSI1SK": { "S": "2025-01-10T12:00:00Z" },
-          "GSI2PK": { "S": "FOLLOW_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-10T12:00:00Z" },
-          "id": { "S": "http://localhost:3000/activities/follow-001" },
-          "type": { "S": "Follow" },
-          "actor": { "S": "http://localhost:3000/users/bob" },
-          "object": { "S": "http://localhost:3000/users/alice" },
-          "published": { "S": "2025-01-10T12:00:00Z" },
-          "accepted": { "BOOL": true },
-          "accepted_at": { "S": "2025-01-10T12:01:00Z" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#follow-001" },
+                    "SK": { "S": "FOLLOW" },
+                    "GSI1PK": { "S": "ACTOR#bob" },
+                    "GSI1SK": { "S": "2025-01-10T12:00:00Z" },
+                    "GSI2PK": { "S": "FOLLOW_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-10T12:00:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/follow-001" },
+                    "type": { "S": "Follow" },
+                    "actor": { "S": "http://localhost:3000/users/bob" },
+                    "object": { "S": "http://localhost:3000/users/alice" },
+                    "published": { "S": "2025-01-10T12:00:00Z" },
+                    "accepted": { "BOOL": true },
+                    "accepted_at": { "S": "2025-01-10T12:01:00Z" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#follow-002" },
-          "SK": { "S": "FOLLOW" },
-          "GSI1PK": { "S": "ACTOR#charlie" },
-          "GSI1SK": { "S": "2025-01-11T16:30:00Z" },
-          "GSI2PK": { "S": "FOLLOW_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-11T16:30:00Z" },
-          "id": { "S": "http://localhost:3000/activities/follow-002" },
-          "type": { "S": "Follow" },
-          "actor": { "S": "http://localhost:3000/users/charlie" },
-          "object": { "S": "http://localhost:3000/users/alice" },
-          "published": { "S": "2025-01-11T16:30:00Z" },
-          "accepted": { "BOOL": true },
-          "accepted_at": { "S": "2025-01-11T16:31:00Z" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#follow-002" },
+                    "SK": { "S": "FOLLOW" },
+                    "GSI1PK": { "S": "ACTOR#charlie" },
+                    "GSI1SK": { "S": "2025-01-11T16:30:00Z" },
+                    "GSI2PK": { "S": "FOLLOW_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-11T16:30:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/follow-002" },
+                    "type": { "S": "Follow" },
+                    "actor": { "S": "http://localhost:3000/users/charlie" },
+                    "object": { "S": "http://localhost:3000/users/alice" },
+                    "published": { "S": "2025-01-11T16:30:00Z" },
+                    "accepted": { "BOOL": true },
+                    "accepted_at": { "S": "2025-01-11T16:31:00Z" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#follow-003" },
-          "SK": { "S": "FOLLOW" },
-          "GSI1PK": { "S": "ACTOR#alice" },
-          "GSI1SK": { "S": "2025-01-12T10:15:00Z" },
-          "GSI2PK": { "S": "FOLLOW_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-12T10:15:00Z" },
-          "id": { "S": "http://localhost:3000/activities/follow-003" },
-          "type": { "S": "Follow" },
-          "actor": { "S": "http://localhost:3000/users/alice" },
-          "object": { "S": "http://localhost:3000/users/bob" },
-          "published": { "S": "2025-01-12T10:15:00Z" },
-          "accepted": { "BOOL": true },
-          "accepted_at": { "S": "2025-01-12T10:16:00Z" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#follow-003" },
+                    "SK": { "S": "FOLLOW" },
+                    "GSI1PK": { "S": "ACTOR#alice" },
+                    "GSI1SK": { "S": "2025-01-12T10:15:00Z" },
+                    "GSI2PK": { "S": "FOLLOW_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-12T10:15:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/follow-003" },
+                    "type": { "S": "Follow" },
+                    "actor": { "S": "http://localhost:3000/users/alice" },
+                    "object": { "S": "http://localhost:3000/users/bob" },
+                    "published": { "S": "2025-01-12T10:15:00Z" },
+                    "accepted": { "BOOL": true },
+                    "accepted_at": { "S": "2025-01-12T10:16:00Z" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#follow-004" },
-          "SK": { "S": "FOLLOW" },
-          "GSI1PK": { "S": "ACTOR#bob" },
-          "GSI1SK": { "S": "2025-01-13T14:20:00Z" },
-          "GSI2PK": { "S": "FOLLOW_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-13T14:20:00Z" },
-          "id": { "S": "http://localhost:3000/activities/follow-004" },
-          "type": { "S": "Follow" },
-          "actor": { "S": "http://localhost:3000/users/bob" },
-          "object": { "S": "http://localhost:3000/users/charlie" },
-          "published": { "S": "2025-01-13T14:20:00Z" },
-          "accepted": { "BOOL": true },
-          "accepted_at": { "S": "2025-01-13T14:21:00Z" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#follow-004" },
+                    "SK": { "S": "FOLLOW" },
+                    "GSI1PK": { "S": "ACTOR#bob" },
+                    "GSI1SK": { "S": "2025-01-13T14:20:00Z" },
+                    "GSI2PK": { "S": "FOLLOW_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-13T14:20:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/follow-004" },
+                    "type": { "S": "Follow" },
+                    "actor": { "S": "http://localhost:3000/users/bob" },
+                    "object": { "S": "http://localhost:3000/users/charlie" },
+                    "published": { "S": "2025-01-13T14:20:00Z" },
+                    "accepted": { "BOOL": true },
+                    "accepted_at": { "S": "2025-01-13T14:21:00Z" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#follow-005" },
-          "SK": { "S": "FOLLOW" },
-          "GSI1PK": { "S": "ACTOR#charlie" },
-          "GSI1SK": { "S": "2025-01-14T11:45:00Z" },
-          "GSI2PK": { "S": "FOLLOW_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-14T11:45:00Z" },
-          "id": { "S": "http://localhost:3000/activities/follow-005" },
-          "type": { "S": "Follow" },
-          "actor": { "S": "http://localhost:3000/users/charlie" },
-          "object": { "S": "http://localhost:3000/users/bob" },
-          "published": { "S": "2025-01-14T11:45:00Z" },
-          "accepted": { "BOOL": true },
-          "accepted_at": { "S": "2025-01-14T11:46:00Z" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#follow-005" },
+                    "SK": { "S": "FOLLOW" },
+                    "GSI1PK": { "S": "ACTOR#charlie" },
+                    "GSI1SK": { "S": "2025-01-14T11:45:00Z" },
+                    "GSI2PK": { "S": "FOLLOW_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-14T11:45:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/follow-005" },
+                    "type": { "S": "Follow" },
+                    "actor": { "S": "http://localhost:3000/users/charlie" },
+                    "object": { "S": "http://localhost:3000/users/bob" },
+                    "published": { "S": "2025-01-14T11:45:00Z" },
+                    "accepted": { "BOOL": true },
+                    "accepted_at": { "S": "2025-01-14T11:46:00Z" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#like-001" },
-          "SK": { "S": "LIKE" },
-          "GSI1PK": { "S": "OBJECT#post-001" },
-          "GSI1SK": { "S": "2025-01-15T11:00:00Z" },
-          "GSI2PK": { "S": "LIKE_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-15T11:00:00Z" },
-          "id": { "S": "http://localhost:3000/activities/like-001" },
-          "type": { "S": "Like" },
-          "actor": { "S": "http://localhost:3000/users/bob" },
-          "object": { "S": "http://localhost:3000/objects/post-001" },
-          "published": { "S": "2025-01-15T11:00:00Z" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#like-001" },
+                    "SK": { "S": "LIKE" },
+                    "GSI1PK": { "S": "OBJECT#post-001" },
+                    "GSI1SK": { "S": "2025-01-15T11:00:00Z" },
+                    "GSI2PK": { "S": "LIKE_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-15T11:00:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/like-001" },
+                    "type": { "S": "Like" },
+                    "actor": { "S": "http://localhost:3000/users/bob" },
+                    "object": { "S": "http://localhost:3000/objects/post-001" },
+                    "published": { "S": "2025-01-15T11:00:00Z" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#like-002" },
-          "SK": { "S": "LIKE" },
-          "GSI1PK": { "S": "OBJECT#post-001" },
-          "GSI1SK": { "S": "2025-01-15T12:30:00Z" },
-          "GSI2PK": { "S": "LIKE_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-15T12:30:00Z" },
-          "id": { "S": "http://localhost:3000/activities/like-002" },
-          "type": { "S": "Like" },
-          "actor": { "S": "http://localhost:3000/users/charlie" },
-          "object": { "S": "http://localhost:3000/objects/post-001" },
-          "published": { "S": "2025-01-15T12:30:00Z" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#like-002" },
+                    "SK": { "S": "LIKE" },
+                    "GSI1PK": { "S": "OBJECT#post-001" },
+                    "GSI1SK": { "S": "2025-01-15T12:30:00Z" },
+                    "GSI2PK": { "S": "LIKE_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-15T12:30:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/like-002" },
+                    "type": { "S": "Like" },
+                    "actor": { "S": "http://localhost:3000/users/charlie" },
+                    "object": { "S": "http://localhost:3000/objects/post-001" },
+                    "published": { "S": "2025-01-15T12:30:00Z" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#like-003" },
-          "SK": { "S": "LIKE" },
-          "GSI1PK": { "S": "OBJECT#post-002" },
-          "GSI1SK": { "S": "2025-01-16T15:00:00Z" },
-          "GSI2PK": { "S": "LIKE_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-16T15:00:00Z" },
-          "id": { "S": "http://localhost:3000/activities/like-003" },
-          "type": { "S": "Like" },
-          "actor": { "S": "http://localhost:3000/users/alice" },
-          "object": { "S": "http://localhost:3000/objects/post-002" },
-          "published": { "S": "2025-01-16T15:00:00Z" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#like-003" },
+                    "SK": { "S": "LIKE" },
+                    "GSI1PK": { "S": "OBJECT#post-002" },
+                    "GSI1SK": { "S": "2025-01-16T15:00:00Z" },
+                    "GSI2PK": { "S": "LIKE_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-16T15:00:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/like-003" },
+                    "type": { "S": "Like" },
+                    "actor": { "S": "http://localhost:3000/users/alice" },
+                    "object": { "S": "http://localhost:3000/objects/post-002" },
+                    "published": { "S": "2025-01-16T15:00:00Z" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#like-004" },
-          "SK": { "S": "LIKE" },
-          "GSI1PK": { "S": "OBJECT#post-002" },
-          "GSI1SK": { "S": "2025-01-16T16:15:00Z" },
-          "GSI2PK": { "S": "LIKE_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-16T16:15:00Z" },
-          "id": { "S": "http://localhost:3000/activities/like-004" },
-          "type": { "S": "Like" },
-          "actor": { "S": "http://localhost:3000/users/charlie" },
-          "object": { "S": "http://localhost:3000/objects/post-002" },
-          "published": { "S": "2025-01-16T16:15:00Z" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#like-004" },
+                    "SK": { "S": "LIKE" },
+                    "GSI1PK": { "S": "OBJECT#post-002" },
+                    "GSI1SK": { "S": "2025-01-16T16:15:00Z" },
+                    "GSI2PK": { "S": "LIKE_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-16T16:15:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/like-004" },
+                    "type": { "S": "Like" },
+                    "actor": { "S": "http://localhost:3000/users/charlie" },
+                    "object": { "S": "http://localhost:3000/objects/post-002" },
+                    "published": { "S": "2025-01-16T16:15:00Z" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#like-005" },
-          "SK": { "S": "LIKE" },
-          "GSI1PK": { "S": "OBJECT#post-003" },
-          "GSI1SK": { "S": "2025-01-17T10:30:00Z" },
-          "GSI2PK": { "S": "LIKE_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-17T10:30:00Z" },
-          "id": { "S": "http://localhost:3000/activities/like-005" },
-          "type": { "S": "Like" },
-          "actor": { "S": "http://localhost:3000/users/alice" },
-          "object": { "S": "http://localhost:3000/objects/post-003" },
-          "published": { "S": "2025-01-17T10:30:00Z" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#like-005" },
+                    "SK": { "S": "LIKE" },
+                    "GSI1PK": { "S": "OBJECT#post-003" },
+                    "GSI1SK": { "S": "2025-01-17T10:30:00Z" },
+                    "GSI2PK": { "S": "LIKE_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-17T10:30:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/like-005" },
+                    "type": { "S": "Like" },
+                    "actor": { "S": "http://localhost:3000/users/alice" },
+                    "object": { "S": "http://localhost:3000/objects/post-003" },
+                    "published": { "S": "2025-01-17T10:30:00Z" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#like-006" },
-          "SK": { "S": "LIKE" },
-          "GSI1PK": { "S": "OBJECT#post-003" },
-          "GSI1SK": { "S": "2025-01-17T11:45:00Z" },
-          "GSI2PK": { "S": "LIKE_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-17T11:45:00Z" },
-          "id": { "S": "http://localhost:3000/activities/like-006" },
-          "type": { "S": "Like" },
-          "actor": { "S": "http://localhost:3000/users/bob" },
-          "object": { "S": "http://localhost:3000/objects/post-003" },
-          "published": { "S": "2025-01-17T11:45:00Z" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#like-006" },
+                    "SK": { "S": "LIKE" },
+                    "GSI1PK": { "S": "OBJECT#post-003" },
+                    "GSI1SK": { "S": "2025-01-17T11:45:00Z" },
+                    "GSI2PK": { "S": "LIKE_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-17T11:45:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/like-006" },
+                    "type": { "S": "Like" },
+                    "actor": { "S": "http://localhost:3000/users/bob" },
+                    "object": { "S": "http://localhost:3000/objects/post-003" },
+                    "published": { "S": "2025-01-17T11:45:00Z" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#announce-001" },
-          "SK": { "S": "ANNOUNCE" },
-          "GSI1PK": { "S": "OBJECT#post-001" },
-          "GSI1SK": { "S": "2025-01-15T13:20:00Z" },
-          "GSI2PK": { "S": "ANNOUNCE_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-15T13:20:00Z" },
-          "id": { "S": "http://localhost:3000/activities/announce-001" },
-          "type": { "S": "Announce" },
-          "actor": { "S": "http://localhost:3000/users/charlie" },
-          "object": { "S": "http://localhost:3000/objects/post-001" },
-          "published": { "S": "2025-01-15T13:20:00Z" },
-          "to": { "L": [
-            { "S": "https://www.w3.org/ns/activitystreams#Public" }
-          ]},
-          "cc": { "L": [
-            { "S": "http://localhost:3000/users/charlie/followers" }
-          ]}
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#announce-001" },
+                    "SK": { "S": "ANNOUNCE" },
+                    "GSI1PK": { "S": "OBJECT#post-001" },
+                    "GSI1SK": { "S": "2025-01-15T13:20:00Z" },
+                    "GSI2PK": { "S": "ANNOUNCE_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-15T13:20:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/announce-001" },
+                    "type": { "S": "Announce" },
+                    "actor": { "S": "http://localhost:3000/users/charlie" },
+                    "object": { "S": "http://localhost:3000/objects/post-001" },
+                    "published": { "S": "2025-01-15T13:20:00Z" },
+                    "to": { "L": [{ "S": "https://www.w3.org/ns/activitystreams#Public" }] },
+                    "cc": { "L": [{ "S": "http://localhost:3000/users/charlie/followers" }] }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "ACTIVITY#announce-002" },
-          "SK": { "S": "ANNOUNCE" },
-          "GSI1PK": { "S": "OBJECT#post-003" },
-          "GSI1SK": { "S": "2025-01-17T14:10:00Z" },
-          "GSI2PK": { "S": "ANNOUNCE_ACTIVITIES" },
-          "GSI2SK": { "S": "2025-01-17T14:10:00Z" },
-          "id": { "S": "http://localhost:3000/activities/announce-002" },
-          "type": { "S": "Announce" },
-          "actor": { "S": "http://localhost:3000/users/bob" },
-          "object": { "S": "http://localhost:3000/objects/post-003" },
-          "published": { "S": "2025-01-17T14:10:00Z" },
-          "to": { "L": [
-            { "S": "https://www.w3.org/ns/activitystreams#Public" }
-          ]},
-          "cc": { "L": [
-            { "S": "http://localhost:3000/users/bob/followers" }
-          ]}
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "ACTIVITY#announce-002" },
+                    "SK": { "S": "ANNOUNCE" },
+                    "GSI1PK": { "S": "OBJECT#post-003" },
+                    "GSI1SK": { "S": "2025-01-17T14:10:00Z" },
+                    "GSI2PK": { "S": "ANNOUNCE_ACTIVITIES" },
+                    "GSI2SK": { "S": "2025-01-17T14:10:00Z" },
+                    "id": { "S": "http://localhost:3000/activities/announce-002" },
+                    "type": { "S": "Announce" },
+                    "actor": { "S": "http://localhost:3000/users/bob" },
+                    "object": { "S": "http://localhost:3000/objects/post-003" },
+                    "published": { "S": "2025-01-17T14:10:00Z" },
+                    "to": { "L": [{ "S": "https://www.w3.org/ns/activitystreams#Public" }] },
+                    "cc": { "L": [{ "S": "http://localhost:3000/users/bob/followers" }] }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "FOLLOWER#alice" },
-          "SK": { "S": "ACTOR#bob" },
-          "GSI1PK": { "S": "FOLLOWER_RELATIONSHIP" },
-          "GSI1SK": { "S": "alice#bob" },
-          "GSI2PK": { "S": "ACTOR#bob" },
-          "GSI2SK": { "S": "FOLLOWING" },
-          "follower_id": { "S": "http://localhost:3000/users/bob" },
-          "following_id": { "S": "http://localhost:3000/users/alice" },
-          "created_at": { "S": "2025-01-10T12:01:00Z" },
-          "status": { "S": "accepted" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "FOLLOWER#alice" },
+                    "SK": { "S": "ACTOR#bob" },
+                    "GSI1PK": { "S": "FOLLOWER_RELATIONSHIP" },
+                    "GSI1SK": { "S": "alice#bob" },
+                    "GSI2PK": { "S": "ACTOR#bob" },
+                    "GSI2SK": { "S": "FOLLOWING" },
+                    "follower_id": { "S": "http://localhost:3000/users/bob" },
+                    "following_id": { "S": "http://localhost:3000/users/alice" },
+                    "created_at": { "S": "2025-01-10T12:01:00Z" },
+                    "status": { "S": "accepted" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "FOLLOWER#alice" },
-          "SK": { "S": "ACTOR#charlie" },
-          "GSI1PK": { "S": "FOLLOWER_RELATIONSHIP" },
-          "GSI1SK": { "S": "alice#charlie" },
-          "GSI2PK": { "S": "ACTOR#charlie" },
-          "GSI2SK": { "S": "FOLLOWING" },
-          "follower_id": { "S": "http://localhost:3000/users/charlie" },
-          "following_id": { "S": "http://localhost:3000/users/alice" },
-          "created_at": { "S": "2025-01-11T16:31:00Z" },
-          "status": { "S": "accepted" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "FOLLOWER#alice" },
+                    "SK": { "S": "ACTOR#charlie" },
+                    "GSI1PK": { "S": "FOLLOWER_RELATIONSHIP" },
+                    "GSI1SK": { "S": "alice#charlie" },
+                    "GSI2PK": { "S": "ACTOR#charlie" },
+                    "GSI2SK": { "S": "FOLLOWING" },
+                    "follower_id": { "S": "http://localhost:3000/users/charlie" },
+                    "following_id": { "S": "http://localhost:3000/users/alice" },
+                    "created_at": { "S": "2025-01-11T16:31:00Z" },
+                    "status": { "S": "accepted" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "FOLLOWER#bob" },
-          "SK": { "S": "ACTOR#alice" },
-          "GSI1PK": { "S": "FOLLOWER_RELATIONSHIP" },
-          "GSI1SK": { "S": "bob#alice" },
-          "GSI2PK": { "S": "ACTOR#alice" },
-          "GSI2SK": { "S": "FOLLOWING" },
-          "follower_id": { "S": "http://localhost:3000/users/alice" },
-          "following_id": { "S": "http://localhost:3000/users/bob" },
-          "created_at": { "S": "2025-01-12T10:16:00Z" },
-          "status": { "S": "accepted" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "FOLLOWER#bob" },
+                    "SK": { "S": "ACTOR#alice" },
+                    "GSI1PK": { "S": "FOLLOWER_RELATIONSHIP" },
+                    "GSI1SK": { "S": "bob#alice" },
+                    "GSI2PK": { "S": "ACTOR#alice" },
+                    "GSI2SK": { "S": "FOLLOWING" },
+                    "follower_id": { "S": "http://localhost:3000/users/alice" },
+                    "following_id": { "S": "http://localhost:3000/users/bob" },
+                    "created_at": { "S": "2025-01-12T10:16:00Z" },
+                    "status": { "S": "accepted" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "FOLLOWER#bob" },
-          "SK": { "S": "ACTOR#charlie" },
-          "GSI1PK": { "S": "FOLLOWER_RELATIONSHIP" },
-          "GSI1SK": { "S": "bob#charlie" },
-          "GSI2PK": { "S": "ACTOR#charlie" },
-          "GSI2SK": { "S": "FOLLOWING" },
-          "follower_id": { "S": "http://localhost:3000/users/charlie" },
-          "following_id": { "S": "http://localhost:3000/users/bob" },
-          "created_at": { "S": "2025-01-14T11:46:00Z" },
-          "status": { "S": "accepted" }
-        }
-      }
-    },
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "FOLLOWER#bob" },
+                    "SK": { "S": "ACTOR#charlie" },
+                    "GSI1PK": { "S": "FOLLOWER_RELATIONSHIP" },
+                    "GSI1SK": { "S": "bob#charlie" },
+                    "GSI2PK": { "S": "ACTOR#charlie" },
+                    "GSI2SK": { "S": "FOLLOWING" },
+                    "follower_id": { "S": "http://localhost:3000/users/charlie" },
+                    "following_id": { "S": "http://localhost:3000/users/bob" },
+                    "created_at": { "S": "2025-01-14T11:46:00Z" },
+                    "status": { "S": "accepted" }
+                }
+            }
+        },
 
-    {
-      "PutRequest": {
-        "Item": {
-          "PK": { "S": "FOLLOWER#charlie" },
-          "SK": { "S": "ACTOR#bob" },
-          "GSI1PK": { "S": "FOLLOWER_RELATIONSHIP" },
-          "GSI1SK": { "S": "charlie#bob" },
-          "GSI2PK": { "S": "ACTOR#bob" },
-          "GSI2SK": { "S": "FOLLOWING" },
-          "follower_id": { "S": "http://localhost:3000/users/bob" },
-          "following_id": { "S": "http://localhost:3000/users/charlie" },
-          "created_at": { "S": "2025-01-13T14:21:00Z" },
-          "status": { "S": "accepted" }
+        {
+            "PutRequest": {
+                "Item": {
+                    "PK": { "S": "FOLLOWER#charlie" },
+                    "SK": { "S": "ACTOR#bob" },
+                    "GSI1PK": { "S": "FOLLOWER_RELATIONSHIP" },
+                    "GSI1SK": { "S": "charlie#bob" },
+                    "GSI2PK": { "S": "ACTOR#bob" },
+                    "GSI2SK": { "S": "FOLLOWING" },
+                    "follower_id": { "S": "http://localhost:3000/users/bob" },
+                    "following_id": { "S": "http://localhost:3000/users/charlie" },
+                    "created_at": { "S": "2025-01-13T14:21:00Z" },
+                    "status": { "S": "accepted" }
+                }
+            }
         }
-      }
-    }
-
-  ]
+    ]
 }
