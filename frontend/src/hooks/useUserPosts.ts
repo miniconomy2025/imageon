@@ -10,63 +10,6 @@ export const useUserPosts = (username: string) => {
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['userPosts', username],
         queryFn: async (): Promise<Post[]> => {
-            if (config.MOCK_DATA) {
-                return Promise.resolve([
-                    {
-                        id: '1',
-                        title: 'Post 1',
-                        content: 'Content 1',
-                        author: { username },
-                        postedAt: new Date().toISOString(),
-                        attachments: [
-                            {
-                                type: 'Document',
-                                mediaType: 'image/jpeg',
-                                url: config.MOCK_IMAGE_URL
-                            }
-                        ]
-                    },
-                    {
-                        id: '2',
-                        title: 'Post 2',
-                        content: 'Content 2',
-                        author: { username },
-                        postedAt: new Date().toISOString(),
-                        attachments: [
-                            {
-                                type: 'Document',
-                                mediaType: 'image/jpeg',
-                                url: config.MOCK_IMAGE_URL
-                            },
-                            {
-                                type: 'Document',
-                                mediaType: 'image/jpeg',
-                                url: config.MOCK_IMAGE_URL
-                            },
-                            {
-                                type: 'Document',
-                                mediaType: 'image/jpeg',
-                                url: config.MOCK_IMAGE_URL
-                            }
-                        ]
-                    },
-                    {
-                        id: '3',
-                        title: 'Post 3',
-                        content: 'Content 3',
-                        author: { username },
-                        postedAt: new Date().toISOString(),
-                        attachments: [
-                            {
-                                type: 'Document',
-                                mediaType: 'image/jpeg',
-                                url: config.MOCK_IMAGE_URL
-                            }
-                        ]
-                    }
-                ] as Post[]);
-            }
-
             const token = (await currentUser?.getIdTokenResult())?.token;
 
             const response = await fetch(url, {

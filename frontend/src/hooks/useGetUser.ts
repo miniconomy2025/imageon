@@ -1,12 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { User } from '../types/user';
-
 import { config } from '../config/config';
 import { useAuth } from '../contexts/AuthContext';
 
 export const useGetUser = (username: string) => {
     const { currentUser } = useAuth();
-    const url = `${config.API_URL}/auth/user/by-id?userId=${username}`;
+    const url = `${config.API_URL}/users/${username}`;
 
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['user', username],
@@ -14,33 +13,37 @@ export const useGetUser = (username: string) => {
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
+                    Accept: 'application/activity+json',
+                    'Content-Type': 'application/activity+json',
                     Authorization: `Bearer ${(await currentUser?.getIdTokenResult())?.token}`
                 }
             });
 
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
             }
 
             const result = await response.json();
+            const backendUser = result;
 
-            if (!result.success) {
-                throw new Error(result.error || 'Failed to fetch user');
-            }
-
-            const backendUser = result.user;
-
-            return {
-                id: parseInt(backendUser.uid) || 0,
-                username: backendUser.username,
-                preferredUsername: backendUser.displayName?.split(' ')[0] || '',
-                lastName: backendUser.displayName?.split(' ').slice(1).join(' ') || '',
-                icon: { type: 'image', url: backendUser.photoURL },
-                bio: backendUser.bio
+            const mappedUser = {
+                id: backendUser.id ? parseInt(backendUser.id.split('/').pop()) || 0 : 0,
+                username: backendUser.preferredUsername,
+                preferredUsername: backendUser.name?.split(' ')[0] || backendUser.preferredUsername,
+                name: backendUser.name,
+                bio: backendUser.summary,
+                icon: backendUser.icon ? { type: 'image', url: backendUser.icon } : undefined,
+                url: backendUser.url || backendUser.id,
+                inbox: backendUser.inbox,
+                outbox: backendUser.outbox,
+                followers: backendUser.followers,
+                following: backendUser.following
             } as User;
+            return mappedUser;
         },
-        enabled: !!username
+        enabled: !!username,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000
     });
 
     return {

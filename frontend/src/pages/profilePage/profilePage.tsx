@@ -35,6 +35,7 @@ export const ProfilePage = () => {
                             <div className='profile-page__user-details'>
                                 <h1 className='profile-page__username'>@{user.username}</h1>
                                 <p className='profile-page__name'>{user.preferredUsername}</p>
+                                {user.bio && <p className='profile-page__bio'>{user.bio}</p>}
                             </div>
                         </div>
                     ) : (

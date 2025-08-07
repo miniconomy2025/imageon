@@ -458,7 +458,8 @@ export class AuthHandlers {
                     followers: followers.map(follower => ({
                         username: follower.SK?.replace('ACTOR#', '') || '',
                         displayName: follower.follower_display_name,
-                        createdAt: follower.created_at
+                        createdAt: follower.created_at,
+                        url: follower.follower_id
                     }))
                 }),
                 {
@@ -542,7 +543,8 @@ export class AuthHandlers {
                     return {
                         username,
                         displayName,
-                        createdAt: item.created_at
+                        createdAt: item.created_at,
+                        url: followUri
                     };
                 })
             );
@@ -1078,11 +1080,11 @@ export class AuthHandlers {
                 const uriStr = String(uri);
                 const id = uriStr.startsWith('http://') || uriStr.startsWith('https://') ? extractIdentifier(uriStr) : uriStr;
                 if (!id) continue;
-                
+
                 // Get full actor object
                 const actor = await ActorModel.getActor(id);
                 const activities = (await activityPub.getActorActivities(id)) as any[];
-                
+
                 for (const act of activities) {
                     const activity: any = act as any;
                     if (activity.type === 'Create') {
