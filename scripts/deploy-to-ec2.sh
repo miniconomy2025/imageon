@@ -7,6 +7,7 @@ FEDERATION_DOMAIN="$3"
 AWS_REGION="$4"
 FIREBASE_PRIVATE_KEY_ID="$5"
 FIREBASE_PRIVATE_KEY="$6"
+AWS_S3_BUCKET="$7"
 
 echo "🚀 Starting deployment..."
 
@@ -64,6 +65,7 @@ ENV_VARS
   # Add dynamic values
   echo "FEDERATION_DOMAIN=$FEDERATION_DOMAIN" >> .env
   echo "AWS_REGION=$AWS_REGION" >> .env
+  echo "AWS_S3_BUCKET=$AWS_S3_BUCKET" >> .env
   
   # Add Firebase secrets if provided as environment variables
   if [ -n "$FIREBASE_PRIVATE_KEY_ID" ]; then
@@ -80,8 +82,10 @@ ENV_VARS
   export FEDERATION_PROTOCOL="https"
   export PORT=3000
   export AWS_REGION="$AWS_REGION"
+  export AWS_S3_BUCKET="$AWS_S3_BUCKET"
   
   # Add to ubuntu user's bashrc for persistence
+  grep -q "AWS_S3_BUCKET" /home/ubuntu/.bashrc || echo "export AWS_S3_BUCKET=\"$AWS_S3_BUCKET\"" >> /home/ubuntu/.bashrc
   grep -q "FEDERATION_DOMAIN" /home/ubuntu/.bashrc || echo "export FEDERATION_DOMAIN=\"$FEDERATION_DOMAIN\"" >> /home/ubuntu/.bashrc
   grep -q "FEDERATION_PROTOCOL" /home/ubuntu/.bashrc || echo "export FEDERATION_PROTOCOL=\"https\"" >> /home/ubuntu/.bashrc
   grep -q "export PORT" /home/ubuntu/.bashrc || echo "export PORT=3000" >> /home/ubuntu/.bashrc
