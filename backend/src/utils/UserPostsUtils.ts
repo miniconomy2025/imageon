@@ -143,7 +143,7 @@ async function fetchUserPosts(userUrl: string): Promise<PaginationResult> {
     }
 }
 
-// Execute the function with the user URL
+// Execute the function with the user URL URl
 const userUrl = 'https://mastodon.social/users/Gargron';
 fetchUserPosts(userUrl)
     .then(result => {
