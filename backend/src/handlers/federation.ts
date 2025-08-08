@@ -425,37 +425,6 @@ export class FederationHandlers {
                             return null;
                         }
 
-                        const additionalData = activity.additionalData || undefined;
-
-                        // Helper function to parse DynamoDB format
-                        const parseDynamoDBValue = (value: any): any => {
-                            if (!value || typeof value !== 'object') return value;
-                            
-                            if (value.S) return value.S;
-                            if (value.N) return Number(value.N);
-                            if (value.B) return value.B;
-                            if (value.SS) return value.SS;
-                            if (value.NS) return value.NS.map(Number);
-                            if (value.BS) return value.BS;
-                            if (value.M) {
-                                const result: any = {};
-                                for (const [key, val] of (Object as any).entries(value.M)) {
-                                    result[key] = parseDynamoDBValue(val);
-                                }
-                                return result;
-                            }
-                            if (value.L) {
-                                return value.L.map(parseDynamoDBValue);
-                            }
-                            if (value.NULL) return null;
-                            if (value.BOOL !== undefined) return value.BOOL;
-                            
-                            return value;
-                        };
-
-                        // Parse additional data if it's in DynamoDB format
-                        const parsedAdditionalData = additionalData ? parseDynamoDBValue(additionalData) : undefined;
-
                         // Handle different activity types
                         switch (activity.type) {
                             case 'Create': {
@@ -463,38 +432,14 @@ export class FederationHandlers {
                                 const objectType = activity.object?.type || 'Note';
                                 const ObjectClass = OBJECT_CONSTRUCTORS[objectType as keyof typeof OBJECT_CONSTRUCTORS] || Note;
 
-                                // Extract content and attachments from parsed data
-                                const content = activity.object?.content || 
-                                              parsedAdditionalData?.content || 
-                                              additionalData?.content?.S || 
-                                              '';
-
-                                // Parse attachments from DynamoDB format
-                                let attachments: any[] = [];
-                                if (parsedAdditionalData?.attachment && Array.isArray(parsedAdditionalData.attachment)) {
-                                    attachments = parsedAdditionalData.attachment.map((att: any) => ({
-                                        type: att.type || 'Document',
-                                        mediaType: att.mediaType || 'image/jpeg',
-                                        url: new URL(att.url)
-                                    }));
-                                } else if (additionalData?.attachment?.L) {
-                                    // Handle raw DynamoDB format
-                                    attachments = additionalData.attachment.L.map((item: any) => ({
-                                        type: item.M?.type?.S || 'Document',
-                                        mediaType: item.M?.mediaType?.S || 'image/jpeg',
-                                        url: new URL(item.M?.url?.S)
-                                    }));
-                                }
-
                                 return new Create({
                                     id: new URL(activity.id),
                                     actor: ctx.getActorUri(identifier),
                                     published: Temporal.Instant.from(activity.published || new Date().toISOString()),
                                     object: new ObjectClass({
-                                        id: new URL(activity.object || activity.id),
-                                        content: content,
-                                        published: Temporal.Instant.from(activity.published || new Date().toISOString()),
-                                        attachments: attachments.length > 0 ? attachments : []
+                                        id: new URL(activity.object?.id || activity.id),
+                                        content: activity.object?.content || activity.additionalData?.content,
+                                        published: Temporal.Instant.from(activity.published || new Date().toISOString())
                                     })
                                 });
                             }
