@@ -1,5 +1,6 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGetPost } from '../../hooks/useGetPost';
+import { useUserFeed } from '../../hooks/useUserFeed';
 import { useGetCurrentUser } from '../../hooks/useGetCurrentUser';
 import { useCreateComment } from '../../hooks/useCreateComment';
 import { useLikePost } from '../../hooks/useLikePost';
@@ -33,13 +34,19 @@ export const PostPage = () => {
     }
 
     const { data: post } = useGetPost(postUrl);
+    const username = currentUser?.username;
+    const { posts: feedPosts } = useUserFeed(username || '');
 
-    // Update like count when post data loads
+    // Find the post in the user feed by URL
+    const feedPost = feedPosts?.find((p: any) => p.url === postUrl);
+
     useEffect(() => {
         if (post?.likes !== undefined) {
             setLikeCount(post.likes);
+        } else if (feedPost?.likes !== undefined) {
+            setLikeCount(feedPost.likes);
         }
-    }, [post?.likes]);
+    }, [post?.likes, feedPost?.likes]);
 
     useEffect(() => {
         if (isSuccess) {
@@ -94,7 +101,8 @@ export const PostPage = () => {
         }
     };
 
-    console.debug('PostPage rendered with post:', post);
+    // Use comments from the feed post if available, otherwise fallback to post.comments
+    const comments = feedPost?.comments || post?.comments || [];
 
     return (
         <div className='post-page'>
@@ -141,7 +149,7 @@ export const PostPage = () => {
                             disabled={isLikingPost}>
                             ❤️ {likeCount} likes
                         </Button>
-                        <span className='post-page__stat'>💬 {post?.comments?.length || 0} comments</span>
+                        <span className='post-page__stat'>💬 {comments.length} comments</span>
                     </div>
                 </Card>
                 <Card className='post-page__comment-creator'>
@@ -175,11 +183,11 @@ export const PostPage = () => {
                     </form>
                 </Card>
                 <Card className='post-page__comments-section'>
-                    <h3 className='post-page__section-title'>Comments ({post?.comments?.length || 0})</h3>
+                    <h3 className='post-page__section-title'>Comments ({comments.length})</h3>
 
                     <div className='post-page__comments-list'>
-                        {post?.comments && post.comments.length > 0 ? (
-                            post.comments.map(comment => (
+                        {comments && comments.length > 0 ? (
+                            comments.map((comment: any) => (
                                 <div key={comment.id} className='comment-item'>
                                     <Avatar
                                         src={comment.author?.icon?.url}
