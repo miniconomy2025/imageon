@@ -681,8 +681,8 @@ export class FederationHandlers {
       console.log(`✅ Actor found for activity request: ${identifier}`);
 
 
-      const activities = await db.queryItems(`ACTIVITY#${actor.id}/activites/${activityId}`);
-      // Get the activity from database       ACTIVITY#yretye5662625
+      const activities = await db.queryItems(`ACTIVITY#${actor.id}/activities/${activityId}`);
+      // Get the activity from database       
       const activityItem = activities.find(item => item.actor === actor.id);
       if (!activityItem) {
         console.log(`❌ Activity not found: ${activityId}`);
