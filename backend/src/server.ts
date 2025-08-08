@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import { serve } from "@hono/node-server";
-import { createFederation, Follow, Accept, Like, Undo, kvCache, Note } from "@fedify/fedify";
+import { createFederation, Follow, Accept, Like, Undo, Note, Activity } from "@fedify/fedify";
 import { RedisKvStore } from "@fedify/redis";
 import { config } from "./config/index.js";
 import { createRedisInstance } from "./config/redis.js";
@@ -38,7 +38,14 @@ federation
 
 federation
   .setObjectDispatcher(
-    Note, "/users/{identifier}/posts/{noteId}", FederationHandlers.handleNoteRequest);
+    Note, "/users/{identifier}/posts/{noteId}", FederationHandlers.handleNoteRequest
+  );
+
+federation
+  .setObjectDispatcher(
+    Activity, "/users/{identifier}/activities/{activityId}", FederationHandlers.handleActivityRequest
+  )
+
 
 federation
   .setFollowersDispatcher("/users/{identifier}/followers", FederationHandlers.handleFollowersRequest)

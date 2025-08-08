@@ -1,4 +1,4 @@
-import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Object, Image, Video } from "@fedify/fedify";
+import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Image, Video } from "@fedify/fedify";
 import { RedisKvStore } from "@fedify/redis";
 import { Temporal } from "@js-temporal/polyfill";
 import { ActorModel } from "../models/Actor.js";
@@ -643,6 +643,79 @@ export class FederationHandlers {
             return false;
         }
     }
+
+  /**
+   * Activity object dispatcher - handles requests for individual Activity objects
+   */
+  static async handleActivityRequest(ctx: RequestContext<ContextData>, values: { identifier: string; activityId: string }) {
+    try {
+      const { activityId } = values;
+      console.log(`📄 Activity request for activityId: ${activityId}`);
+
+      // Rate limiting check
+      const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, 'activity_request', 200, 3600);
+      if (isRateLimited) {
+        return null;
+      }
+
+      // Try to get activity from cache first
+      const cacheKey = CacheKeys.FEDERATION.activities(activityId);
+      const ttlSeconds = FederationCache.TTL.ACTIVITIES;
+      const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
+
+      try {
+        const cached = await ctx.data.kv.get<string>(cacheKey);
+        if (cached) {
+          console.log(`🎯 Cache HIT for activity: ${activityId}`);
+          return JSON.parse(cached);
+        }
+      } catch (cacheError) {
+        console.warn(`⚠️ Cache error for activity ${activityId}:`, cacheError);
+      }
+
+      // Get the activity from database
+      const activityItem = await db.getItem(`ACTIVITY#${activityId}`, 'OBJECT');
+      if (!activityItem) {
+        console.log(`❌ Activity not found: ${activityId}`);
+        return null;
+      }
+      
+      console.log(`📋 Activity data for ${activityId}:`, JSON.stringify(activityItem, null, 2));
+
+      // Handle different possible timestamp field names
+      const timestamp = activityItem.created_at || activityItem.createdAt || activityItem.timestamp || activityItem.published || new Date().toISOString();
+
+      if (!timestamp) {
+        console.log(`❌ No timestamp found for activity ${activityId}. Available fields:`, activityItem);
+        return null;
+      }
+
+      let ActivityClass = ACTIVITY_CONSTRUCTORS[activityItem.type as keyof typeof ACTIVITY_CONSTRUCTORS];
+
+      console.log(`📅 Using timestamp for activity ${activityId}: ${timestamp}`);
+
+      // Create Activity object
+      const activity = new ActivityClass({
+        id: activityItem.id ? new URL(activityItem.id) : new URL(`https://example.com/activities/${activityId}`),
+        actor: activityItem.actor ? new URL(activityItem.actor) : new URL(`https://example.com/actors/${values.identifier}`),
+        object: activityItem.object ? new URL(activityItem.object) : new URL(`https://example.com/objects/${activityId}`),
+        published: Temporal.Instant.from(timestamp),
+      });
+
+      // Cache the result
+      try {
+        await ctx.data.kv.set(cacheKey, JSON.stringify(activity), { ttl });
+        console.log(`💿 Cached activity: ${activityId}`);
+      } catch (cacheError) {
+        console.warn(`⚠️ Failed to cache activity ${activityId}:`, cacheError);
+      }
+
+      return activity;
+    } catch (error) {
+      console.error(`❌ Error in handleActivityRequest for ${values.identifier}:`, error);
+      return null;
+    }
+  }
 
   /**
    * Note object dispatcher - handles requests for individual Note objects
