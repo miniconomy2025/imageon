@@ -11,33 +11,44 @@ export const useGetUserByUrl = (url: string) => {
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
+                    Accept: 'application/activity+json',
+                    'Content-Type': 'application/activity+json',
                     Authorization: `Bearer ${(await currentUser?.getIdTokenResult())?.token}`
                 }
             });
 
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
             }
 
             const result = await response.json();
+            console.log('useGetUserByUrl raw response:', result);
 
-            if (!result.success) {
-                throw new Error(result.error || 'Failed to fetch user');
-            }
+            const backendUser = result;
+            console.log('useGetUserByUrl backendUser:', backendUser);
 
-            const backendUser = result.user;
-
-            return {
-                id: parseInt(backendUser.uid) || 0,
-                username: backendUser.username,
-                preferredUsername: backendUser.displayName?.split(' ')[0] || '',
-                lastName: backendUser.displayName?.split(' ').slice(1).join(' ') || '',
-                icon: { type: 'image', url: backendUser.photoURL },
-                bio: backendUser.bio
+            const mappedUser = {
+                id: backendUser.id ? parseInt(backendUser.id.split('/').pop()) || 0 : 0,
+                username: backendUser.preferredUsername || '',
+                preferredUsername: backendUser.name?.split(' ')[0] || backendUser.preferredUsername || '',
+                name: backendUser.name || '',
+                bio: backendUser.summary || '',
+                icon: backendUser.icon ? { type: 'image', url: backendUser.icon } : undefined,
+                url: backendUser.url || backendUser.id || '',
+                inbox: backendUser.inbox || '',
+                outbox: backendUser.outbox || '',
+                followers: backendUser.followers || '',
+                following: backendUser.following || ''
             } as User;
+
+            console.log('useGetUserByUrl mapped user:', mappedUser);
+            return mappedUser;
         },
-        enabled: !!url
+        enabled: !!url,
+        retry: 3,
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 10 * 60 * 1000 // 10 minutes
     });
 
     return {

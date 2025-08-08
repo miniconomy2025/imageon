@@ -7,7 +7,7 @@ interface CreateCommentParams {
 }
 
 export const useCreateComment = () => {
-    const { currentUser } = useAuth();
+    const { currentUser, userProfile } = useAuth();
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
@@ -21,7 +21,8 @@ export const useCreateComment = () => {
                     Authorization: `Bearer ${(await currentUser?.getIdTokenResult())?.token}`
                 },
                 body: JSON.stringify({
-                    content
+                    content,
+                    actor: userProfile?.username
                 })
             });
 

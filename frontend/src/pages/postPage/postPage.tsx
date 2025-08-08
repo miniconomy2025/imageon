@@ -1,7 +1,9 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGetPost } from '../../hooks/useGetPost';
+import { useUserFeed } from '../../hooks/useUserFeed';
 import { useGetCurrentUser } from '../../hooks/useGetCurrentUser';
 import { useCreateComment } from '../../hooks/useCreateComment';
+import { useLikePost } from '../../hooks/useLikePost';
 import { AttachmentCarousel } from '../../components/AttachmentCarousel/attachementCarousel';
 import { Card, Button, Avatar } from '../../components';
 import { useState, useEffect } from 'react';
@@ -9,16 +11,42 @@ import './postPage.css';
 
 export const PostPage = () => {
     const params = useParams();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { user: currentUser } = useGetCurrentUser();
     const [newComment, setNewComment] = useState('');
     const { createComment, isLoading: isCreatingComment, isSuccess } = useCreateComment();
 
-    if (!params.postId || params.postId === '' || params.postId === undefined) {
-        navigate('/');
+    // Like functionality
+    const [isLiked, setIsLiked] = useState<boolean>(false);
+    const [likeCount, setLikeCount] = useState<number>(0);
+    const { likePost, isLoading: isLikingPost } = useLikePost();
+
+    const postUrl = searchParams.get('url');
+    const postId = params.postId;
+
+    if (!postId) {
+        return <div>Error: Post ID is required</div>;
     }
 
-    const { data: post } = useGetPost(params.postId ?? '');
+    if (!postUrl) {
+        return <div>Error: Post URL is required</div>;
+    }
+
+    const { data: post } = useGetPost(postUrl);
+    const username = currentUser?.username;
+    const { posts: feedPosts } = useUserFeed(username || '');
+
+    // Find the post in the user feed by URL
+    const feedPost = feedPosts?.find((p: any) => p.url === postUrl);
+
+    useEffect(() => {
+        if (post?.likes !== undefined) {
+            setLikeCount(post.likes);
+        } else if (feedPost?.likes !== undefined) {
+            setLikeCount(feedPost.likes);
+        }
+    }, [post?.likes, feedPost?.likes]);
 
     useEffect(() => {
         if (isSuccess) {
@@ -26,16 +54,39 @@ export const PostPage = () => {
         }
     }, [isSuccess]);
 
+    const handleLike = (): void => {
+        if (isLikingPost || !post) return;
+
+        const currentLikedState = isLiked;
+        const newLikedState = !isLiked;
+
+        setIsLiked(newLikedState);
+        setLikeCount(prev => (currentLikedState ? prev - 1 : prev + 1));
+
+        likePost(
+            {
+                postId: post.id,
+                isLiked: currentLikedState
+            },
+            {
+                onError: () => {
+                    setIsLiked(currentLikedState);
+                    setLikeCount(prev => (currentLikedState ? prev + 1 : prev - 1));
+                }
+            }
+        );
+    };
+
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!newComment.trim() || !params.postId) {
+        if (!newComment.trim() || !postId) {
             return;
         }
 
         try {
             createComment({
-                postId: params.postId,
+                postId: postId,
                 content: newComment.trim()
             });
         } catch (error) {
@@ -49,6 +100,9 @@ export const PostPage = () => {
             handleCommentSubmit(e as any);
         }
     };
+
+    // Use comments from the feed post if available, otherwise fallback to post.comments
+    const comments = feedPost?.comments || post?.comments || [];
 
     return (
         <div className='post-page'>
@@ -87,8 +141,15 @@ export const PostPage = () => {
                         </div>
                     )}
                     <div className='post-page__stats'>
-                        <span className='post-page__stat'>❤️ {post?.likes || 0} likes</span>
-                        <span className='post-page__stat'>💬 {post?.comments?.length || 0} comments</span>
+                        <Button
+                            variant='outline'
+                            size='small'
+                            onClick={handleLike}
+                            className={`post-page__stat-button ${isLiked ? 'post-page__stat-button--liked' : ''}`}
+                            disabled={isLikingPost}>
+                            ❤️ {likeCount} likes
+                        </Button>
+                        <span className='post-page__stat'>💬 {comments.length} comments</span>
                     </div>
                 </Card>
                 <Card className='post-page__comment-creator'>
@@ -122,11 +183,11 @@ export const PostPage = () => {
                     </form>
                 </Card>
                 <Card className='post-page__comments-section'>
-                    <h3 className='post-page__section-title'>Comments ({post?.comments?.length || 0})</h3>
+                    <h3 className='post-page__section-title'>Comments ({comments.length})</h3>
 
                     <div className='post-page__comments-list'>
-                        {post?.comments && post.comments.length > 0 ? (
-                            post.comments.map(comment => (
+                        {comments && comments.length > 0 ? (
+                            comments.map((comment: any) => (
                                 <div key={comment.id} className='comment-item'>
                                     <Avatar
                                         src={comment.author?.icon?.url}

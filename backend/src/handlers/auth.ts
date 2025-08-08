@@ -384,11 +384,10 @@ export class AuthHandlers {
                 });
             }
 
-            const actorId = `ACTOR#${userMapping.username}`;
+            const userId = `USER#${request.user.uid}`;
 
-            // Get posts from DynamoDB
-            const posts = await db.queryItemsByGSI1(actorId, {
-                sortKeyExpression: 'begins_with(SK, :sk)',
+            const posts = await db.queryItemsByGSI1(userId, {
+                sortKeyExpression: 'begins_with(GSI1SK, :sk)',
                 attributeValues: { ':sk': 'POST#' }
             });
 
@@ -396,11 +395,12 @@ export class AuthHandlers {
                 JSON.stringify({
                     success: true,
                     posts: posts.map(post => ({
-                        id: post.post_id,
+                        id: post.post_id || post.PK?.replace('POST#', ''),
                         content: post.content,
                         createdAt: post.created_at,
                         likesCount: post.likes_count || 0,
-                        authorUsername: post.author_username
+                        authorUsername: post.author_username || userMapping.username,
+                        authorId: post.author_id
                     }))
                 }),
                 {
@@ -455,7 +455,7 @@ export class AuthHandlers {
             return new Response(
                 JSON.stringify({
                     success: true,
-                    followers: followers.map(follower => ({
+                    followers: followers.map((follower: any) => ({
                         username: follower.SK?.replace('ACTOR#', '') || '',
                         displayName: follower.follower_display_name,
                         createdAt: follower.created_at,
@@ -511,7 +511,7 @@ export class AuthHandlers {
             });
 
             const following = await Promise.all(
-                followingItems.map(async item => {
+                followingItems.map(async (item: any) => {
                     const followUri: string | undefined = item.following_id;
                     let username = '';
                     let displayName: string | undefined = undefined;
@@ -694,7 +694,7 @@ export class AuthHandlers {
      * Accepts actor and content fields and optionally a media file. If media is provided
      * it is uploaded to S3 and stored in the post object and activity.
      */
-    static async handleCreatePost(request: Request): Promise<Response> {
+    static async handleCreatePost(request: AuthenticatedRequest): Promise<Response> {
         try {
             const contentType = request.headers.get('content-type') || '';
             let actor: string;
@@ -712,9 +712,8 @@ export class AuthHandlers {
                     const postId = randomUUID();
                     const key = `posts/${actor}/${postId}/${file.name}`;
                     const arrayBuffer = await file.arrayBuffer();
-                    const buffer = Buffer.from(arrayBuffer);
                     const s3 = new S3Service();
-                    mediaUrl = await s3.uploadMedia(key, buffer, file.type);
+                    mediaUrl = await s3.uploadMedia(key, new Uint8Array(arrayBuffer) as any, file.type);
                     mediaType = file.type;
                 }
             } else {
@@ -760,19 +759,53 @@ export class AuthHandlers {
             const postId = randomUUID();
             const objectId = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}/posts/${postId}`;
             const activityId = `${actorUri}/activities/${postId}`;
-            // Persist post object
-            const item: Record<string, any> = {
+
+            const timestamp = new Date().toISOString();
+
+            // Persist ActivityPub post object (for federation)
+            const activityPubItem: Record<string, any> = {
                 PK: `POST#${postId}`,
                 SK: 'OBJECT',
                 id: objectId,
                 actor: actorUri,
                 content,
-                created_at: new Date().toISOString()
+                created_at: timestamp
             };
             if (mediaUrl) {
-                item.media_url = mediaUrl;
+                activityPubItem.media_url = mediaUrl;
             }
-            await db.putItem(item);
+            await db.putItem(activityPubItem);
+
+            // ALSO persist social media post entry (for user queries)
+            // This follows the schema: GSI1PK = USER#userId, GSI1SK = POST#timestamp#postId
+            const socialMediaPost: Record<string, any> = {
+                PK: `POST#${postId}`,
+                SK: 'METADATA',
+                GSI1PK: `USER#${request.user?.uid}`, // Use Firebase UID as user ID
+                GSI1SK: `POST#${timestamp}#${postId}`,
+                GSI2PK: `TIMELINE#${timestamp.split('T')[0]}`, // Date for timeline queries
+                GSI2SK: `${timestamp}#${postId}`,
+                post_id: postId,
+                author_id: request.user?.uid,
+                author_username: identifier,
+                content,
+                content_type: mediaType ? 'image' : 'text',
+                created_at: timestamp,
+                updated_at: timestamp,
+                likes_count: 0,
+                comments_count: 0,
+                shares_count: 0,
+                engagement_score: 0,
+                visibility: 'public',
+                is_deleted: false,
+                hashtags: [],
+                mentions: []
+            };
+            if (mediaUrl) {
+                socialMediaPost.media_urls = [mediaUrl];
+            }
+            await db.putItem(socialMediaPost);
+
             // Prepare additional data for the activity
             const extra: any = { content };
             if (mediaUrl) {
@@ -785,13 +818,15 @@ export class AuthHandlers {
                 ];
             }
             await activityPub.saveActivity(activityId, 'Create', actorUri, objectId, extra);
+
             return new Response(
                 JSON.stringify({
                     success: true,
                     activityId,
                     objectId,
                     actor: actorUri,
-                    content
+                    content,
+                    postId
                 }),
                 { status: 201, headers: { 'Content-Type': 'application/json' } }
             );
