@@ -63,15 +63,15 @@ export const useGetPost = (url: string) => {
             }
 
             const mappedPost = {
-                id: result.id || '',
-                content: result.content || '',
-                title: result.name || result.summary || '',
+                id: result.id.split('/').pop(),
+                content: result.content,
+                title: result.name || result.summary,
                 author: user,
                 postedAt: result.published || new Date().toISOString(),
                 likes: result.likes?.totalItems || 0,
                 comments: result.replies?.items || [],
                 attachments: attachments,
-                url: result.url || result.id || ''
+                url: result.url
             } as Post;
 
             console.log('useGetPost mapped post:', mappedPost);
