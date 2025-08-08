@@ -649,7 +649,7 @@ export class FederationHandlers {
    */
   static async handleActivityRequest(ctx: RequestContext<ContextData>, values: { identifier: string; activityId: string }) {
     try {
-      const { activityId } = values;
+      const { activityId, identifier } = values;
       console.log(`📄 Activity request for activityId: ${activityId}`);
 
       // Rate limiting check
@@ -673,8 +673,17 @@ export class FederationHandlers {
         console.warn(`⚠️ Cache error for activity ${activityId}:`, cacheError);
       }
 
-      // Get the activity from database
-      const activityItem = await db.getItem(`ACTIVITY#${activityId}`, 'OBJECT');
+      const actor = await db.getActor(identifier);
+      if (!actor) {
+        console.log(`❌ Actor not found for activity request: ${identifier}`);
+        return null;
+      }
+      console.log(`✅ Actor found for activity request: ${identifier}`);
+
+
+      const activities = await db.queryItems(`ACTIVITY#${actor.id}/activites/${activityId}`);
+      // Get the activity from database       ACTIVITY#yretye5662625
+      const activityItem = activities.find(item => item.actor === actor.id);
       if (!activityItem) {
         console.log(`❌ Activity not found: ${activityId}`);
         return null;
