@@ -1139,35 +1139,6 @@ export class AuthHandlers {
                                 entry.inReplyTo = (activity.additionalData as any).inReplyTo;
                             }
                         }
-                        // Add likes info
-                        try {
-                            // Get all Like activities for this object
-                            const objectId = activity.object && activity.object.id ? activity.object.id : activity.object || null;
-                            let likeCount = 0;
-                            let likedBy: string[] = [];
-                            if (objectId) {
-                                // Aggregate Like activities from all actors
-                                for (const likeActorUri of actorUris) {
-                                    const likeActorId =
-                                        likeActorUri.startsWith('http://') || likeActorUri.startsWith('https://')
-                                            ? extractIdentifier(likeActorUri)
-                                            : likeActorUri;
-                                    if (!likeActorId) continue;
-                                    const likeActivities = (await activityPub.getActorActivities(likeActorId)) as any[];
-                                    for (const likeAct of likeActivities) {
-                                        if (likeAct.type === 'Like' && likeAct.object === objectId) {
-                                            likeCount++;
-                                            likedBy.push(likeAct.actor);
-                                        }
-                                    }
-                                }
-                            }
-                            entry.likes = likeCount;
-                            entry.likedBy = likedBy;
-                        } catch (e) {
-                            entry.likes = 0;
-                            entry.likedBy = [];
-                        }
                         items.push(entry);
                     }
                 }
