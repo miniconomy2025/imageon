@@ -437,7 +437,7 @@ export class FederationHandlers {
                                     actor: ctx.getActorUri(identifier),
                                     published: Temporal.Instant.from(activity.published || new Date().toISOString()),
                                     object: new ObjectClass({
-                                        id: new URL(activity.object?.id || activity.id),
+                                        id: new URL(activity.object || activity.id),
                                         content: activity.object?.content || activity.additionalData?.content,
                                         published: Temporal.Instant.from(activity.published || new Date().toISOString())
                                     })
