@@ -1,4 +1,4 @@
-import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Object } from "@fedify/fedify";
+import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Object, Image, Video } from "@fedify/fedify";
 import { RedisKvStore } from "@fedify/redis";
 import { Temporal } from "@js-temporal/polyfill";
 import { ActorModel } from "../models/Actor.js";
@@ -698,16 +698,15 @@ export class FederationHandlers {
             console.log(`📅 Using timestamp for note ${noteId}: ${timestamp}`);
 
       const containsMedia = !!postItem?.media_url;
-      const mediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && 'Image' || 'Video' : null;
+      const MediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && Image || Video : null;
       // Create Note object
       const note = new Note({
         id: postItem.id ? new URL(postItem.id) : new URL(`https://example.com/notes/${noteId}`),
         content: postItem.content,
         published: Temporal.Instant.from(timestamp),
-        attachments: containsMedia && [
-          new Object({
+        attachments: !!containsMedia && !!MediaType && [
+          new MediaType({
             id: new URL(postItem.id),
-            mediaType: mediaType,
             url: new URL(postItem.media_url),
           })
         ] || [],
