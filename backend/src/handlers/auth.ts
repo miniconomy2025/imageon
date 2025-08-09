@@ -86,8 +86,7 @@ export class AuthHandlers {
                 );
             }
 
-            const userMapping = userMappingDoc.data();
-            const username = userMapping?.username;
+            const username = user?.username;
 
             if (!username) {
                 return new Response(
@@ -122,6 +121,8 @@ export class AuthHandlers {
                 );
             }
 
+            console.log('Actor data:', actorData);
+
             return new Response(
                 JSON.stringify({
                     success: true,
@@ -129,6 +130,7 @@ export class AuthHandlers {
                         uid: decodedToken.uid,
                         email: decodedToken.email,
                         displayName: actorData.name,
+                        url: actorData.id,
                         username: username,
                         photoURL: actorData.icon?.url || decodedToken.picture,
                         needsProfile: false
