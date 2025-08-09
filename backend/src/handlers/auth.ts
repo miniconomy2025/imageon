@@ -31,7 +31,8 @@ export class AuthHandlers {
 
             // Get user mapping from Firestore to check if user exists
             const userMappingDoc = await firestore.collection('users').doc(decodedToken.uid).get();
-
+            console.log('User mapping document:', userMappingDoc.data());
+            console.log('Decoded token:', decodedToken);
             if (!userMappingDoc.exists) {
                 return new Response(
                     JSON.stringify({
