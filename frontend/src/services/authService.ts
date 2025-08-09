@@ -7,6 +7,7 @@ export interface UserProfile {
     photoURL: string;
     bio?: string;
     needsProfile: boolean;
+    url: string; 
 }
 
 export interface CompleteProfileData {

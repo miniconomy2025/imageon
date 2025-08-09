@@ -33,7 +33,7 @@ export class AuthHandlers {
             const userMappingDoc = await firestore.collection('users').doc(decodedToken.uid).get();
             console.log('User mapping document:', userMappingDoc.data());
 
-            const user = userMappingDoc.data();
+            const user = userMappingDoc?.data?.();
 
             if (!user) {
                 return new Response(
@@ -48,43 +48,7 @@ export class AuthHandlers {
                         headers: { 'Content-Type': 'application/json' }
                     }
                 );
-            }
-
-            const actorPK = user.actorId || `ACTOR#${user.username}`;
-
-            const actor = await db.getItem(actorPK, 'PROFILE');
-
-            if (!actor?.id) {
-                return new Response(
-                    JSON.stringify({
-                        error: 'Actor not found',
-                        needsProfile: true,
-                        uid: decodedToken.uid,
-                        email: decodedToken.email
-                    }),
-                    {
-                        status: 404,
-                        headers: { 'Content-Type': 'application/json' }
-                    }
-                );
-            }
-
-            console.log('Decoded token:', decodedToken);
-            if (!userMappingDoc.exists) {
-                return new Response(
-                    JSON.stringify({
-                        error: 'User not found',
-                        needsProfile: true,
-                        uid: decodedToken.uid,
-                        email: decodedToken.email,
-                        url: actor.id
-                    }),
-                    {
-                        status: 404,
-                        headers: { 'Content-Type': 'application/json' }
-                    }
-                );
-            }
+            }            
 
             const username = user?.username;
 

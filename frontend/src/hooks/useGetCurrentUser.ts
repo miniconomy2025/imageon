@@ -30,7 +30,8 @@ export const useGetCurrentUser = () => {
               preferredUsername: userProfile.displayName?.split(' ')[0] || '',
               lastName: userProfile.displayName?.split(' ').slice(1).join(' ') || '',
               icon: { url: userProfile.photoURL, type: 'image' },
-              bio: userProfile.bio
+              bio: userProfile.bio,
+              url: userProfile.url || ''
           } as User)
         : null;
 

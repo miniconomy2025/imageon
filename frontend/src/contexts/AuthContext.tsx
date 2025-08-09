@@ -45,7 +45,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     displayName: user.displayName || '',
                     username: '',
                     photoURL: user.photoURL || '',
-                    needsProfile: true
+                    needsProfile: true,
+                    url: authResponse.user.url || '',
                 });
             } else {
                 // User profile is complete
@@ -63,7 +64,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     displayName: user.displayName || '',
                     username: '',
                     photoURL: user.photoURL || '',
-                    needsProfile: true
+                    needsProfile: true,
+                    url: '', 
                 });
             } else {
                 // For other errors, still assume user needs to complete profile
@@ -73,7 +75,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     displayName: user.displayName || '',
                     username: '',
                     photoURL: user.photoURL || '',
-                    needsProfile: true
+                    needsProfile: true,
+                    url: '',
                 });
             }
         }
