@@ -78,7 +78,12 @@ serve({
 
     // Auth endpoints
     if (url.pathname === "/auth/verify" && request.method === "POST") {
-      return await AuthHandlers.handleVerifyToken(request);
+      const response = await AuthHandlers.handleVerifyToken(request);
+      const responseHeaders = new Headers(response.headers);
+      return new Response(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      });
     }
 
     if (
