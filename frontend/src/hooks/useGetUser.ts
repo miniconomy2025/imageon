@@ -14,7 +14,7 @@ export const useGetUser = (username: string) => {
                 method: 'GET',
                 headers: {
                     Accept: 'application/activity+json',
-                    'Content-Type': 'application/activity+json',
+                    'Content-Type': 'application/json',
                     Authorization: `Bearer ${(await currentUser?.getIdTokenResult())?.token}`
                 }
             });
