@@ -76,159 +76,63 @@ serve({
   fetch: async (request: Request) => {
     const url = new URL(request.url);
 
-    // Add CORS headers for all requests
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    };
-
-    // Handle preflight requests
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 200,
-        headers: corsHeaders,
-      });
-    }
-
     // Auth endpoints
     if (url.pathname === "/auth/verify" && request.method === "POST") {
-      const response = await AuthHandlers.handleVerifyToken(request);
-      // Add CORS headers to the response
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
+      return await AuthHandlers.handleVerifyToken(request);
     }
 
     if (
       url.pathname === "/auth/complete-profile" &&
       request.method === "POST"
     ) {
-      const response = await requireAuth(AuthHandlers.handleCompleteProfile)(
+      return await requireAuth(AuthHandlers.handleCompleteProfile)(
         request
       );
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
     }
 
     if (url.pathname === "/auth/profile" && request.method === "GET") {
-      const response = await requireAuth(AuthHandlers.handleGetProfile)(
+      return await requireAuth(AuthHandlers.handleGetProfile)(
         request
       );
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
     }
 
     if (url.pathname === "/auth/profile" && request.method === "PUT") {
-      const response = await requireAuth(AuthHandlers.handleUpdateProfile)(
+      return await requireAuth(AuthHandlers.handleUpdateProfile)(
         request
       );
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
     }
 
     if (url.pathname === "/auth/check-username" && request.method === "GET") {
-      const response = await AuthHandlers.handleCheckUsername(request);
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
+      return await AuthHandlers.handleCheckUsername(request);
     }
 
     // New user routes
     if (url.pathname === "/auth/user/posts" && request.method === "GET") {
-      const response = await requireAuth(AuthHandlers.handleGetUserPosts)(
+      return await requireAuth(AuthHandlers.handleGetUserPosts)(
         request
       );
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
     }
 
     if (url.pathname === "/auth/user/followers" && request.method === "GET") {
-      const response = await requireAuth(AuthHandlers.handleGetFollowers)(
+      return await requireAuth(AuthHandlers.handleGetFollowers)(
         request
       );
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
     }
 
     if (url.pathname === "/auth/user/following" && request.method === "GET") {
-      const response = await requireAuth(AuthHandlers.handleGetFollowing)(
+      return await requireAuth(AuthHandlers.handleGetFollowing)(
         request
       );
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
     }
 
     if (url.pathname === "/auth/user/logged-in" && request.method === "GET") {
-      const response = await requireAuth(AuthHandlers.handleGetLoggedInUser)(
+      return await requireAuth(AuthHandlers.handleGetLoggedInUser)(
         request
       );
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
     }
 
     if (url.pathname === "/auth/user/by-id" && request.method === "GET") {
-      const response = await AuthHandlers.handleGetUserById(request);
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
+      return await AuthHandlers.handleGetUserById(request);
     }
 
     // Health check endpoint
@@ -412,15 +316,7 @@ serve({
     // Create post endpoint
     if (url.pathname === "/api/posts" && request.method === "POST") {
       // Protect the create post endpoint behind authentication
-      const response = await requireAuth((r: any) => AuthHandlers.handleCreatePost(r))(request);
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value as any);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
+      return await requireAuth((r: any) => AuthHandlers.handleCreatePost(r))(request);
     }
 
     // Like and unlike endpoints for posts (API only)
@@ -434,27 +330,11 @@ serve({
       const postId = likeParts[3];
       if (request.method === "POST") {
         // Authenticate like request 
-        const response = await requireAuth((r: any) => AuthHandlers.handleLikePost(r, postId))(request);
-        const responseHeaders = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          responseHeaders.set(key, value as any);
-        });
-        return new Response(response.body, {
-          status: response.status,
-          headers: responseHeaders,
-        });
+        return await requireAuth((r: any) => AuthHandlers.handleLikePost(r, postId))(request);
       }
       if (request.method === "DELETE") {
         // Authenticate unlike request
-        const response = await requireAuth((r: any) => AuthHandlers.handleUnlikePost(r, postId))(request);
-        const responseHeaders = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          responseHeaders.set(key, value as any);
-        });
-        return new Response(response.body, {
-          status: response.status,
-          headers: responseHeaders,
-        });
+        return await requireAuth((r: any) => AuthHandlers.handleUnlikePost(r, postId))(request);
       }
     }
 
@@ -469,29 +349,13 @@ serve({
     ) {
       const parentPostId = commentParts[3];
       // Authenticate comment creation
-      const response = await requireAuth((r: any) => AuthHandlers.handleCreateComment(r, parentPostId))(request);
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value as any);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
+      return await requireAuth((r: any) => AuthHandlers.handleCreateComment(r, parentPostId))(request);
     }
 
     // User feed endpoint - returns posts from followed actors and self
     if (url.pathname === "/api/feed" && request.method === "GET") {
       // Authenticate feed retrieval
-      const response = await requireAuth((r: any) => AuthHandlers.handleUserFeed(r))(request);
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value as any);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
+      return await requireAuth((r: any) => AuthHandlers.handleUserFeed(r))(request);
     }
 
     // User discovery endpoints
@@ -899,15 +763,7 @@ serve({
     // Follow and unfollow endpoints
     if (url.pathname === "/api/follow" && (request.method === "POST" || request.method === "DELETE")) {
       // Authenticate follow and unfollow actions
-      const response = await requireAuth((r: any) => AuthHandlers.handleFollowUnfollow(r))(request);
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        responseHeaders.set(key, value as any);
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: responseHeaders,
-      });
+      return await requireAuth((r: any) => AuthHandlers.handleFollowUnfollow(r))(request);
     }
 
     // All other federation-related requests are handled by the Federation object
