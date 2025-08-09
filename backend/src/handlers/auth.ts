@@ -597,6 +597,7 @@ export class AuthHandlers {
                     user: {
                         uid: userData.uid,
                         email: userData.email,
+                        url: userData.id,
                         displayName: userData.display_name,
                         username: userData.username,
                         photoURL: userData.profile_image_url,
@@ -650,7 +651,7 @@ export class AuthHandlers {
             }
 
             // Get full user profile from DynamoDB
-            const userData = await db.getItem(`USER#${request.user.uid}`, 'PROFILE');
+            const userData = await db.getItem(`ACTOR#${request.user.uid}`, 'PROFILE');
 
             if (!userData) {
                 return new Response(JSON.stringify({ error: 'User profile not found' }), {
@@ -666,6 +667,7 @@ export class AuthHandlers {
                         uid: userData.uid,
                         email: userData.email,
                         displayName: userData.display_name,
+                        url:  userData.id,
                         username: userData.username,
                         photoURL: userData.profile_image_url,
                         bio: userData.bio,
