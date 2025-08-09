@@ -76,11 +76,12 @@ serve({
   fetch: async (request: Request) => {
     const url = new URL(request.url);
 
-    // Add CORS headers for all requests
+    // Add CORS headers for all requests including ActivityPub protocol support
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, User-Agent, Date, Digest, Signature, Host",
+      "Access-Control-Expose-Headers": "Content-Type, Location, Date, ETag, Last-Modified",
     };
 
     // Handle preflight requests
