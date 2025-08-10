@@ -452,12 +452,9 @@ export class FederationHandlers {
                                 }
                                 
                                 const attachments = [];
-                                console.log(`🔍 Processing Create activity: ${activity.id} with additional data:`, additionalData);
                                 
-                                if (additionalData?.attachments) {
-                                    console.log(`🔍 Found ${additionalData.attachments.length} attachments in Create activity`);
-                                    for (const attachment of additionalData.attachments) {
-                                        console.log(`🔍 Processing attachment:`, attachment);
+                                if (additionalData?.attachment) {
+                                    for (const attachment of additionalData.attachment) {
                                         if (typeof attachment.mediaType === 'string' && attachment.mediaType.startsWith('image/')) {
                                             attachments.push(new Image({
                                                 url: new URL(attachment.url),
