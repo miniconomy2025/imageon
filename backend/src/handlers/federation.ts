@@ -783,19 +783,19 @@ export class FederationHandlers {
       const ttlSeconds = FederationCache.TTL.ACTIVITIES; // Use activities TTL
       const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
       
-      try {
-        const cached = await ctx.data.kv.get<string>(cacheKey);
-        if (cached) {
-          console.log(`🎯 Cache HIT for note: ${noteId}`);
-          const cachedNote = JSON.parse(cached);
-          // Look for this specific note in cached activities
-          if (cachedNote) {
-            return cachedNote;
-          }
-        }
-      } catch (cacheError) {
-        console.warn(`⚠️ Cache error for note ${noteId}:`, cacheError);
-      }
+      // try {
+      //   const cached = await ctx.data.kv.get<string>(cacheKey);
+      //   if (cached) {
+      //     console.log(`🎯 Cache HIT for note: ${noteId}`);
+      //     const cachedNote = JSON.parse(cached);
+      //     // Look for this specific note in cached activities
+      //     if (cachedNote) {
+      //       return cachedNote;
+      //     }
+      //   }
+      // } catch (cacheError) {
+      //   console.warn(`⚠️ Cache error for note ${noteId}:`, cacheError);
+      // }
 
       // Get the post/note from database
       const postItem = await db.getItem(`POST#${noteId}`, 'OBJECT');
@@ -814,7 +814,7 @@ export class FederationHandlers {
         return null;
       }
 
-            console.log(`📅 Using timestamp for note ${noteId}: ${timestamp}`);
+      console.log(`📅 Using timestamp for note ${noteId}: ${timestamp}`);
 
       const containsMedia = !!postItem?.media_url;
       const MediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && Image || Video : null;
@@ -830,6 +830,8 @@ export class FederationHandlers {
           })
         ] || [],
       });
+
+      console.log(`📄 Note created: ${noteId}`, JSON.stringify(note));
 
             // Cache the result
             try {
