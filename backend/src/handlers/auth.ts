@@ -1180,6 +1180,7 @@ export class AuthHandlers {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
+            console.log('create following step1:', body);
             // Resolve follower identifier
             let followerId: string;
             if (actor.startsWith('http://') || actor.startsWith('https://')) {
@@ -1226,6 +1227,7 @@ export class AuthHandlers {
             if (!followerId) {
                 return new Response(JSON.stringify({ error: 'Invalid actor identifier' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
             }
+            console.log('create following step2:', followerId, targetId, targetUri);
             // Verify follower exists
             const followerExists = await ActorModel.exists(followerId);
             if (!followerExists) {
@@ -1259,16 +1261,19 @@ export class AuthHandlers {
             if (request.method === 'POST') {
                 await activityPub.saveFollower(activityId, followerUri, targetUri);
                 await activityPub.saveActivity(activityId, 'Follow', followerUri, targetUri);
+                console.log('create following step3:', followerUri, followId, activityId);
 
                 try {
                     const targetHost = new URL(targetUri).hostname;
                     const localHost = config.federation.domain.split(':')[0];
+                    console.log('create following step4:', targetHost, localHost);
                     if (targetHost !== localHost) {
                         const actorResp = await fetch(targetUri, {
                             headers: {
                                 'Accept': 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
                             }
                         });
+                        console.log('create following step5:', actorResp);
                         if (actorResp.ok) {
                             const actorData = await actorResp.json();
                             const inbox = actorData.inbox;
@@ -1280,13 +1285,14 @@ export class AuthHandlers {
                                     actor: followerUri,
                                     object: targetUri
                                 };
-                                await fetch(inbox, {
+                                const followReq = await fetch(inbox, {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/activity+json'
                                     },
                                     body: JSON.stringify(followActivity)
                                 });
+                                console.log('create following step6:', followReq);
                             }
                         }
                     }
