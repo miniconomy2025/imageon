@@ -1,34 +1,39 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useGetUserByUrl } from '../../hooks/useGetUserByUrl';
 import { useUserPosts } from '../../hooks/useUserPosts';
+import { LoaderDots } from '../../components/LoaderDots';
 import { Card, PostCard, Avatar } from '../../components';
 import './profilePage.css';
+import { config } from '../../config/config';
 
 export const ProfilePage = () => {
     const params = useParams();
     const [searchParams] = useSearchParams();
     const username = params.username;
-    const userUrl = searchParams.get('url');
+    let userUrl = searchParams.get('url');
 
     if (!username) {
         return <div>Error: Username is required</div>;
     }
 
     if (!userUrl) {
-        return <div>Error: User URL is required</div>;
+        userUrl = `/users/${username}@${config.API_URL}`;
     }
 
-    const { user, isFetching: isLoadingUser } = useGetUserByUrl(userUrl);
-    const { posts: userPosts, isFetching: isLoadingPosts } = useUserPosts(username);
+    const { user, isFetching: isLoadingUser, isError: isLoadingUserError } = useGetUserByUrl(userUrl);
+    const { posts: userPosts, isFetching: isLoadingPosts, isError: isLoadingPostsError } = useUserPosts(userUrl);
+
+    if (isLoadingPostsError || isLoadingUserError) {
+        return <div className='profile-page__error-message'>Error loading user or posts. Please try again later.</div>;
+    }
 
     return (
         <div className='profile-page'>
             <div className='profile-page__container'>
-                {/* Profile Header */}
                 <Card className='profile-page__header-card'>
                     {isLoadingUser ? (
                         <div className='profile-page__loading'>
-                            <p>Loading user...</p>
+                            <LoaderDots />
                         </div>
                     ) : user ? (
                         <div className='profile-page__user-info'>
@@ -50,15 +55,13 @@ export const ProfilePage = () => {
                         </div>
                     )}
                 </Card>
-
-                {/* Posts Section */}
                 <Card className='profile-page__posts-card'>
                     <h2 className='profile-page__section-title'>Posts ({userPosts?.length || 0})</h2>
 
                     <div className='profile__feed'>
                         {isLoadingPosts ? (
                             <div className='profile-page__loading'>
-                                <p>Loading posts...</p>
+                                <LoaderDots />
                             </div>
                         ) : userPosts && userPosts.length > 0 ? (
                             <section className='profile__posts'>

@@ -67,8 +67,8 @@ export const useSearchUser = (searchTerm: string) => {
 
             return [transformedUser];
         },
-        enabled: searchTerm.length > 0, // Only run query if there's a search term
-        staleTime: 30000 // Consider data stale after 30 seconds
+        enabled: searchTerm.length > 0,
+        staleTime: 30000
     });
 
     return {

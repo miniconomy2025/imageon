@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import LoaderDots from '../../components/LoaderDots';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import './loginPage.css';
@@ -36,6 +37,10 @@ export const LoginPage: React.FC = () => {
         }
     };
 
+    // Show loader if loading
+    if (loading) {
+        return <LoaderDots />;
+    }
     // Don't show login page if user is already authenticated
     if (!loading && userProfile) {
         return null;

@@ -82,7 +82,7 @@ export const UserSearch = () => {
         <div className='user-search' ref={searchRef}>
             <input
                 type='text'
-                placeholder='Search users...'
+                placeholder='Enter full username (include domain if external)...'
                 className='user-search__input'
                 value={searchTerm}
                 onChange={handleInputChange}

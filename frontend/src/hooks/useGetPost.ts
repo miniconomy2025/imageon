@@ -1,25 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { Post } from '../types/post';
 import { useAuth } from '../contexts/AuthContext';
-import { useGetUserByUrl } from './useGetUserByUrl';
 
-export const useGetPost = (url: string) => {
+export const useGetPost = (url: string, author: any) => {
     const { currentUser } = useAuth();
-
-    const getAuthorUrlFromPostUrl = (postUrl: string) => {
-        if (!postUrl) return '';
-        const postIdParts = postUrl.split('/');
-        const userIndex = postIdParts.findIndex((part: string) => part === 'users');
-        if (userIndex !== -1 && userIndex + 1 < postIdParts.length) {
-            return postIdParts.slice(0, userIndex + 2).join('/');
-        }
-        return '';
-    };
-
-    console.debug('useGetPost called with URL:', url);
-
-    const authorUrl = getAuthorUrlFromPostUrl(url);
-    const { user, isFetching: isFetchingUser } = useGetUserByUrl(authorUrl);
 
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['post', url],
@@ -41,24 +25,25 @@ export const useGetPost = (url: string) => {
 
             // Handle attachments - can be single object or array
             let attachments = [];
+            const ensureMediaType = (att: any) => {
+                // Prefer mediaType, fallback to type for video/image detection
+                let mediaType = att.mediaType || att.type || '';
+                // If type is 'Video' or 'Image', set a default mediaType
+                if (!mediaType && att.type === 'Video') mediaType = 'video/mp4';
+                if (!mediaType && att.type === 'Image') mediaType = 'image/png';
+                return {
+                    id: att.id || '',
+                    type: att.type || '',
+                    mediaType,
+                    url: att.url || '',
+                    name: att.name || ''
+                };
+            };
             if (result.attachment) {
                 if (Array.isArray(result.attachment)) {
-                    attachments = result.attachment.map((att: any) => ({
-                        id: att.id || '',
-                        type: att.mediaType || att.type || 'image',
-                        url: att.url || '',
-                        name: att.name || ''
-                    }));
+                    attachments = result.attachment.map(ensureMediaType);
                 } else {
-                    // Single attachment object
-                    attachments = [
-                        {
-                            id: result.attachment.id || '',
-                            type: result.attachment.mediaType || result.attachment.type || 'image',
-                            url: result.attachment.url || '',
-                            name: result.attachment.name || ''
-                        }
-                    ];
+                    attachments = [ensureMediaType(result.attachment)];
                 }
             }
 
@@ -66,7 +51,7 @@ export const useGetPost = (url: string) => {
                 id: result.id.split('/').pop(),
                 content: result.content,
                 title: result.name || result.summary,
-                author: user,
+                author: author,
                 postedAt: result.published || new Date().toISOString(),
                 likes: result.likes?.totalItems || 0,
                 comments: result.replies?.items || [],
@@ -74,14 +59,13 @@ export const useGetPost = (url: string) => {
                 url: result.url
             } as Post;
 
-            console.log('useGetPost mapped post:', mappedPost);
             return mappedPost;
         },
-        enabled: !!url && !isFetchingUser,
+        enabled: !!url && !!author,
         retry: 3,
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 10 * 60 * 1000 // 10 minutes
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000
     });
 
     return {

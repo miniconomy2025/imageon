@@ -24,27 +24,17 @@ export const useUserFeed = (username: string) => {
             const result = await response.json();
             const items = result.items || [];
 
-            // Separate posts and comments
             const posts: any[] = [];
             const comments: any[] = [];
 
             items.forEach((item: any) => {
                 if (item.inReplyTo) {
-                    // This is a comment
                     comments.push(item);
                 } else {
-                    // This is a post
                     posts.push(item);
                 }
             });
 
-            console.log('Found posts:', posts.length, 'comments:', comments.length);
-            console.log(
-                'Comments inReplyTo URLs:',
-                comments.map(c => c.inReplyTo)
-            );
-
-            // Map posts to their structure
             const postsMap = new Map<string, Post>();
 
             posts.forEach((item: any) => {
@@ -55,7 +45,6 @@ export const useUserFeed = (username: string) => {
                     postId = urlParts[urlParts.length - 1];
                 }
 
-                // Map actor to both actor and author fields
                 const user = item.actor
                     ? {
                           id: item.actor.id,
@@ -88,11 +77,9 @@ export const useUserFeed = (username: string) => {
                     url: item.object
                 };
 
-                // Store post by both its URL and ID for lookup
                 postsMap.set(item.object, post);
                 postsMap.set(postId, post);
 
-                // Also store by the item.id in case it's used in inReplyTo
                 if (item.id !== postId) {
                     postsMap.set(item.id, post);
                 }
@@ -110,7 +97,6 @@ export const useUserFeed = (username: string) => {
 
                 let parentPost = postsMap.get(commentItem.inReplyTo);
 
-                // If not found by exact URL match, try to find by post ID extracted from inReplyTo
                 if (!parentPost && commentItem.inReplyTo) {
                     const urlParts = commentItem.inReplyTo.split('/');
                     const postIdFromUrl = urlParts[urlParts.length - 1];
@@ -181,21 +167,18 @@ export const useUserFeed = (username: string) => {
                 }
             });
 
-            // Return only the posts (comments are now attached to their parent posts)
             const posts1 = Array.from(postsMap.values()).filter((post, index, array) => array.findIndex(p => p.id === post.id) === index);
             console.log('useUserFeed posts1', posts1);
             return posts1;
         },
         getNextPageParam: (_lastPage: Post[], _pages: Post[][]) => {
-            // Returns undefined if there are no more pages
-            //return lastPage.length > 0 ? pages.length + 1 : undefined;
             return undefined;
         },
         enabled: !!username,
         retry: 3,
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-        staleTime: 2 * 60 * 1000, // 2 minutes (shorter for feeds to keep them fresh)
-        gcTime: 5 * 60 * 1000, // 5 minutes
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+        staleTime: 2 * 60 * 1000,
+        gcTime: 5 * 60 * 1000,
         initialPageParam: 1
     });
 
