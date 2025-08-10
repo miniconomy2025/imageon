@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - followThis
     paths:
       - 'backend/**'
   workflow_dispatch:

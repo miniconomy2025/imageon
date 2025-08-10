@@ -131,10 +131,13 @@ export class ActivityPubService {
   private extractIdentifierFromUri(uri: string): string | null {
     try {
       const url = new URL(uri);
-      const pathParts = url.pathname.split('/');
+      const pathParts = url.pathname.split('/').filter(Boolean);
       const usersIndex = pathParts.indexOf('users');
       if (usersIndex !== -1 && pathParts[usersIndex + 1]) {
         return pathParts[usersIndex + 1];
+      }
+      if (pathParts.length === 1 && pathParts[0].startsWith('@')) {
+        return pathParts[0].substring(1);
       }
       return null;
     } catch (error) {
