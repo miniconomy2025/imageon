@@ -3,12 +3,12 @@ import { useUserFeed } from '../../hooks/useUserFeed';
 import Card from '../Card/Card';
 import PostCard from '../Post/Post';
 import { useAuth } from '../../contexts/AuthContext';
+import LoaderDots from '../LoaderDots';
 
 export const UserFeed = () => {
     const { userProfile } = useAuth();
     const observerRef = useRef<IntersectionObserver | null>(null);
 
-    //Once login is implemented, replace with logged-in users username
     const username = userProfile?.username;
 
     if (!username) {
@@ -43,14 +43,16 @@ export const UserFeed = () => {
 
     return (
         <>
-            {isLoadingPosts && <p>Loading posts...</p>}
-            {feedPosts &&
+            {isLoadingPosts === true ? (
+                <LoaderDots />
+            ) : (
+                feedPosts.length > 0 &&
                 feedPosts.map((post, index) => (
                     <Card key={post.id} ref={index === feedPosts.length - 1 ? lastPostElementRef : null}>
                         <PostCard post={post} author={post.author} />
                     </Card>
-                ))}
-            {isLoadingPosts && <p>Loading more posts...</p>}
+                ))
+            )}
         </>
     );
 };

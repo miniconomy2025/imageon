@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import './completeProfilePage.css';
+import LoaderDots from '../../components/LoaderDots';
 
 export const CompleteProfilePage: React.FC = () => {
     const { currentUser, userProfile, completeProfile, checkUsername, loading } = useAuth();
@@ -113,8 +114,7 @@ export const CompleteProfilePage: React.FC = () => {
             <div className='complete-profile-page'>
                 <div className='complete-profile-container'>
                     <div className='complete-profile-card'>
-                        <div className='loading-spinner'></div>
-                        <p>Loading...</p>
+                        <LoaderDots />
                     </div>
                 </div>
             </div>

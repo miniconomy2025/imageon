@@ -14,7 +14,7 @@ export const useGetUser = (username: string) => {
                 method: 'GET',
                 headers: {
                     Accept: 'application/activity+json',
-                    'Content-Type': 'application/activity+json',
+                    'Content-Type': 'application/json',
                     Authorization: `Bearer ${(await currentUser?.getIdTokenResult())?.token}`
                 }
             });
@@ -43,7 +43,7 @@ export const useGetUser = (username: string) => {
         },
         enabled: !!username,
         retry: 3,
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
         staleTime: 5 * 60 * 1000,
         gcTime: 10 * 60 * 1000
     });

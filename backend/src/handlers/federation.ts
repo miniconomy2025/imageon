@@ -1,4 +1,4 @@
-import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Object } from "@fedify/fedify";
+import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Image, Video } from "@fedify/fedify";
 import { RedisKvStore } from "@fedify/redis";
 import { Temporal } from "@js-temporal/polyfill";
 import { ActorModel } from "../models/Actor.js";
@@ -293,51 +293,58 @@ export class FederationHandlers {
      * Undo activity handler
      * Handles incoming Undo activities (e.g. unfollow)
      */
-    static async handleUndoActivity(ctx: InboxContext<ContextData>, undo: any) {
+    static async handleUndoActivity(ctx: InboxContext<ContextData>, undoActivity: Undo) {
+        const undo = await undoActivity.getObject();
+
+        if (!undo?.id) {
+            console.error('Invalid Undo activity: missing object');
+            return;
+        }
+
         try {
-            if (!undo?.id || !undo?.actorId || !undo?.object) {
-                console.log('Invalid Undo activity: missing required fields');
-                return;
-            }
-            const object = undo.object;
+            console.log(`🔁 Processing Undo activity: ${JSON.stringify(undo)}`);
+            console.log(`Actor ID: ${undoActivity.actorId}`);
             // If the object is a Follow, remove the follower relationship
-            if (object.type === 'Follow' && object.actor && object.object) {
-                const followerId = object.actor?.href ?? String(object.actor);
-                const targetId = object.object?.href ?? String(object.object);
-                await activityPub.removeFollower(followerId, targetId);
-                console.log(`👋 Unfollow processed: ${followerId} -> ${targetId}`);
+            if (undo instanceof Follow  && undo.actorId && undo.objectId) {
+                const parsed = ctx.parseUri(undo.objectId);
+
+                if (!undoActivity.actorId || !undoActivity.id) {
+                    console.error('Undo activity missing actorId:', undoActivity);
+                    return;
+                }
+
+                if (parsed == null || parsed.type !== "actor") return;
+
+                await activityPub.removeFollower(undoActivity.actorId.toString(), parsed.identifier);
 
                 // 🔥 CACHE INVALIDATION: Clear cached data
                 try {
                     // Extract identifier from target URI
-                    const targetUrl = new URL(targetId);
-                    const pathParts = targetUrl.pathname.split('/');
-                    const usersIndex = pathParts.indexOf('users');
-                    if (usersIndex !== -1 && pathParts[usersIndex + 1]) {
-                        const targetIdentifier = pathParts[usersIndex + 1];
-                        await ctx.data.kv.delete(CacheKeys.FEDERATION.followers(targetIdentifier));
-                        await ctx.data.kv.delete(CacheKeys.FEDERATION.followersCount(targetIdentifier));
+                   
+                      await ctx.data.kv.delete(CacheKeys.FEDERATION.followers(parsed.identifier));
+                      await ctx.data.kv.delete(CacheKeys.FEDERATION.followersCount(parsed.identifier));
 
                         // Also invalidate activities cache
-                        const activitiesKey = CacheKeys.FEDERATION.activities(targetIdentifier);
-                        await ctx.data.kv.delete(activitiesKey);
+                      const activitiesKey = CacheKeys.FEDERATION.activities(parsed.identifier);
+                      await ctx.data.kv.delete(activitiesKey);
 
-                        console.log(`🗑️ Cache invalidated for unfollow of: ${targetIdentifier}`);
-                    }
+                      console.log(`🗑️ Cache invalidated for unfollow of: ${parsed.identifier}`);
+
                 } catch (cacheError) {
                     console.warn(`⚠️ Failed to invalidate cache for unfollow:`, cacheError);
                 }
 
-                // Save the Undo activity
-                const activityId = undo.id?.href ?? String(undo.id);
-                await activityPub.saveActivity(activityId, 'Undo', followerId, targetId);
+                await activityPub.saveActivity(undoActivity.id.toString(), 'Undo', undo.actorId.toString(), undo.id.toString(), {
+                    unfollowed_at: new Date().toISOString()
+                });
             } else {
+                console.log(`🔁 Undo received for unsupported type: ${typeof undo}`);
                 // Other undo types can simply be recorded
-                const activityId = undo.id?.href ?? String(undo.id);
-                const actorId = undo.actorId?.href ?? String(undo.actorId);
-                const objectId = object.id?.href ?? object.objectId?.href ?? String(object);
-                await activityPub.saveActivity(activityId, 'Undo', actorId, objectId);
-                console.log(`🔁 Undo received for unsupported type: ${JSON.stringify(object)}`);
+                // const activityId = undo.id?.href ?? String(undo.id);
+                // const actorId = undo.actorId?.href ?? String(undo.actorId);
+                // const objectId = object.id?.href ?? object.objectId?.href ?? String(object);
+                // await activityPub.saveActivity(activityId, 'Undo', actorId, objectId);
+                // console.log(`🔁 Undo received for unsupported type: ${JSON.stringify(object)}`);
             }
         } catch (error) {
             console.error('Error processing Undo activity:', error);
@@ -386,8 +393,7 @@ export class FederationHandlers {
                 console.warn(`⚠️ Cache error for activities ${identifier}, falling back to database:`, cacheError);
                 allActivities = await activityPub.getActorActivities(identifier);
             }
-            console.log(`All Activities for ${identifier}:`, allActivities);
-
+            console.log(`Found activities for ${identifier}:`, allActivities.length);
             // Debug: Check published field format
             if (allActivities.length > 0) {
                 console.log(`🔍 Sample activity published field:`, {
@@ -431,15 +437,46 @@ export class FederationHandlers {
                                 // For Create activities, we need to construct the object too
                                 const objectType = activity.object?.type || 'Note';
                                 const ObjectClass = OBJECT_CONSTRUCTORS[objectType as keyof typeof OBJECT_CONSTRUCTORS] || Note;
-
+                                
+                                // Handle additionalData - check if it's already parsed or needs parsing
+                                let additionalData: any = {};
+                                try {
+                                    if (typeof activity.additionalData === 'string') {
+                                        additionalData = JSON.parse(activity.additionalData);
+                                    } else if (activity.additionalData && typeof activity.additionalData === 'object') {
+                                        additionalData = activity.additionalData;
+                                    }
+                                } catch (parseError) {
+                                    console.warn(`⚠️ Failed to parse additionalData for activity ${activity.id}:`, parseError);
+                                    additionalData = {};
+                                }
+                                
+                                const attachments = [];
+                                
+                                if (additionalData?.attachment) {
+                                    for (const attachment of additionalData.attachment) {
+                                        if (typeof attachment.mediaType === 'string' && attachment.mediaType.startsWith('image/')) {
+                                            attachments.push(new Image({
+                                                url: new URL(attachment.url),
+                                                mediaType: attachment.mediaType
+                                            }));
+                                        } else if (typeof attachment.mediaType === 'string' && attachment.mediaType.startsWith('video/')) {
+                                            attachments.push(new Video({
+                                                url: new URL(attachment.url),
+                                                mediaType: attachment.mediaType,
+                                            }));
+                                        }
+                                    }
+                                }
                                 return new Create({
                                     id: new URL(activity.id),
                                     actor: ctx.getActorUri(identifier),
                                     published: Temporal.Instant.from(activity.published || new Date().toISOString()),
                                     object: new ObjectClass({
-                                        id: new URL(activity.object?.id || activity.id),
+                                        id: new URL(activity.object || activity.id),
                                         content: activity.object?.content || activity.additionalData?.content,
-                                        published: Temporal.Instant.from(activity.published || new Date().toISOString())
+                                        published: Temporal.Instant.from(activity.published || new Date().toISOString()),
+                                        attachments,
                                     })
                                 });
                             }
@@ -466,7 +503,7 @@ export class FederationHandlers {
                                     id: new URL(activity.id),
                                     actor: new URL(activity.actor),
                                     object: new URL(activity.object),
-                                    published: new Date(activity.published),
+                                    published: Temporal.Instant.from(activity.published || new Date().toISOString()),
                                     ...activity.additionalData
                                 });
                         }
@@ -645,6 +682,88 @@ export class FederationHandlers {
     }
 
   /**
+   * Activity object dispatcher - handles requests for individual Activity objects
+   */
+  static async handleActivityRequest(ctx: RequestContext<ContextData>, values: { identifier: string; activityId: string }) {
+    try {
+      const { activityId, identifier } = values;
+      console.log(`📄 Activity request for activityId: ${activityId}`);
+
+      // Rate limiting check
+      const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, 'activity_request', 200, 3600);
+      if (isRateLimited) {
+        return null;
+      }
+
+      // Try to get activity from cache first
+      const cacheKey = CacheKeys.FEDERATION.activities(activityId);
+      const ttlSeconds = FederationCache.TTL.ACTIVITIES;
+      const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
+
+      try {
+        const cached = await ctx.data.kv.get<string>(cacheKey);
+        if (cached) {
+          console.log(`🎯 Cache HIT for activity: ${activityId}`);
+          return JSON.parse(cached);
+        }
+      } catch (cacheError) {
+        console.warn(`⚠️ Cache error for activity ${activityId}:`, cacheError);
+      }
+
+      const actor = await db.getActor(identifier);
+      if (!actor) {
+        console.log(`❌ Actor not found for activity request: ${identifier}`);
+        return null;
+      }
+      console.log(`✅ Actor found for activity request: ${identifier}`);
+
+
+      const activities = await db.queryItems(`ACTIVITY#${actor.id}/activities/${activityId}`);
+      // Get the activity from database       
+      const activityItem = activities.find(item => item.actor === actor.id);
+      if (!activityItem) {
+        console.log(`❌ Activity not found: ${activityId}`);
+        return null;
+      }
+      
+      console.log(`📋 Activity data for ${activityId}:`, JSON.stringify(activityItem, null, 2));
+
+      // Handle different possible timestamp field names
+      const timestamp = activityItem.created_at || activityItem.createdAt || activityItem.timestamp || activityItem.published || new Date().toISOString();
+
+      if (!timestamp) {
+        console.log(`❌ No timestamp found for activity ${activityId}. Available fields:`, activityItem);
+        return null;
+      }
+
+      let ActivityClass = ACTIVITY_CONSTRUCTORS[activityItem.type as keyof typeof ACTIVITY_CONSTRUCTORS];
+
+      console.log(`📅 Using timestamp for activity ${activityId}: ${timestamp}`);
+
+      // Create Activity object
+      const activity = new ActivityClass({
+        id: activityItem.id ? new URL(activityItem.id) : new URL(`https://example.com/activities/${activityId}`),
+        actor: activityItem.actor ? new URL(activityItem.actor) : new URL(`https://example.com/actors/${values.identifier}`),
+        object: activityItem.object ? new URL(activityItem.object) : new URL(`https://example.com/objects/${activityId}`),
+        published: Temporal.Instant.from(timestamp),
+      });
+
+      // Cache the result
+      try {
+        await ctx.data.kv.set(cacheKey, JSON.stringify(activity), { ttl });
+        console.log(`💿 Cached activity: ${activityId}`);
+      } catch (cacheError) {
+        console.warn(`⚠️ Failed to cache activity ${activityId}:`, cacheError);
+      }
+
+      return activity;
+    } catch (error) {
+      console.error(`❌ Error in handleActivityRequest for ${values.identifier}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Note object dispatcher - handles requests for individual Note objects
    */
   static async handleNoteRequest(ctx: RequestContext<ContextData>, values: { identifier: string; noteId: string }) {
@@ -698,16 +817,15 @@ export class FederationHandlers {
             console.log(`📅 Using timestamp for note ${noteId}: ${timestamp}`);
 
       const containsMedia = !!postItem?.media_url;
-      const mediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && 'Image' || 'Video' : null;
+      const MediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && Image || Video : null;
       // Create Note object
       const note = new Note({
         id: postItem.id ? new URL(postItem.id) : new URL(`https://example.com/notes/${noteId}`),
         content: postItem.content,
         published: Temporal.Instant.from(timestamp),
-        attachments: containsMedia && [
-          new Object({
+        attachments: !!containsMedia && !!MediaType && [
+          new MediaType({
             id: new URL(postItem.id),
-            mediaType: mediaType,
             url: new URL(postItem.media_url),
           })
         ] || [],

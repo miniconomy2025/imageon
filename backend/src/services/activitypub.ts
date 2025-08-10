@@ -110,11 +110,10 @@ export class ActivityPubService {
   /**
    * Remove a follower relationship (used when processing an Undo of Follow)
    */
-  async removeFollower(actorId: string, targetActorId: string) {
+  async removeFollower(actorId: string, targetIdentifier: string) {
     const followerIdentifier = this.extractIdentifierFromUri(actorId);
-    const targetIdentifier = this.extractIdentifierFromUri(targetActorId);
     if (!followerIdentifier || !targetIdentifier) {
-      console.error('Could not extract identifiers from URIs for removeFollower:', { actorId, targetActorId });
+      console.error('Could not extract identifiers from URIs for removeFollower:', { actorId, targetIdentifier });
       return false;
     }
     const pk = `FOLLOWER#${targetIdentifier}`;

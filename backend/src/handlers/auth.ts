@@ -31,8 +31,11 @@ export class AuthHandlers {
 
             // Get user mapping from Firestore to check if user exists
             const userMappingDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+            console.log('User mapping document:', userMappingDoc.data());
 
-            if (!userMappingDoc.exists) {
+            const user = userMappingDoc?.data?.();
+
+            if (!user) {
                 return new Response(
                     JSON.stringify({
                         error: 'User not found',
@@ -45,10 +48,9 @@ export class AuthHandlers {
                         headers: { 'Content-Type': 'application/json' }
                     }
                 );
-            }
+            }            
 
-            const userMapping = userMappingDoc.data();
-            const username = userMapping?.username;
+            const username = user?.username;
 
             if (!username) {
                 return new Response(
@@ -83,6 +85,8 @@ export class AuthHandlers {
                 );
             }
 
+            console.log('Actor data:', actorData);
+
             return new Response(
                 JSON.stringify({
                     success: true,
@@ -90,6 +94,7 @@ export class AuthHandlers {
                         uid: decodedToken.uid,
                         email: decodedToken.email,
                         displayName: actorData.name,
+                        url: actorData.id,
                         username: username,
                         photoURL: actorData.icon?.url || decodedToken.picture,
                         needsProfile: false
@@ -597,6 +602,7 @@ export class AuthHandlers {
                     user: {
                         uid: userData.uid,
                         email: userData.email,
+                        url: userData.id,
                         displayName: userData.display_name,
                         username: userData.username,
                         photoURL: userData.profile_image_url,
@@ -650,7 +656,7 @@ export class AuthHandlers {
             }
 
             // Get full user profile from DynamoDB
-            const userData = await db.getItem(`USER#${request.user.uid}`, 'PROFILE');
+            const userData = await db.getItem(`ACTOR#${request.user.uid}`, 'PROFILE');
 
             if (!userData) {
                 return new Response(JSON.stringify({ error: 'User profile not found' }), {
@@ -666,6 +672,7 @@ export class AuthHandlers {
                         uid: userData.uid,
                         email: userData.email,
                         displayName: userData.display_name,
+                        url:  userData.id,
                         username: userData.username,
                         photoURL: userData.profile_image_url,
                         bio: userData.bio,
