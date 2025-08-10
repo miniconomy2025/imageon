@@ -22,10 +22,8 @@ export const useGetUserByUrl = (url: string) => {
             }
 
             const result = await response.json();
-            console.log('useGetUserByUrl raw response:', result);
 
             const backendUser = result;
-            console.log('useGetUserByUrl backendUser:', backendUser);
 
             const mappedUser = {
                 id: backendUser.id ? parseInt(backendUser.id.split('/').pop()) || 0 : 0,
@@ -46,9 +44,9 @@ export const useGetUserByUrl = (url: string) => {
         },
         enabled: !!url,
         retry: 3,
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 10 * 60 * 1000 // 10 minutes
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000
     });
 
     return {
