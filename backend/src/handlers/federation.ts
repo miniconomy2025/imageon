@@ -293,12 +293,31 @@ export class FederationHandlers {
      * Undo activity handler
      * Handles incoming Undo activities (e.g. unfollow)
      */
-    static async handleUndoActivity(ctx: InboxContext<ContextData>, undo: any) {
-        console.log(`🔁 Processing Undo activity: ${JSON.stringify(undo)}`) ;
+    static async handleUndoActivity(ctx: InboxContext<ContextData>, undoActivity: any) {
+        console.log(`🔁 Processing Undo activity: ${JSON.stringify(undoActivity)}`) ;
+        let undo;
         try {
-            if (!undo?.id || !undo?.actor || !undo?.object) {
+            if (!undoActivity?.id) {
                 console.log('Invalid Undo activity: missing required fields');
                 return;
+            }
+
+            if (!undoActivity?.actorId || !undoActivity?.object) {
+                console.log('fetching undo activity from id: missing required fields');
+                const response = await fetch(undoActivity.id, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/activity+json'
+                    }
+                });
+                if (!response.ok) {
+                    console.error(`Failed to fetch Undo activity from ${undoActivity.id}:`, response.statusText);
+                    return;
+                }
+                undo = await response.json();
+            }
+            else {
+                undo = undoActivity;
             }
             const object = undo.object;
             // If the object is a Follow, remove the follower relationship
