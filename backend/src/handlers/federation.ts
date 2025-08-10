@@ -777,6 +777,7 @@ export class FederationHandlers {
         return null;
       }
 
+      let postItem: any;
 
       // Try to get note from cache first
       const cacheKey = CacheKeys.FEDERATION.note(noteId); // Use activities cache for now
@@ -787,21 +788,29 @@ export class FederationHandlers {
         const cached = await ctx.data.kv.get<string>(cacheKey);
         if (cached) {
           console.log(`🎯 Cache HIT for note: ${noteId}`);
-          const cachedNote = JSON.parse(cached);
-          // Look for this specific note in cached activities
-          if (cachedNote) {
-            return new Note(cachedNote);
-          }
+          postItem = JSON.parse(cached);
+
         }
       } catch (cacheError) {
         console.warn(`⚠️ Cache error for note ${noteId}:`, cacheError);
       }
 
       // Get the post/note from database
-      const postItem = await db.getItem(`POST#${noteId}`, 'OBJECT');
+      if (!postItem) {
+        console.log(`💾 Cache MISS for note: ${noteId} - fetching from database`);
+        postItem = await db.getItem(`POST#${noteId}`, 'OBJECT');
+      }
+
       if (!postItem) {
         console.log(`❌ Note not found: ${noteId}`);
         return null;
+      }
+
+      try {
+        // Cache the post item for future requests
+        await ctx.data.kv.set(cacheKey, JSON.stringify(postItem), { ttl });
+      } catch (cacheError) {
+        console.warn(`⚠️ Failed to cache note ${noteId}:`, cacheError);
       }
 
       console.log(`📋 Note data for ${noteId}:`, JSON.stringify(postItem, null, 2));
@@ -835,23 +844,15 @@ export class FederationHandlers {
 
       console.log(`📄 Note created: ${noteId}`, JSON.stringify(noteData));
 
-            // Cache the result
-            try {
-                await ctx.data.kv.set(cacheKey, JSON.stringify(noteData), { ttl });
-                console.log(`💿 Cached note: ${noteId}`);
-            } catch (cacheError) {
-                console.warn(`⚠️ Failed to cache note ${noteId}:`, cacheError);
-            }
-
-            return note;
-        } catch (error) {
-            console.error(`❌ Error in handleNoteRequest for ${values?.identifier}/${values?.noteId}:`, error);
-            if (error instanceof Error) {
-                console.error('Stack trace:', error.stack);
-            }
-            return null;
+      return note;
+    } catch (error) {
+        console.error(`❌ Error in handleNoteRequest for ${values?.identifier}/${values?.noteId}:`, error);
+        if (error instanceof Error) {
+            console.error('Stack trace:', error.stack);
         }
+        return null;
     }
+ }
 }
 
 export const handleAcceptActivity = FederationHandlers.handleAcceptActivity;
