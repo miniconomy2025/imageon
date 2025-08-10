@@ -437,7 +437,8 @@ export class FederationHandlers {
                                 // For Create activities, we need to construct the object too
                                 const objectType = activity.object?.type || 'Note';
                                 const ObjectClass = OBJECT_CONSTRUCTORS[objectType as keyof typeof OBJECT_CONSTRUCTORS] || Note;
-
+                                const additionalData = activity.additionalData || undefined;
+                                console.log(`Additional data for Create activity:`, additionalData);
                                 return new Create({
                                     id: new URL(activity.id),
                                     actor: ctx.getActorUri(identifier),
