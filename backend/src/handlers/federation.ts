@@ -814,7 +814,7 @@ export class FederationHandlers {
         return null;
       }
 
-            console.log(`📅 Using timestamp for note ${noteId}: ${timestamp}`);
+      console.log(`📅 Using timestamp for note ${noteId}: ${timestamp}`);
 
       const containsMedia = !!postItem?.media_url;
       const MediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && Image || Video : null;
