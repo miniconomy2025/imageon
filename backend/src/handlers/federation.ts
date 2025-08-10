@@ -437,9 +437,10 @@ export class FederationHandlers {
                                 // For Create activities, we need to construct the object too
                                 const objectType = activity.object?.type || 'Note';
                                 const ObjectClass = OBJECT_CONSTRUCTORS[objectType as keyof typeof OBJECT_CONSTRUCTORS] || Note;
-                                const additionalData = activity.additionalData || undefined;
+                                const additionalData = JSON.parse(activity.additionalData || '{}');
                                 const attachments = [];
-                                console.log(`🔍 Processing Create activity: ${activity.id} with additional data: ${additionalData}`);
+                                console.log(`🔍 Processing Create activity: ${activity.id} with additional data: ${{additionalData}}`);
+                                
                                 if (additionalData?.attachments) {
                                     console.log(`🔍 Found ${additionalData.attachments.length} attachments in Create activity`);
                                     for (const attachment of additionalData.attachments) {
