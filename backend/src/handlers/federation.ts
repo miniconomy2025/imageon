@@ -393,8 +393,7 @@ export class FederationHandlers {
                 console.warn(`⚠️ Cache error for activities ${identifier}, falling back to database:`, cacheError);
                 allActivities = await activityPub.getActorActivities(identifier);
             }
-            console.log(`All Activities for ${identifier}:`, allActivities);
-
+            console.log(`Found activities for ${identifier}:`, allActivities.length);
             // Debug: Check published field format
             if (allActivities.length > 0) {
                 console.log(`🔍 Sample activity published field:`, {

@@ -583,9 +583,7 @@ serve({
             ));
           }
           
-          const webfingerData = await webfingerResponse.json();
-          console.log(`📊 WebFinger data:`, JSON.stringify(webfingerData, null, 2));
-          
+          const webfingerData = await webfingerResponse.json();          
           // Find ActivityPub self link
           const selfLink = webfingerData.links?.find((link: any) => 
             link.rel === 'self' && 
