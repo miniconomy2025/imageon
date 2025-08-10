@@ -25,9 +25,9 @@ export const useGetFollowing = () => {
         },
         enabled: currentUser?.uid != null,
         retry: 3,
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 10 * 60 * 1000 // 10 minutes
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000
     });
 
     return {

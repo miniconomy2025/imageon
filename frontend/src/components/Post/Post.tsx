@@ -16,6 +16,17 @@ interface PostProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const PostCard: React.FC<PostProps> = ({ post, author, className = '', ...props }) => {
+    // Helper to extract username from post.id if it's a full URL
+    const getPostPagePath = () => {
+        let postIdForPath = post.id;
+        if (postIdForPath && postIdForPath.startsWith('http')) {
+            const match = postIdForPath.match(/users\/(.*?)\//);
+            if (match && match[1]) {
+                postIdForPath = match[1];
+            }
+        }
+        return Pages.postPage.replace(':postId', postIdForPath) + `?url=${encodeURIComponent(post.url || '')}`;
+    };
     const [isLiked, setIsLiked] = useState<boolean>(false);
     const [likeCount, setLikeCount] = useState<number>(post.likes ?? 0);
     const { likePost, isLoading } = useLikePost();
@@ -45,7 +56,7 @@ const PostCard: React.FC<PostProps> = ({ post, author, className = '', ...props 
     };
 
     const handleComment = (): void => {
-        navigate(Pages.postPage.replace(':id', post.id.toString()));
+        navigate(getPostPagePath());
     };
 
     const formatTime = (date: Date | string): string => {
@@ -79,11 +90,7 @@ const PostCard: React.FC<PostProps> = ({ post, author, className = '', ...props 
             <div className='post__content'>{post.content}</div>
 
             <div className='post__actions'>
-                <Button
-                    variant='primary'
-                    size='small'
-                    onClick={() => navigate(Pages.postPage.replace(':postId', post.id) + `?url=${encodeURIComponent(post.url || '')}`)}
-                    className={`post__action`}>
+                <Button variant='primary' size='small' onClick={() => navigate(getPostPagePath())} className={`post__action`}>
                     Open
                 </Button>
                 <Button variant='outline' size='small' onClick={handleLike} className={`post__action ${isLiked ? 'post__action--liked' : ''}`}>

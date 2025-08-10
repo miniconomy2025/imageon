@@ -2,12 +2,14 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGetPost } from '../../hooks/useGetPost';
 import { useUserFeed } from '../../hooks/useUserFeed';
 import { useGetCurrentUser } from '../../hooks/useGetCurrentUser';
+import { useGetUserByUrl } from '../../hooks/useGetUserByUrl';
 import { useCreateComment } from '../../hooks/useCreateComment';
 import { useLikePost } from '../../hooks/useLikePost';
 import { AttachmentCarousel } from '../../components/AttachmentCarousel/attachementCarousel';
 import { Card, Button, Avatar } from '../../components';
 import { useState, useEffect } from 'react';
 import './postPage.css';
+import LoaderDots from '../../components/LoaderDots';
 
 export const PostPage = () => {
     const params = useParams();
@@ -17,13 +19,36 @@ export const PostPage = () => {
     const [newComment, setNewComment] = useState('');
     const { createComment, isLoading: isCreatingComment, isSuccess } = useCreateComment();
 
-    // Like functionality
     const [isLiked, setIsLiked] = useState<boolean>(false);
     const [likeCount, setLikeCount] = useState<number>(0);
     const { likePost, isLoading: isLikingPost } = useLikePost();
 
-    const postUrl = searchParams.get('url');
-    const postId = params.postId;
+    let postId = params.postId || '';
+    if (postId.startsWith('http')) {
+        const match = postId.match(/users\/(.*?)\//);
+        if (match && match[1]) {
+            postId = match[1];
+        }
+    }
+    const postUrl = searchParams.get('url') || '';
+
+    const getAuthorUrlFromPostUrl = (postUrl: string) => {
+        if (!postUrl) return '';
+        const postIdParts = postUrl.split('/');
+        const userIndex = postIdParts.findIndex((part: string) => part === 'users');
+        if (userIndex !== -1 && userIndex + 1 < postIdParts.length) {
+            return postIdParts.slice(0, userIndex + 2).join('/');
+        }
+        return '';
+    };
+
+    const authorUrl = getAuthorUrlFromPostUrl(postUrl);
+    const { user: author, isFetching: isFetchingUser } = useGetUserByUrl(authorUrl);
+
+    const { data: post, isError: isPostError, isFetching: isLoadingPost } = useGetPost(postUrl, author);
+    const username = currentUser?.username || '';
+    const { posts: feedPosts } = useUserFeed(username);
+    const feedPost = feedPosts?.find((p: any) => p.url === postUrl);
 
     if (!postId) {
         return <div>Error: Post ID is required</div>;
@@ -33,12 +58,9 @@ export const PostPage = () => {
         return <div>Error: Post URL is required</div>;
     }
 
-    const { data: post } = useGetPost(postUrl);
-    const username = currentUser?.username;
-    const { posts: feedPosts } = useUserFeed(username || '');
-
-    // Find the post in the user feed by URL
-    const feedPost = feedPosts?.find((p: any) => p.url === postUrl);
+    if (isPostError) {
+        return <div className='post-page__error-message'>Failed to load post. Please try again later.</div>;
+    }
 
     useEffect(() => {
         if (post?.likes !== undefined) {
@@ -101,8 +123,11 @@ export const PostPage = () => {
         }
     };
 
-    // Use comments from the feed post if available, otherwise fallback to post.comments
     const comments = feedPost?.comments || post?.comments || [];
+
+    if (isLoadingPost === true || isFetchingUser) {
+        return <LoaderDots />;
+    }
 
     return (
         <div className='post-page'>
