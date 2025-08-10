@@ -307,6 +307,7 @@ export class FederationHandlers {
                 const response = await fetch(undoActivity.id, {
                     method: 'GET',
                     headers: {
+                        'Accept': 'application/activity+json',
                         'Content-Type': 'application/activity+json'
                     }
                 });
