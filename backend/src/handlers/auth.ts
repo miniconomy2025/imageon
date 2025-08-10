@@ -7,7 +7,13 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { crypto } from '../services/cryptography.js';
 
 // Additional imports to support post, like, comment, feed and follow operations
-import { randomUUID } from 'crypto';
+// Import Node.js crypto utilities. In addition to randomUUID we need
+// createHash for computing the Digest header and the webcrypto API for
+// generating an HTTP signature. The webcrypto API exposes SubtleCrypto
+// methods that operate on CryptoKey objects created by the Fedify
+// cryptography service. We avoid importing the full `crypto` namespace to
+// prevent clashing with the local cryptography service named `crypto`.
+import { randomUUID, createHash, webcrypto } from 'crypto';
 import { S3Service } from '../services/s3Service.js';
 import { activityPub } from '../services/activitypub.js';
 
@@ -1180,7 +1186,6 @@ export class AuthHandlers {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            console.log('create following step1:', body);
             // Resolve follower identifier
             let followerId: string;
             if (actor.startsWith('http://') || actor.startsWith('https://')) {
@@ -1227,7 +1232,6 @@ export class AuthHandlers {
             if (!followerId) {
                 return new Response(JSON.stringify({ error: 'Invalid actor identifier' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
             }
-            console.log('create following step2:', followerId, targetId, targetUri);
             // Verify follower exists
             const followerExists = await ActorModel.exists(followerId);
             if (!followerExists) {
@@ -1261,22 +1265,19 @@ export class AuthHandlers {
             if (request.method === 'POST') {
                 await activityPub.saveFollower(activityId, followerUri, targetUri);
                 await activityPub.saveActivity(activityId, 'Follow', followerUri, targetUri);
-                console.log('create following step3:', followerUri, followId, activityId);
 
                 try {
                     const targetHost = new URL(targetUri).hostname;
                     const localHost = config.federation.domain.split(':')[0];
-                    console.log('create following step4:', targetHost, localHost);
                     if (targetHost !== localHost) {
                         const actorResp = await fetch(targetUri, {
                             headers: {
                                 'Accept': 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
                             }
                         });
-                        console.log('create following step5:', actorResp);
                         if (actorResp.ok) {
                             const actorData = await actorResp.json();
-                            const inbox = actorData.inbox;
+                            const inbox: string | undefined = actorData.inbox;
                             if (inbox) {
                                 const followActivity = {
                                     '@context': 'https://www.w3.org/ns/activitystreams',
@@ -1285,14 +1286,40 @@ export class AuthHandlers {
                                     actor: followerUri,
                                     object: targetUri
                                 };
-                                const followReq = await fetch(inbox, {
+                                const bodyString = JSON.stringify(followActivity);
+                                const digestHash = createHash('sha256').update(bodyString).digest('base64');
+                                const digestHeader = `SHA-256=${digestHash}`;
+                                const dateHeader = new Date().toUTCString();
+                                const inboxUrl = new URL(inbox);
+                                const requestTarget = `post ${inboxUrl.pathname}`;
+                                const signingString = [
+                                    `(request-target): ${requestTarget}`,
+                                    `host: ${inboxUrl.host}`,
+                                    `date: ${dateHeader}`,
+                                    `digest: ${digestHeader}`
+                                ].join('\n');
+                                const keyPairs = await crypto.getOrGenerateKeyPairs(followerId);
+                                const privateKey = keyPairs[0].privateKey;
+                                const enc = new TextEncoder();
+                                const signatureBuf = await webcrypto.subtle.sign(
+                                    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+                                    privateKey as any,
+                                    enc.encode(signingString)
+                                );
+                                const signatureB64 = Buffer.from(signatureBuf).toString('base64');
+                                const keyId = `${followerUri}#main-key`;
+                                const signatureHeader =
+                                    `keyId="${keyId}",headers="(request-target) host date digest",signature="${signatureB64}"`;
+                                await fetch(inbox, {
                                     method: 'POST',
                                     headers: {
-                                        'Content-Type': 'application/activity+json'
+                                        'Date': dateHeader,
+                                        'Digest': digestHeader,
+                                        'Content-Type': 'application/activity+json',
+                                        'Signature': signatureHeader
                                     },
-                                    body: JSON.stringify(followActivity)
+                                    body: bodyString
                                 });
-                                console.log('create following step6:', followReq);
                             }
                         }
                     }
