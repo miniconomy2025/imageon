@@ -1194,9 +1194,8 @@ export class AuthHandlers {
             } else {
                 followerId = actor;
             }
-            // Resolve target identifier and target URI. If target is a full URI, use it; otherwise construct local URI.
-            let targetId: string;
-            let targetUri: string;
+            let targetId: string = '';
+            let targetUri: string = '';
             if (target.startsWith('http://') || target.startsWith('https://')) {
                 targetUri = target;
                 try {
@@ -1206,6 +1205,19 @@ export class AuthHandlers {
                     targetId = idx !== -1 && parts[idx + 1] ? parts[idx + 1] : '';
                 } catch {
                     targetId = '';
+                }
+            } else if (target.includes('@')) {
+                const cleaned = target.startsWith('@') ? target.slice(1) : target;
+                const parts = cleaned.split('@');
+                if (parts.length === 2) {
+                    const [username, domain] = parts;
+                    targetId = username;
+                    const usesLocalScheme = domain.includes('localhost') || domain.includes(':');
+                    const scheme = usesLocalScheme ? config.federation.protocol : 'https';
+                    targetUri = `${scheme}://${domain}/users/${username}`;
+                } else {
+                    targetId = target;
+                    targetUri = `${config.federation.protocol}://${config.federation.domain}/users/${target}`;
                 }
             } else {
                 targetId = target;
