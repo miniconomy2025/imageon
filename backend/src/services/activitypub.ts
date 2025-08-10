@@ -78,7 +78,7 @@ export class ActivityPubService {
             GSI1PK: `ACTOR#${identifier}`,
             GSI1SK: new Date().toISOString(),
             GSI2PK: `${activityType.toUpperCase()}_ACTIVITIES`,
-            GSI2SK: activityType.toUpperCase() === 'LIKE' ? objectId : new Date().toISOString(),
+            GSI2SK: new Date().toISOString(),
             id: activityId,
             type: activityType,
             actor: actorId,
@@ -99,6 +99,27 @@ export class ActivityPubService {
             console.log(`� Fetching activities for actor: ${identifier}`);
             const activities = await db.queryItemsByGSI1(`ACTOR#${identifier}`);
             const result = activities || [];
+
+            // Enhance activities with likes information
+            for (const activity of result) {
+                if (activity.type === 'Create' && activity.object) {
+                    // Get likes for this post/object
+                    const likes = await db.getLikesForObject(activity.object);
+                    const likesCount = await db.getLikesCountForObject(activity.object);
+
+                    // Add likes information to the activity
+                    activity.likes = likes.map((like: any) => ({
+                        id: like.id,
+                        actor: like.actor,
+                        object: like.object,
+                        published: like.published
+                    }));
+                    activity.likesCount = likesCount;
+
+                    console.log(`👍 Activity ${activity.id} has ${likesCount} likes`);
+                }
+            }
+
             console.log(`✅ Found ${result.length} activities for: ${identifier}`);
             return result;
         } catch (error) {
@@ -155,36 +176,6 @@ export class ActivityPubService {
         } catch {
             return false;
         }
-    }
-
-    /**
-     * Get likes for a specific post/object
-     */
-    async getLikesForObject(objectId: string) {
-        try {
-            console.log(`👍 Fetching likes for object: ${objectId}`);
-            // Query activities where the object matches and type is LIKE
-            const likes = await db.queryItemsByGSI2('LIKE_ACTIVITIES', {
-                sortKeyExpression: 'GSI2SK = :sk',
-                attributeValues: {
-                    ':sk': objectId
-                }
-            });
-            const result = likes || [];
-            console.log(`✅ Found ${result.length} likes for object: ${objectId}`);
-            return result;
-        } catch (error) {
-            console.error(`Error getting likes for object ${objectId}:`, error);
-            return [];
-        }
-    }
-
-    /**
-     * Get likes for a specific post by post ID
-     */
-    async getLikesForPost(postId: string) {
-        const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
-        return this.getLikesForObject(postUri);
     }
 }
 

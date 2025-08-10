@@ -1,12 +1,29 @@
-import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Image, Video } from "@fedify/fedify";
-import { RedisKvStore } from "@fedify/redis";
-import { Temporal } from "@js-temporal/polyfill";
-import { ActorModel } from "../models/Actor.js";
-import { crypto } from "../services/cryptography.js";
-import { activityPub } from "../services/activitypub.js";
-import { redis } from "../services/redis.js";
-import { FederationCache, CacheKeys } from "../utils/cache.js";
-import { db } from "../services/database.js";
+import {
+    Follow,
+    Accept,
+    Article,
+    RequestContext,
+    Context,
+    InboxContext,
+    Undo,
+    Announce,
+    Update,
+    Delete,
+    Recipient,
+    Like,
+    Create,
+    Note,
+    Image,
+    Video
+} from '@fedify/fedify';
+import { RedisKvStore } from '@fedify/redis';
+import { Temporal } from '@js-temporal/polyfill';
+import { ActorModel } from '../models/Actor.js';
+import { crypto } from '../services/cryptography.js';
+import { activityPub } from '../services/activitypub.js';
+import { redis } from '../services/redis.js';
+import { FederationCache, CacheKeys } from '../utils/cache.js';
+import { db } from '../services/database.js';
 
 // Define context data type to include KV store access
 interface ContextData {
@@ -305,7 +322,7 @@ export class FederationHandlers {
             console.log(`🔁 Processing Undo activity: ${JSON.stringify(undo)}`);
             console.log(`Actor ID: ${undoActivity.actorId}`);
             // If the object is a Follow, remove the follower relationship
-            if (undo instanceof Follow  && undo.actorId && undo.objectId) {
+            if (undo instanceof Follow && undo.actorId && undo.objectId) {
                 const parsed = ctx.parseUri(undo.objectId);
 
                 if (!undoActivity.actorId || !undoActivity.id) {
@@ -313,23 +330,22 @@ export class FederationHandlers {
                     return;
                 }
 
-                if (parsed == null || parsed.type !== "actor") return;
+                if (parsed == null || parsed.type !== 'actor') return;
 
                 await activityPub.removeFollower(undoActivity.actorId.toString(), parsed.identifier);
 
                 // 🔥 CACHE INVALIDATION: Clear cached data
                 try {
                     // Extract identifier from target URI
-                   
-                      await ctx.data.kv.delete(CacheKeys.FEDERATION.followers(parsed.identifier));
-                      await ctx.data.kv.delete(CacheKeys.FEDERATION.followersCount(parsed.identifier));
 
-                        // Also invalidate activities cache
-                      const activitiesKey = CacheKeys.FEDERATION.activities(parsed.identifier);
-                      await ctx.data.kv.delete(activitiesKey);
+                    await ctx.data.kv.delete(CacheKeys.FEDERATION.followers(parsed.identifier));
+                    await ctx.data.kv.delete(CacheKeys.FEDERATION.followersCount(parsed.identifier));
 
-                      console.log(`🗑️ Cache invalidated for unfollow of: ${parsed.identifier}`);
+                    // Also invalidate activities cache
+                    const activitiesKey = CacheKeys.FEDERATION.activities(parsed.identifier);
+                    await ctx.data.kv.delete(activitiesKey);
 
+                    console.log(`🗑️ Cache invalidated for unfollow of: ${parsed.identifier}`);
                 } catch (cacheError) {
                     console.warn(`⚠️ Failed to invalidate cache for unfollow:`, cacheError);
                 }
@@ -437,7 +453,7 @@ export class FederationHandlers {
                                 // For Create activities, we need to construct the object too
                                 const objectType = activity.object?.type || 'Note';
                                 const ObjectClass = OBJECT_CONSTRUCTORS[objectType as keyof typeof OBJECT_CONSTRUCTORS] || Note;
-                                
+
                                 // Handle additionalData - check if it's already parsed or needs parsing
                                 let additionalData: any = {};
                                 try {
@@ -450,21 +466,25 @@ export class FederationHandlers {
                                     console.warn(`⚠️ Failed to parse additionalData for activity ${activity.id}:`, parseError);
                                     additionalData = {};
                                 }
-                                
+
                                 const attachments = [];
-                                
+
                                 if (additionalData?.attachment) {
                                     for (const attachment of additionalData.attachment) {
                                         if (typeof attachment.mediaType === 'string' && attachment.mediaType.startsWith('image/')) {
-                                            attachments.push(new Image({
-                                                url: new URL(attachment.url),
-                                                mediaType: attachment.mediaType
-                                            }));
+                                            attachments.push(
+                                                new Image({
+                                                    url: new URL(attachment.url),
+                                                    mediaType: attachment.mediaType
+                                                })
+                                            );
                                         } else if (typeof attachment.mediaType === 'string' && attachment.mediaType.startsWith('video/')) {
-                                            attachments.push(new Video({
-                                                url: new URL(attachment.url),
-                                                mediaType: attachment.mediaType,
-                                            }));
+                                            attachments.push(
+                                                new Video({
+                                                    url: new URL(attachment.url),
+                                                    mediaType: attachment.mediaType
+                                                })
+                                            );
                                         }
                                     }
                                 }
@@ -476,7 +496,7 @@ export class FederationHandlers {
                                         id: new URL(activity.object || activity.id),
                                         content: activity.object?.content || activity.additionalData?.content,
                                         published: Temporal.Instant.from(activity.published || new Date().toISOString()),
-                                        attachments,
+                                        attachments
                                     })
                                 });
                             }
@@ -681,155 +701,156 @@ export class FederationHandlers {
         }
     }
 
-  /**
-   * Activity object dispatcher - handles requests for individual Activity objects
-   */
-  static async handleActivityRequest(ctx: RequestContext<ContextData>, values: { identifier: string; activityId: string }) {
-    try {
-      const { activityId, identifier } = values;
-      console.log(`📄 Activity request for activityId: ${activityId}`);
+    /**
+     * Activity object dispatcher - handles requests for individual Activity objects
+     */
+    static async handleActivityRequest(ctx: RequestContext<ContextData>, values: { identifier: string; activityId: string }) {
+        try {
+            const { activityId, identifier } = values;
+            console.log(`📄 Activity request for activityId: ${activityId}`);
 
-      // Rate limiting check
-      const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, 'activity_request', 200, 3600);
-      if (isRateLimited) {
-        return null;
-      }
+            // Rate limiting check
+            const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, 'activity_request', 200, 3600);
+            if (isRateLimited) {
+                return null;
+            }
 
-      // Try to get activity from cache first
-      const cacheKey = CacheKeys.FEDERATION.activities(activityId);
-      const ttlSeconds = FederationCache.TTL.ACTIVITIES;
-      const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
+            // Try to get activity from cache first
+            const cacheKey = CacheKeys.FEDERATION.activities(activityId);
+            const ttlSeconds = FederationCache.TTL.ACTIVITIES;
+            const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
 
-      try {
-        const cached = await ctx.data.kv.get<string>(cacheKey);
-        if (cached) {
-          console.log(`🎯 Cache HIT for activity: ${activityId}`);
-          return JSON.parse(cached);
+            try {
+                const cached = await ctx.data.kv.get<string>(cacheKey);
+                if (cached) {
+                    console.log(`🎯 Cache HIT for activity: ${activityId}`);
+                    return JSON.parse(cached);
+                }
+            } catch (cacheError) {
+                console.warn(`⚠️ Cache error for activity ${activityId}:`, cacheError);
+            }
+
+            const actor = await db.getActor(identifier);
+            if (!actor) {
+                console.log(`❌ Actor not found for activity request: ${identifier}`);
+                return null;
+            }
+            console.log(`✅ Actor found for activity request: ${identifier}`);
+
+            const activities = await db.queryItems(`ACTIVITY#${actor.id}/activities/${activityId}`);
+            // Get the activity from database
+            const activityItem = activities.find(item => item.actor === actor.id);
+            if (!activityItem) {
+                console.log(`❌ Activity not found: ${activityId}`);
+                return null;
+            }
+
+            console.log(`📋 Activity data for ${activityId}:`, JSON.stringify(activityItem, null, 2));
+
+            // Handle different possible timestamp field names
+            const timestamp = activityItem.created_at || activityItem.createdAt || activityItem.timestamp || activityItem.published || new Date().toISOString();
+
+            if (!timestamp) {
+                console.log(`❌ No timestamp found for activity ${activityId}. Available fields:`, activityItem);
+                return null;
+            }
+
+            let ActivityClass = ACTIVITY_CONSTRUCTORS[activityItem.type as keyof typeof ACTIVITY_CONSTRUCTORS];
+
+            console.log(`📅 Using timestamp for activity ${activityId}: ${timestamp}`);
+
+            // Create Activity object
+            const activity = new ActivityClass({
+                id: activityItem.id ? new URL(activityItem.id) : new URL(`https://example.com/activities/${activityId}`),
+                actor: activityItem.actor ? new URL(activityItem.actor) : new URL(`https://example.com/actors/${values.identifier}`),
+                object: activityItem.object ? new URL(activityItem.object) : new URL(`https://example.com/objects/${activityId}`),
+                published: Temporal.Instant.from(timestamp)
+            });
+
+            // Cache the result
+            try {
+                await ctx.data.kv.set(cacheKey, JSON.stringify(activity), { ttl });
+                console.log(`💿 Cached activity: ${activityId}`);
+            } catch (cacheError) {
+                console.warn(`⚠️ Failed to cache activity ${activityId}:`, cacheError);
+            }
+
+            return activity;
+        } catch (error) {
+            console.error(`❌ Error in handleActivityRequest for ${values.identifier}:`, error);
+            return null;
         }
-      } catch (cacheError) {
-        console.warn(`⚠️ Cache error for activity ${activityId}:`, cacheError);
-      }
-
-      const actor = await db.getActor(identifier);
-      if (!actor) {
-        console.log(`❌ Actor not found for activity request: ${identifier}`);
-        return null;
-      }
-      console.log(`✅ Actor found for activity request: ${identifier}`);
-
-
-      const activities = await db.queryItems(`ACTIVITY#${actor.id}/activities/${activityId}`);
-      // Get the activity from database       
-      const activityItem = activities.find(item => item.actor === actor.id);
-      if (!activityItem) {
-        console.log(`❌ Activity not found: ${activityId}`);
-        return null;
-      }
-      
-      console.log(`📋 Activity data for ${activityId}:`, JSON.stringify(activityItem, null, 2));
-
-      // Handle different possible timestamp field names
-      const timestamp = activityItem.created_at || activityItem.createdAt || activityItem.timestamp || activityItem.published || new Date().toISOString();
-
-      if (!timestamp) {
-        console.log(`❌ No timestamp found for activity ${activityId}. Available fields:`, activityItem);
-        return null;
-      }
-
-      let ActivityClass = ACTIVITY_CONSTRUCTORS[activityItem.type as keyof typeof ACTIVITY_CONSTRUCTORS];
-
-      console.log(`📅 Using timestamp for activity ${activityId}: ${timestamp}`);
-
-      // Create Activity object
-      const activity = new ActivityClass({
-        id: activityItem.id ? new URL(activityItem.id) : new URL(`https://example.com/activities/${activityId}`),
-        actor: activityItem.actor ? new URL(activityItem.actor) : new URL(`https://example.com/actors/${values.identifier}`),
-        object: activityItem.object ? new URL(activityItem.object) : new URL(`https://example.com/objects/${activityId}`),
-        published: Temporal.Instant.from(timestamp),
-      });
-
-      // Cache the result
-      try {
-        await ctx.data.kv.set(cacheKey, JSON.stringify(activity), { ttl });
-        console.log(`💿 Cached activity: ${activityId}`);
-      } catch (cacheError) {
-        console.warn(`⚠️ Failed to cache activity ${activityId}:`, cacheError);
-      }
-
-      return activity;
-    } catch (error) {
-      console.error(`❌ Error in handleActivityRequest for ${values.identifier}:`, error);
-      return null;
     }
-  }
 
-  /**
-   * Note object dispatcher - handles requests for individual Note objects
-   */
-  static async handleNoteRequest(ctx: RequestContext<ContextData>, values: { identifier: string; noteId: string }) {
-    try {
-      const {noteId } = values;
-      console.log(`📝 Note request for noteId: ${noteId}`);
-      
-      // Rate limiting check
-      const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, 'note_request', 200, 3600);
-      if (isRateLimited) {
-        return null;
-      }
+    /**
+     * Note object dispatcher - handles requests for individual Note objects
+     */
+    static async handleNoteRequest(ctx: RequestContext<ContextData>, values: { identifier: string; noteId: string }) {
+        try {
+            const { noteId } = values;
+            console.log(`📝 Note request for noteId: ${noteId}`);
 
+            // Rate limiting check
+            const isRateLimited = await FederationHandlers.isRateLimitExceeded(ctx, 'note_request', 200, 3600);
+            if (isRateLimited) {
+                return null;
+            }
 
-      // Try to get note from cache first
-      const cacheKey = CacheKeys.FEDERATION.note(noteId); // Use activities cache for now
-      const ttlSeconds = FederationCache.TTL.ACTIVITIES; // Use activities TTL
-      const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
-      
-      try {
-        const cached = await ctx.data.kv.get<string>(cacheKey);
-        if (cached) {
-          console.log(`🎯 Cache HIT for note: ${noteId}`);
-          const cachedNote = JSON.parse(cached);
-          // Look for this specific note in cached activities
-          if (cachedNote) {
-            return cachedNote;
-          }
-        }
-      } catch (cacheError) {
-        console.warn(`⚠️ Cache error for note ${noteId}:`, cacheError);
-      }
+            // Try to get note from cache first
+            const cacheKey = CacheKeys.FEDERATION.note(noteId); // Use activities cache for now
+            const ttlSeconds = FederationCache.TTL.ACTIVITIES; // Use activities TTL
+            const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
 
-      // Get the post/note from database
-      const postItem = await db.getItem(`POST#${noteId}`, 'OBJECT');
-      if (!postItem) {
-        console.log(`❌ Note not found: ${noteId}`);
-        return null;
-      }
+            try {
+                const cached = await ctx.data.kv.get<string>(cacheKey);
+                if (cached) {
+                    console.log(`🎯 Cache HIT for note: ${noteId}`);
+                    const cachedNote = JSON.parse(cached);
+                    // Look for this specific note in cached activities
+                    if (cachedNote) {
+                        return cachedNote;
+                    }
+                }
+            } catch (cacheError) {
+                console.warn(`⚠️ Cache error for note ${noteId}:`, cacheError);
+            }
 
-      console.log(`📋 Note data for ${noteId}:`, JSON.stringify(postItem, null, 2));
+            // Get the post/note from database
+            const postItem = await db.getItem(`POST#${noteId}`, 'OBJECT');
+            if (!postItem) {
+                console.log(`❌ Note not found: ${noteId}`);
+                return null;
+            }
 
-      // Handle different possible timestamp field names
-      const timestamp = postItem.created_at || postItem.createdAt || postItem.timestamp || postItem.published || new Date().toISOString();
-      
-      if (!timestamp) {
-        console.log(`❌ No timestamp found for note ${noteId}. Available fields:`, postItem);
-        return null;
-      }
+            console.log(`📋 Note data for ${noteId}:`, JSON.stringify(postItem, null, 2));
+
+            // Handle different possible timestamp field names
+            const timestamp = postItem.created_at || postItem.createdAt || postItem.timestamp || postItem.published || new Date().toISOString();
+
+            if (!timestamp) {
+                console.log(`❌ No timestamp found for note ${noteId}. Available fields:`, postItem);
+                return null;
+            }
 
             console.log(`📅 Using timestamp for note ${noteId}: ${timestamp}`);
 
-      const containsMedia = !!postItem?.media_url;
-      const MediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && Image || Video : null;
-      // Create Note object
-      const note = new Note({
-        id: postItem.id ? new URL(postItem.id) : new URL(`https://example.com/notes/${noteId}`),
-        content: postItem.content,
-        published: Temporal.Instant.from(timestamp),
-        attachments: !!containsMedia && !!MediaType && [
-          new MediaType({
-            id: new URL(postItem.id),
-            url: new URL(postItem.media_url),
-          })
-        ] || [],
-      });
+            const containsMedia = !!postItem?.media_url;
+            const MediaType = containsMedia ? (['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && Image) || Video : null;
+            // Create Note object
+            const note = new Note({
+                id: postItem.id ? new URL(postItem.id) : new URL(`https://example.com/notes/${noteId}`),
+                content: postItem.content,
+                published: Temporal.Instant.from(timestamp),
+                attachments:
+                    (!!containsMedia &&
+                        !!MediaType && [
+                            new MediaType({
+                                id: new URL(postItem.id),
+                                url: new URL(postItem.media_url)
+                            })
+                        ]) ||
+                    []
+            });
 
             // Cache the result
             try {
