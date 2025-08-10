@@ -67,7 +67,7 @@ export const ProfilePage = () => {
                             <section className='profile__posts'>
                                 {userPosts.map(post => (
                                     <Card key={post.id}>
-                                        <PostCard post={post} />
+                                        <PostCard post={post} author={user}/>
                                     </Card>
                                 ))}
                             </section>
