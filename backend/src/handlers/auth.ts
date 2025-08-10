@@ -530,11 +530,12 @@ export class AuthHandlers {
                     if (followUri) {
                         try {
                             const url = new URL(followUri);
-
-                            const parts = url.pathname.split('/');
+                            const parts = url.pathname.split('/').filter(Boolean);
                             const usersIndex = parts.indexOf('users');
                             if (usersIndex !== -1 && parts[usersIndex + 1]) {
                                 username = parts[usersIndex + 1];
+                            } else if (parts.length >= 1 && parts[parts.length - 1].startsWith('@')) {
+                                username = parts[parts.length - 1].substring(1);
                             }
 
                             const localHost = config.federation.domain.split(':')[0];
@@ -543,7 +544,26 @@ export class AuthHandlers {
                                     const actor = await ActorModel.getActor(username);
                                     displayName = actor?.name;
                                 } catch {
-                                    // Ignore resolution errors; leave displayName undefined
+                                    // ignore errors
+                                }
+                            } else {
+                                try {
+                                    const resp = await fetch(followUri, {
+                                        headers: {
+                                            'Accept': 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
+                                        }
+                                    });
+                                    if (resp.ok) {
+                                        const actorData = await resp.json();
+                                        if (!username && actorData.preferredUsername) {
+                                            username = actorData.preferredUsername;
+                                        }
+                                        if (actorData.name) {
+                                            displayName = actorData.name;
+                                        }
+                                    }
+                                } catch {
+                                    // ignore remote fetch errors
                                 }
                             }
                         } catch {
