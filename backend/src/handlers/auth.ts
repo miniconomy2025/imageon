@@ -48,7 +48,7 @@ export class AuthHandlers {
                         headers: { 'Content-Type': 'application/json' }
                     }
                 );
-            }            
+            }
 
             const username = user?.username;
 
@@ -672,7 +672,7 @@ export class AuthHandlers {
                         uid: userData.uid,
                         email: userData.email,
                         displayName: userData.display_name,
-                        url:  userData.id,
+                        url: userData.id,
                         username: userData.username,
                         photoURL: userData.profile_image_url,
                         bio: userData.bio,
@@ -1130,10 +1130,31 @@ export class AuthHandlers {
                 for (const act of activities) {
                     const activity: any = act as any;
                     if (activity.type === 'Create') {
+                        // Extract post ID from the object URL
+                        let postId = null;
+                        if (activity.object && typeof activity.object === 'string') {
+                            const objectUrl = new URL(activity.object);
+                            postId = objectUrl.pathname.split('/').pop();
+                        } else if (activity.object && activity.object.id) {
+                            const objectUrl = new URL(activity.object.id);
+                            postId = objectUrl.pathname.split('/').pop();
+                        }
+
+                        // Get likes for this post
+                        let likes: any[] = [];
+                        if (postId) {
+                            try {
+                                likes = await activityPub.getLikesForPost(postId);
+                            } catch (likeError) {
+                                console.warn(`Failed to fetch likes for post ${postId}:`, likeError);
+                            }
+                        }
+
                         const entry: any = {
                             actor: actor, // Full actor object
                             object: activity.object, // Full post object
-                            published: activity.published
+                            published: activity.published,
+                            likes: likes // Add likes to the entry
                         };
                         if (activity.additionalData && typeof activity.additionalData === 'object') {
                             if ('content' in activity.additionalData) {
