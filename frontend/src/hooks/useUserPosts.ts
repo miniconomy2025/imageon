@@ -9,12 +9,11 @@ export const useUserPosts = (url: string) => {
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['userPosts', outboxUrl],
         queryFn: async (): Promise<Post[]> => {
-
             const response = await fetch(requestUrl, {
                 method: 'POST',
                 body: JSON.stringify({
                     outboxUrl: outboxUrl
-                }),
+                })
             });
 
             if (!response.ok) {
@@ -22,7 +21,6 @@ export const useUserPosts = (url: string) => {
             }
 
             const result = await response.json();
-            console.debug(result);
 
             // If result.first exists, fetch the first page (pagination)
             let activities = [];
@@ -46,7 +44,6 @@ export const useUserPosts = (url: string) => {
                         attachments
                     };
                 }) as Post[];
-            
 
             // activities is already filtered and mapped to Post[]
             return activities;

@@ -116,17 +116,6 @@
     cursor: not-allowed;
 }
 
-.user-search__follow-btn--following {
-    background-color: #ffffff;
-    color: #007bff;
-}
-
-.user-search__follow-btn--following:hover {
-    background-color: #dc3545;
-    border-color: #dc3545;
-    color: white;
-}
-
 .user-search__loading {
     padding: 16px;
     text-align: center;

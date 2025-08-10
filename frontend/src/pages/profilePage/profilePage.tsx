@@ -1,24 +1,20 @@
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useGetUserByUrl } from '../../hooks/useGetUserByUrl';
 import { useUserPosts } from '../../hooks/useUserPosts';
 import { LoaderDots } from '../../components/LoaderDots';
 import { Card, PostCard, Avatar } from '../../components';
 import './profilePage.css';
-import { config } from '../../config/config';
 
 export const ProfilePage = () => {
     const params = useParams();
-    const [searchParams] = useSearchParams();
-    const username = params.username;
-    let userUrl = searchParams.get('url');
+    const { domain, username } = params;
+    const navigate = useNavigate();
 
-    if (!username) {
-        return <div>Error: Username is required</div>;
+    if (!domain || !username) {
+        navigate('/');
     }
 
-    if (!userUrl) {
-        userUrl = `/users/${username}@${config.API_URL}`;
-    }
+    const userUrl = `https://${domain}/users/${username}`;
 
     const { user, isFetching: isLoadingUser, isError: isLoadingUserError } = useGetUserByUrl(userUrl);
     const { posts: userPosts, isFetching: isLoadingPosts, isError: isLoadingPostsError } = useUserPosts(userUrl);
@@ -66,9 +62,7 @@ export const ProfilePage = () => {
                         ) : userPosts && userPosts.length > 0 ? (
                             <section className='profile__posts'>
                                 {userPosts.map(post => (
-                                    <Card key={post.id}>
-                                        <PostCard post={post} author={user}/>
-                                    </Card>
+                                    <PostCard post={post} author={user} key={post.id} />
                                 ))}
                             </section>
                         ) : (

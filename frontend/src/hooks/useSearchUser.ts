@@ -4,12 +4,12 @@ import { User } from '../types/user';
 import { config } from '../config/config';
 import { useAuth } from '../contexts/AuthContext';
 
-export const useSearchUser = (searchTerm: string) => {
+export const useSearchUser = (searchTerm: string, followers: User[]) => {
     const { currentUser } = useAuth();
 
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['searchUsers', searchTerm],
-        queryFn: async (): Promise<User[]> => {
+        queryFn: async (): Promise<Array<{ user: User; isFollowing: boolean }>> => {
             // Format the handle properly for the discovery endpoint
             const formatHandle = (term: string) => {
                 const cleanTerm = term.replace(/^@/, '');
@@ -62,14 +62,22 @@ export const useSearchUser = (searchTerm: string) => {
                 type: user.type
             };
 
-            return [transformedUser];
+            // Check if the user is already being followed
+            const isFollowing = followers.some(follower => follower.handle === user.handle || follower.id === transformedUser.id || follower.url === user.id);
+
+            return [
+                {
+                    user: transformedUser,
+                    isFollowing
+                }
+            ];
         },
         enabled: searchTerm.length > 0,
         staleTime: 30000
     });
 
     return {
-        users: data || [],
+        data: data || [],
         isLoading: isFetching,
         isError,
         isSuccess
