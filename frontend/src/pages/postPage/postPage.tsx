@@ -50,18 +50,6 @@ export const PostPage = () => {
     const { posts: feedPosts } = useUserFeed(username);
     const feedPost = feedPosts?.find((p: any) => p.url === postUrl);
 
-    if (!postId) {
-        return <div>Error: Post ID is required</div>;
-    }
-
-    if (!postUrl) {
-        return <div>Error: Post URL is required</div>;
-    }
-
-    if (isPostError) {
-        return <div className='post-page__error-message'>Failed to load post. Please try again later.</div>;
-    }
-
     useEffect(() => {
         if (post?.likes !== undefined) {
             setLikeCount(post.likes);
@@ -75,6 +63,18 @@ export const PostPage = () => {
             setNewComment('');
         }
     }, [isSuccess]);
+
+    if (!postId) {
+        return <div>Error: Post ID is required</div>;
+    }
+
+    if (!postUrl) {
+        return <div>Error: Post URL is required</div>;
+    }
+
+    if (isPostError) {
+        return <div className='post-page__error-message'>Failed to load post. Please try again later.</div>;
+    }
 
     const handleLike = (): void => {
         if (isLikingPost || !post) return;
