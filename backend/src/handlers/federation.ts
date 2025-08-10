@@ -437,14 +437,27 @@ export class FederationHandlers {
                                 // For Create activities, we need to construct the object too
                                 const objectType = activity.object?.type || 'Note';
                                 const ObjectClass = OBJECT_CONSTRUCTORS[objectType as keyof typeof OBJECT_CONSTRUCTORS] || Note;
-                                const additionalData = JSON.parse(activity.additionalData || '{}');
+                                
+                                // Handle additionalData - check if it's already parsed or needs parsing
+                                let additionalData: any = {};
+                                try {
+                                    if (typeof activity.additionalData === 'string') {
+                                        additionalData = JSON.parse(activity.additionalData);
+                                    } else if (activity.additionalData && typeof activity.additionalData === 'object') {
+                                        additionalData = activity.additionalData;
+                                    }
+                                } catch (parseError) {
+                                    console.warn(`⚠️ Failed to parse additionalData for activity ${activity.id}:`, parseError);
+                                    additionalData = {};
+                                }
+                                
                                 const attachments = [];
-                                console.log(`🔍 Processing Create activity: ${activity.id} with additional data: ${{additionalData}}`);
+                                console.log(`🔍 Processing Create activity: ${activity.id} with additional data:`, additionalData);
                                 
                                 if (additionalData?.attachments) {
                                     console.log(`🔍 Found ${additionalData.attachments.length} attachments in Create activity`);
                                     for (const attachment of additionalData.attachments) {
-                                        console.log(`🔍 Processing attachment: ${attachment}`);
+                                        console.log(`🔍 Processing attachment:`, attachment);
                                         if (typeof attachment.mediaType === 'string' && attachment.mediaType.startsWith('image/')) {
                                             attachments.push(new Image({
                                                 url: new URL(attachment.url),
