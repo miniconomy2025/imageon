@@ -1259,6 +1259,41 @@ export class AuthHandlers {
             if (request.method === 'POST') {
                 await activityPub.saveFollower(activityId, followerUri, targetUri);
                 await activityPub.saveActivity(activityId, 'Follow', followerUri, targetUri);
+
+                try {
+                    const targetHost = new URL(targetUri).hostname;
+                    const localHost = config.federation.domain.split(':')[0];
+                    if (targetHost !== localHost) {
+                        const actorResp = await fetch(targetUri, {
+                            headers: {
+                                'Accept': 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
+                            }
+                        });
+                        if (actorResp.ok) {
+                            const actorData = await actorResp.json();
+                            const inbox = actorData.inbox;
+                            if (inbox) {
+                                const followActivity = {
+                                    '@context': 'https://www.w3.org/ns/activitystreams',
+                                    id: activityId,
+                                    type: 'Follow',
+                                    actor: followerUri,
+                                    object: targetUri
+                                };
+                                await fetch(inbox, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/activity+json'
+                                    },
+                                    body: JSON.stringify(followActivity)
+                                });
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error sending follow request to remote inbox:', error);
+                }
+
                 return new Response(
                     JSON.stringify({
                         success: true,
