@@ -295,7 +295,7 @@ export class FederationHandlers {
      */
     static async handleUndoActivity(ctx: InboxContext<ContextData>, undo: any) {
         try {
-            if (!undo?.id || !undo?.actorId || !undo?.object) {
+            if (!undo?.id || !undo?.actor || !undo?.object) {
                 console.log('Invalid Undo activity: missing required fields');
                 return;
             }
