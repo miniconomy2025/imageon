@@ -790,7 +790,7 @@ export class FederationHandlers {
           const cachedNote = JSON.parse(cached);
           // Look for this specific note in cached activities
           if (cachedNote) {
-            return cachedNote;
+            return new Note(cachedNote);
           }
         }
       } catch (cacheError) {
@@ -818,8 +818,9 @@ export class FederationHandlers {
 
       const containsMedia = !!postItem?.media_url;
       const MediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && Image || Video : null;
+
       // Create Note object
-      const note = new Note({
+      const noteData = {
         id: postItem.id ? new URL(postItem.id) : new URL(`https://example.com/notes/${noteId}`),
         content: postItem.content,
         published: Temporal.Instant.from(timestamp),
@@ -829,11 +830,14 @@ export class FederationHandlers {
             url: new URL(postItem.media_url),
           })
         ] || [],
-      });
+      }
+      const note = new Note(noteData);
+
+      console.log(`📄 Note created: ${noteId}`, JSON.stringify(noteData));
 
             // Cache the result
             try {
-                await ctx.data.kv.set(cacheKey, JSON.stringify(note), { ttl });
+                await ctx.data.kv.set(cacheKey, JSON.stringify(noteData), { ttl });
                 console.log(`💿 Cached note: ${noteId}`);
             } catch (cacheError) {
                 console.warn(`⚠️ Failed to cache note ${noteId}:`, cacheError);
