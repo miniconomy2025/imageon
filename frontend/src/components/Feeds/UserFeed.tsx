@@ -46,7 +46,7 @@ export const UserFeed = () => {
             {isLoadingPosts === true ? (
                 <LoaderDots />
             ) : (
-                feedPosts &&
+                feedPosts.length > 0 &&
                 feedPosts.map((post, index) => (
                     <Card key={post.id} ref={index === feedPosts.length - 1 ? lastPostElementRef : null}>
                         <PostCard post={post} author={post.author} />
