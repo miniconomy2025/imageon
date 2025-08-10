@@ -293,72 +293,47 @@ export class FederationHandlers {
      * Undo activity handler
      * Handles incoming Undo activities (e.g. unfollow)
      */
-    static async handleUndoActivity(ctx: InboxContext<ContextData>, undoActivity: any) {
-        console.log(`🔁 Processing Undo activity: ${JSON.stringify(undoActivity)}`) ;
-        let undo;
+    static async handleUndoActivity(ctx: InboxContext<ContextData>, undoActivity: Undo) {
+        const undo = await undoActivity.getObject();
         try {
-            if (!undoActivity?.id) {
-                console.log('Invalid Undo activity: missing required fields');
-                return;
-            }
-
-            if (!undoActivity?.actorId || !undoActivity?.object) {
-                console.log('fetching undo activity from id: missing required fields');
-                const response = await fetch(undoActivity.id, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/activity+json',
-                        'Content-Type': 'application/activity+json'
-                    }
-                });
-                if (!response.ok) {
-                    console.error(`Failed to fetch Undo activity from ${undoActivity.id}:`, response.statusText);
-                    return;
-                }
-                undo = await response.json();
-            }
-            else {
-                undo = undoActivity;
-            }
-            const object = undo.object;
+            console.log(`🔁 Processing Undo activity: ${JSON.stringify(undo)}`);
             // If the object is a Follow, remove the follower relationship
-            if (object.type === 'Follow' && object.actor && object.object) {
-                const followerId = object.actor?.href ?? String(object.actor);
-                const targetId = object.object?.href ?? String(object.object);
-                await activityPub.removeFollower(followerId, targetId);
-                console.log(`👋 Unfollow processed: ${followerId} -> ${targetId}`);
+            if (undo instanceof Follow  && undo.actorId && undo.objectId) {
+                const parsed = ctx.parseUri(undo.objectId);
+                console.log(`🔄 Undoing follow for: ${JSON.stringify(parsed)}`);
+                // await activityPub.removeFollower(followerId, targetId);
 
                 // 🔥 CACHE INVALIDATION: Clear cached data
-                try {
-                    // Extract identifier from target URI
-                    const targetUrl = new URL(targetId);
-                    const pathParts = targetUrl.pathname.split('/');
-                    const usersIndex = pathParts.indexOf('users');
-                    if (usersIndex !== -1 && pathParts[usersIndex + 1]) {
-                        const targetIdentifier = pathParts[usersIndex + 1];
-                        await ctx.data.kv.delete(CacheKeys.FEDERATION.followers(targetIdentifier));
-                        await ctx.data.kv.delete(CacheKeys.FEDERATION.followersCount(targetIdentifier));
+                // try {
+                //     // Extract identifier from target URI
+                //     // const targetUrl = new URL(targetId);
+                //     // const pathParts = targetUrl.pathname.split('/');
+                //     // const usersIndex = pathParts.indexOf('users');
+                //     // if (usersIndex !== -1 && pathParts[usersIndex + 1]) {
+                //     //     const targetIdentifier = pathParts[usersIndex + 1];
+                //     //     await ctx.data.kv.delete(CacheKeys.FEDERATION.followers(targetIdentifier));
+                //     //     await ctx.data.kv.delete(CacheKeys.FEDERATION.followersCount(targetIdentifier));
 
-                        // Also invalidate activities cache
-                        const activitiesKey = CacheKeys.FEDERATION.activities(targetIdentifier);
-                        await ctx.data.kv.delete(activitiesKey);
+                //     //     // Also invalidate activities cache
+                //     //     const activitiesKey = CacheKeys.FEDERATION.activities(targetIdentifier);
+                //     //     await ctx.data.kv.delete(activitiesKey);
 
-                        console.log(`🗑️ Cache invalidated for unfollow of: ${targetIdentifier}`);
-                    }
-                } catch (cacheError) {
-                    console.warn(`⚠️ Failed to invalidate cache for unfollow:`, cacheError);
-                }
+                //     //     console.log(`🗑️ Cache invalidated for unfollow of: ${targetIdentifier}`);
+                //     }
+                // } catch (cacheError) {
+                //     console.warn(`⚠️ Failed to invalidate cache for unfollow:`, cacheError);
+                // }
 
                 // Save the Undo activity
                 const activityId = undo.id?.href ?? String(undo.id);
-                await activityPub.saveActivity(activityId, 'Undo', followerId, targetId);
+                // await activityPub.saveActivity(activityId, 'Undo', followerId, targetId);
             } else {
                 // Other undo types can simply be recorded
-                const activityId = undo.id?.href ?? String(undo.id);
-                const actorId = undo.actorId?.href ?? String(undo.actorId);
-                const objectId = object.id?.href ?? object.objectId?.href ?? String(object);
-                await activityPub.saveActivity(activityId, 'Undo', actorId, objectId);
-                console.log(`🔁 Undo received for unsupported type: ${JSON.stringify(object)}`);
+                // const activityId = undo.id?.href ?? String(undo.id);
+                // const actorId = undo.actorId?.href ?? String(undo.actorId);
+                // const objectId = object.id?.href ?? object.objectId?.href ?? String(object);
+                // await activityPub.saveActivity(activityId, 'Undo', actorId, objectId);
+                // console.log(`🔁 Undo received for unsupported type: ${JSON.stringify(object)}`);
             }
         } catch (error) {
             console.error('Error processing Undo activity:', error);
