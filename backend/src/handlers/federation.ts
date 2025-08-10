@@ -297,6 +297,7 @@ export class FederationHandlers {
         const undo = await undoActivity.getObject();
         try {
             console.log(`🔁 Processing Undo activity: ${JSON.stringify(undo)}`);
+            console.log(`Actor ID: ${undoActivity.actorId}`);
             // If the object is a Follow, remove the follower relationship
             if (undo instanceof Follow  && undo.actorId && undo.objectId) {
                 const parsed = ctx.parseUri(undo.objectId);
