@@ -438,7 +438,23 @@ export class FederationHandlers {
                                 const objectType = activity.object?.type || 'Note';
                                 const ObjectClass = OBJECT_CONSTRUCTORS[objectType as keyof typeof OBJECT_CONSTRUCTORS] || Note;
                                 const additionalData = activity.additionalData || undefined;
-                                console.log(`Additional data for Create activity:`, additionalData);
+                                const attachments = [];
+
+                                if (additionalData?.attachments) {
+                                    for (const attachment of additionalData.attachments) {
+                                        if (typeof attachment.mediaType === 'string' && attachment.mediaType.startsWith('image/')) {
+                                            attachments.push(new Image({
+                                                url: new URL(attachment.url),
+                                                mediaType: attachment.mediaType
+                                            }));
+                                        } else if (typeof attachment.mediaType === 'string' && attachment.mediaType.startsWith('video/')) {
+                                            attachments.push(new Video({
+                                                url: new URL(attachment.url),
+                                                mediaType: attachment.mediaType,
+                                            }));
+                                        }
+                                    }
+                                }
                                 return new Create({
                                     id: new URL(activity.id),
                                     actor: ctx.getActorUri(identifier),
@@ -446,7 +462,8 @@ export class FederationHandlers {
                                     object: new ObjectClass({
                                         id: new URL(activity.object || activity.id),
                                         content: activity.object?.content || activity.additionalData?.content,
-                                        published: Temporal.Instant.from(activity.published || new Date().toISOString())
+                                        published: Temporal.Instant.from(activity.published || new Date().toISOString()),
+                                        attachments,
                                     })
                                 });
                             }
