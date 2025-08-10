@@ -294,6 +294,7 @@ export class FederationHandlers {
      * Handles incoming Undo activities (e.g. unfollow)
      */
     static async handleUndoActivity(ctx: InboxContext<ContextData>, undo: any) {
+        console.log(`🔁 Processing Undo activity: ${JSON.stringify(undo)}`) ;
         try {
             if (!undo?.id || !undo?.actor || !undo?.object) {
                 console.log('Invalid Undo activity: missing required fields');
