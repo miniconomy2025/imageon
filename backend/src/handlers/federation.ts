@@ -700,15 +700,15 @@ export class FederationHandlers {
       const ttlSeconds = FederationCache.TTL.ACTIVITIES;
       const ttl = Temporal.Duration.from({ seconds: ttlSeconds });
 
-      try {
-        const cached = await ctx.data.kv.get<string>(cacheKey);
-        if (cached) {
-          console.log(`🎯 Cache HIT for activity: ${activityId}`);
-          return JSON.parse(cached);
-        }
-      } catch (cacheError) {
-        console.warn(`⚠️ Cache error for activity ${activityId}:`, cacheError);
-      }
+      // try {
+      //   const cached = await ctx.data.kv.get<string>(cacheKey);
+      //   if (cached) {
+      //     console.log(`🎯 Cache HIT for activity: ${activityId}`);
+      //     return JSON.parse(cached);
+      //   }
+      // } catch (cacheError) {
+      //   console.warn(`⚠️ Cache error for activity ${activityId}:`, cacheError);
+      // }
 
       const actor = await db.getActor(identifier);
       if (!actor) {
