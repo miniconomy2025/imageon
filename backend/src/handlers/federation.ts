@@ -466,7 +466,7 @@ export class FederationHandlers {
                                     id: new URL(activity.id),
                                     actor: new URL(activity.actor),
                                     object: new URL(activity.object),
-                                    published: new Date(activity.published),
+                                    published: Temporal.Instant.from(activity.published || new Date().toISOString()),
                                     ...activity.additionalData
                                 });
                         }
