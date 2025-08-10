@@ -75,7 +75,7 @@ export const UserSearch = () => {
     };
 
     const handleResultClick = (user: User) => {
-        navigate(Pages.profilePage.replace(':username', user.username));
+        navigate(Pages.profilePage.replace(':username', user?.username) + `?url=${encodeURIComponent(user?.url || '')}`);
     };
 
     return (
