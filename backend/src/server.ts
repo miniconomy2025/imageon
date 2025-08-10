@@ -721,6 +721,94 @@ serve({
       });
     }
 
+    if (url.pathname === "/api/outbox" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { outboxUrl } = body;
+        
+        if (!outboxUrl || typeof outboxUrl !== 'string') {
+          return addCorsHeaders(new Response(
+            JSON.stringify({ error: "Missing or invalid outboxUrl" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          ));
+        }
+
+        // Validate URL to prevent SSRF attacks
+        try {
+          const parsedUrl = new URL(outboxUrl);
+          if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+            throw new Error('Invalid protocol');
+          }
+        } catch {
+          return addCorsHeaders(new Response(
+            JSON.stringify({ error: "Invalid URL format" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          ));
+        }
+
+        // Fetch the outbox data
+        console.log(`🔄 Proxying outbox request to: ${outboxUrl}`);
+        const outboxResponse = await fetch(outboxUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/activity+json, application/ld+json',
+            'User-Agent': 'ImageOn/1.0 ActivityPub Client'
+          }
+        });
+
+        if (!outboxResponse.ok) {
+          return addCorsHeaders(new Response(
+            JSON.stringify({ 
+              error: "Failed to fetch outbox", 
+              status: outboxResponse.status,
+              statusText: outboxResponse.statusText 
+            }),
+            { status: outboxResponse.status, headers: { "Content-Type": "application/json" } }
+          ));
+        }
+
+        const outboxData = await outboxResponse.json();
+
+        // If there's a paginated first page, fetch that too
+        if (outboxData.first && typeof outboxData.first === 'string') {
+          try {
+            console.log(`🔄 Fetching first page: ${outboxData.first}`);
+            const firstPageResponse = await fetch(outboxData.first, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/activity+json, application/ld+json',
+                'User-Agent': 'ImageOn/1.0 ActivityPub Client'
+              }
+            });
+
+            if (firstPageResponse.ok) {
+              const firstPageData = await firstPageResponse.json();
+              // Return the first page data which contains the actual posts
+              return addCorsHeaders(new Response(
+                JSON.stringify(firstPageData),
+                { status: 200, headers: { "Content-Type": "application/json" } }
+              ));
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to fetch first page: ${error}`);
+            // Fall back to returning the outbox collection itself
+          }
+        }
+
+        return addCorsHeaders(new Response(
+          JSON.stringify(outboxData),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        ));
+
+      } catch (error) {
+        console.error("Error in outbox proxy:", error);
+        return addCorsHeaders(new Response(
+          JSON.stringify({ error: "Internal server error" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        ));
+      }
+    }
+
     // All other federation-related requests are handled by the Federation object
     try {
       console.log(`🌐 Delegating to federation.fetch for: ${url.pathname}`);
