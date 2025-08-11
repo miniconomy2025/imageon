@@ -138,13 +138,15 @@ export class ActivityPubService {
             const params = {
                 TableName: config.dynamodb.tableName,
                 IndexName: 'GSI2',
-                KeyConditionExpression: '#object = :objectId AND GSI2PK = :sk',
+                KeyConditionExpression: 'GSI2PK = :pk AND GSI2SK > :minTime',
+                FilterExpression: '#object = :objectId',
                 ExpressionAttributeNames: {
                     '#object': 'object'
                 },
                 ExpressionAttributeValues: {
-                    ':objectId': objectId,
-                    ':sk': 'LIKE_ACTIVITIES'
+                    ':pk': 'LIKE_ACTIVITIES',
+                    ':minTime': '2020-01-01T00:00:00.000Z', // Get all likes from 2020 onwards
+                    ':objectId': objectId
                 }
             };
             const result = await docClient.send(new QueryCommand(params));
