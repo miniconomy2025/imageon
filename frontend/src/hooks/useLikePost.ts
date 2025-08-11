@@ -36,9 +36,13 @@ export const useLikePost = () => {
             }
         },
         onSuccess: () => {
+            // Invalidate all post-related caches
             queryClient.invalidateQueries({ queryKey: ['posts'] });
             queryClient.invalidateQueries({ queryKey: ['feed'] });
             queryClient.invalidateQueries({ queryKey: ['user'] });
+            queryClient.invalidateQueries({ queryKey: ['userFeed'] });
+            queryClient.invalidateQueries({ queryKey: ['userPosts'] });
+            queryClient.invalidateQueries({ queryKey: ['post'] });
         },
         onError: error => {
             console.error('Error updating like status:', error);

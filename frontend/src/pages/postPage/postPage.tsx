@@ -55,6 +55,14 @@ export const PostPage = () => {
     }, [post?.likes, feedPost?.likes]);
 
     useEffect(() => {
+        if (post?.userLiked !== undefined) {
+            setIsLiked(post.userLiked);
+        } else if (feedPost?.userLiked !== undefined) {
+            setIsLiked(feedPost.userLiked);
+        }
+    }, [post?.userLiked, feedPost?.userLiked]);
+
+    useEffect(() => {
         if (isSuccess) {
             setNewComment('');
         }
