@@ -9,6 +9,8 @@ export type Post = {
     author?: User;
     postedAt?: string;
     likes?: number;
+    likeCount?: number;
+    userLiked?: boolean;
     comments?: Comment[];
     attachments?: Attachment[];
     url?: string;

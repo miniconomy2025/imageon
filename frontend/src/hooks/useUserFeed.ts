@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 import { config } from '../config/config';
 export const useUserFeed = (username: string) => {
-    const { currentUser } = useAuth();
+    const { currentUser, userProfile } = useAuth();
 
     const { data, isError, isSuccess, isFetching, fetchNextPage, hasNextPage } = useInfiniteQuery<Post[], Error>({
         queryKey: ['userFeed', username],
@@ -73,6 +73,8 @@ export const useUserFeed = (username: string) => {
                     attachments: item.attachment || [],
                     author: user,
                     likes: 0,
+                    likeCount: item.likesCount || 0,
+                    userLiked: item.likes && Array.isArray(item.likes) ? item.likes.some((like: any) => like.actor === userProfile?.url) : false,
                     comments: [],
                     url: item.object
                 };
@@ -161,14 +163,10 @@ export const useUserFeed = (username: string) => {
                         parentPost.comments = [];
                     }
                     parentPost.comments.push(comment);
-                    console.log('Added comment to post:', parentPost.id, 'total comments now:', parentPost.comments.length);
-                } else {
-                    console.log('Parent post not found for comment:', commentItem.id, 'inReplyTo:', commentItem.inReplyTo);
                 }
             });
 
             const posts1 = Array.from(postsMap.values()).filter((post, index, array) => array.findIndex(p => p.id === post.id) === index);
-            console.log('useUserFeed posts1', posts1);
             return posts1;
         },
         getNextPageParam: (_lastPage: Post[], _pages: Post[][]) => {

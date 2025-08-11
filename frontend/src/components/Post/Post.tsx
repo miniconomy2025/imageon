@@ -74,12 +74,11 @@ const PostCard: React.FC<PostProps> = ({ post, author, className = '', ...props 
             return `/${domain}/${username}/posts/${postId}`;
         } catch (error) {}
 
-        // Fallback to unknown path if parsing fails
-        console.warn('Failed to parse post URL, using fallback');
-        return `/unknown/unknown/posts/unknown`;
+        // Fallback to main if parsing fails
+        return Pages.mainPage;
     };
-    const [isLiked, setIsLiked] = useState<boolean>(false);
-    const [likeCount, setLikeCount] = useState<number>(post.likes ?? 0);
+    const [isLiked, setIsLiked] = useState<boolean>(post.userLiked ?? false);
+    const [likeCount, setLikeCount] = useState<number>(post.likeCount ?? 0);
     const { likePost, isLoading } = useLikePost();
     const navigate = useNavigate();
 
