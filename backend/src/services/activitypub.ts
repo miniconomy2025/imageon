@@ -197,6 +197,7 @@ export class ActivityPubService {
       console.error('Error parsing URI:', uri, error);
       return null;
     }
+  }
 
     /**
      * Check if actor is local to this server
