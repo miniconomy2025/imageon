@@ -1,4 +1,4 @@
-import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Image, Video } from "@fedify/fedify";
+import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Image, Video, Collection } from "@fedify/fedify";
 import { RedisKvStore } from "@fedify/redis";
 import { Temporal } from "@js-temporal/polyfill";
 import { ActorModel } from "../models/Actor.js";
@@ -337,6 +337,12 @@ export class FederationHandlers {
                 });
             } else {
                 console.log(`🔁 Undo received for unsupported type: ${typeof undo}`);
+                // Other undo types can simply be recorded
+                // const activityId = undo.id?.href ?? String(undo.id);
+                // const actorId = undo.actorId?.href ?? String(undo.actorId);
+                // const objectId = object.id?.href ?? object.objectId?.href ?? String(object);
+                // await activityPub.saveActivity(activityId, 'Undo', actorId, objectId);
+                // console.log(`🔁 Undo received for unsupported type: ${JSON.stringify(object)}`);
             }
         } catch (error) {
             console.error('Error processing Undo activity:', error);
@@ -402,6 +408,7 @@ export class FederationHandlers {
                 return bTime - aTime;
             });
 
+            
 
             const postActivities = sortedActivities
                 .map((activity: any) => {
@@ -450,6 +457,7 @@ export class FederationHandlers {
                                         }
                                     }
                                 }
+
                                 return new Create({
                                     id: new URL(activity.id),
                                     actor: ctx.getActorUri(identifier),
@@ -459,6 +467,13 @@ export class FederationHandlers {
                                         content: activity.object?.content || activity.additionalData?.content,
                                         published: Temporal.Instant.from(activity.published || new Date().toISOString()),
                                         attachments,
+                                        likes: new Collection({
+                                          items: Array.isArray(activity.likes) && activity.likes.map((like : any) => (new Like({
+                                            url: new URL(like.id),
+                                            actor: new URL(like.actor),
+                                          }))) || [],
+                                          totalItems: activity.likesCount || activity?.likes?.lenght || 0,
+                                        })                 
                                     })
                                 });
                             }
@@ -496,10 +511,9 @@ export class FederationHandlers {
                 })
                 .filter(Boolean);
 
-
             return {
                 items: [...postActivities],
-                };
+            };
         } catch (error) {
             console.error(`❌ Error in handleOutboxRequest for ${identifier}:`, error);
             if (error instanceof Error) {
@@ -807,7 +821,7 @@ export class FederationHandlers {
 
       const containsMedia = !!postItem?.media_url;
       const MediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && Image || Video : null;
-
+      const likes = await activityPub.getLikesForObject(postItem.id)
       // Create Note object
       const noteData = {
         id: postItem.id ? new URL(postItem.id) : new URL(`https://example.com/notes/${noteId}`),
@@ -819,6 +833,13 @@ export class FederationHandlers {
             url: new URL(postItem.media_url),
           })
         ] || [],
+        likes: new Collection({
+          items: likes.map((like : any) => (new Like({
+            url: new URL(like.id),
+            actor: new URL(like.actor),
+          }))),
+          totalItems: likes.length || 0,
+        })
       }
       const note = new Note(noteData);
 
