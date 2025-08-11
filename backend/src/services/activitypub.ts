@@ -139,6 +139,7 @@ export class ActivityPubService {
       if (pathParts.length === 1 && pathParts[0].startsWith('@')) {
         return pathParts[0].substring(1);
       }
+      
       return null;
     } catch (error) {
       console.error('Error parsing URI:', uri, error);
