@@ -18,8 +18,6 @@ export const PostPage = () => {
     const [newComment, setNewComment] = useState('');
     const { createComment, isLoading: isCreatingComment, isSuccess } = useCreateComment();
 
-    const [isLiked, setIsLiked] = useState<boolean>(false);
-    const [likeCount, setLikeCount] = useState<number>(0);
     const { likePost, isLoading: isLikingPost } = useLikePost();
 
     // Extract parameters from the URL path
@@ -42,6 +40,8 @@ export const PostPage = () => {
     const { user: author, isFetching: isFetchingUser } = useGetUserByUrl(authorUrl);
 
     const { data: post, isError: isPostError, isFetching: isLoadingPost } = useGetPost(postUrl, author);
+    const [isLiked, setIsLiked] = useState<boolean>(post?.userLiked ?? false);
+    const [likeCount, setLikeCount] = useState<number>(post?.likeCount ?? 0);
     const username = currentUser?.username || '';
     const { posts: feedPosts } = useUserFeed(username);
     const feedPost = feedPosts?.find((p: any) => p.url === postUrl);
