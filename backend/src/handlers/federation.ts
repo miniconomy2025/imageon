@@ -1,4 +1,4 @@
-import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Image, Video } from "@fedify/fedify";
+import { Follow,  Accept, Article, RequestContext, Context, InboxContext, Undo, Announce, Update, Delete, Recipient,Like , Create, Note, Image, Video, Collection } from "@fedify/fedify";
 import { RedisKvStore } from "@fedify/redis";
 import { Temporal } from "@js-temporal/polyfill";
 import { ActorModel } from "../models/Actor.js";
@@ -457,6 +457,7 @@ export class FederationHandlers {
                                         }
                                     }
                                 }
+
                                 return new Create({
                                     id: new URL(activity.id),
                                     actor: ctx.getActorUri(identifier),
@@ -466,6 +467,10 @@ export class FederationHandlers {
                                         content: activity.object?.content || activity.additionalData?.content,
                                         published: Temporal.Instant.from(activity.published || new Date().toISOString()),
                                         attachments,
+                                        likes: new Collection({
+                                          items: activity.likes || [],
+                                          totalItems: activity.likesCount || 0,
+                                        })                 
                                     })
                                 });
                             }
@@ -813,7 +818,7 @@ export class FederationHandlers {
 
       const containsMedia = !!postItem?.media_url;
       const MediaType = containsMedia ? ['jpg', 'jpeg', 'png', 'gif'].includes(postItem.media_url.split('.').pop()) && Image || Video : null;
-
+      const likes = await activityPub.getLikesForObject(postItem.id)
       // Create Note object
       const noteData = {
         id: postItem.id ? new URL(postItem.id) : new URL(`https://example.com/notes/${noteId}`),
@@ -825,6 +830,13 @@ export class FederationHandlers {
             url: new URL(postItem.media_url),
           })
         ] || [],
+        likes: new Collection({
+          items: likes.map((like : any) => (new Like({
+            url: like.id,
+            actor: like.actor,
+          }))),
+          totalItems: likes.length || 0,
+        })
       }
       const note = new Note(noteData);
 
