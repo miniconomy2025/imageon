@@ -980,6 +980,8 @@ export class AuthHandlers {
             const undoId = randomUUID();
             const activityId = `${actorUri}/activities/${undoId}`;
             await activityPub.saveActivity(activityId, 'Undo', actorUri, postUri);
+            await db.deleteItem(`ACTIVITY#${activityId}`, 'LIKE')
+
             return new Response(
                 JSON.stringify({
                     success: true,
@@ -989,6 +991,7 @@ export class AuthHandlers {
                 }),
                 { status: 200, headers: { 'Content-Type': 'application/json' } }
             );
+
         } catch (error) {
             console.error('Error processing Undo Like activity:', error);
             return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
