@@ -41,7 +41,6 @@ export const useUserFeed = (username: string) => {
                 let postId = item.id;
 
                 // Extract the actual post ID from the full URL
-                // Handle both item.object and item.id formats
                 const urlToProcess = item.object || item.id;
                 if (urlToProcess && typeof urlToProcess === 'string') {
                     const urlParts = urlToProcess.split('/');
@@ -77,7 +76,7 @@ export const useUserFeed = (username: string) => {
                 let likeCount = 0;
                 let userLiked = false;
 
-                // Check for collection format (like in outbox response)
+                // Check for collection format
                 if (item.likes && typeof item.likes === 'object' && item.likes.totalItems !== undefined) {
                     likeCount = item.likes.totalItems;
 
@@ -86,7 +85,7 @@ export const useUserFeed = (username: string) => {
                         userLiked = likesArray.some((like: any) => like.actor === userProfile?.url);
                     }
                 }
-                // Check for array format (existing feed format)
+                // Check for array format
                 else if (item.likes && Array.isArray(item.likes)) {
                     likeCount = item.likes.length;
                     userLiked = item.likes.some((like: any) => like.actor === userProfile?.url);

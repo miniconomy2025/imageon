@@ -3,7 +3,7 @@ import { Post } from '../types/post';
 import { useAuth } from '../contexts/AuthContext';
 
 export const useGetPost = (url: string, author: any) => {
-    const { currentUser } = useAuth();
+    const { currentUser, userProfile } = useAuth();
 
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['post', url],
@@ -85,13 +85,35 @@ export const useGetPost = (url: string, author: any) => {
                 }
             }
 
+            // Handle likes and userLiked
+            let likeCount = 0;
+            let userLiked = false;
+
+            if (result.likes) {
+                if (result.likes.totalItems !== undefined) {
+                    likeCount = result.likes.totalItems;
+                }
+
+                if (result.likes.items) {
+                    const likesArray = Array.isArray(result.likes.items) ? result.likes.items : [result.likes.items];
+
+                    if (result.likes.totalItems === undefined) {
+                        likeCount = likesArray.length;
+                    }
+
+                    userLiked = likesArray.some((like: any) => like.actor === userProfile?.url);
+                }
+            }
+
             const mappedPost = {
                 id: result.id.split('/').pop(),
                 content: result.content,
                 title: result.name || result.summary,
                 author: author,
                 postedAt: result.published || new Date().toISOString(),
-                likes: result.likes?.totalItems || 0,
+                likes: likeCount,
+                likeCount: likeCount,
+                userLiked: userLiked,
                 comments: result.replies?.items || [],
                 attachments: attachments,
                 url: result.url
