@@ -7,13 +7,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { crypto } from '../services/cryptography.js';
 
 // Additional imports to support post, like, comment, feed and follow operations
-// Import Node.js crypto utilities. In addition to randomUUID we need
-// createHash for computing the Digest header and the webcrypto API for
-// generating an HTTP signature. The webcrypto API exposes SubtleCrypto
-// methods that operate on CryptoKey objects created by the Fedify
-// cryptography service. We avoid importing the full `crypto` namespace to
-// prevent clashing with the local cryptography service named `crypto`.
-import { randomUUID, createHash, webcrypto } from 'crypto';
+import { randomUUID } from 'crypto';
 import { S3Service } from '../services/s3Service.js';
 import { activityPub } from '../services/activitypub.js';
 
@@ -54,7 +48,7 @@ export class AuthHandlers {
                         headers: { 'Content-Type': 'application/json' }
                     }
                 );
-            }            
+            }
 
             const username = user?.username;
 
@@ -530,12 +524,11 @@ export class AuthHandlers {
                     if (followUri) {
                         try {
                             const url = new URL(followUri);
-                            const parts = url.pathname.split('/').filter(Boolean);
+
+                            const parts = url.pathname.split('/');
                             const usersIndex = parts.indexOf('users');
                             if (usersIndex !== -1 && parts[usersIndex + 1]) {
                                 username = parts[usersIndex + 1];
-                            } else if (parts.length >= 1 && parts[parts.length - 1].startsWith('@')) {
-                                username = parts[parts.length - 1].substring(1);
                             }
 
                             const localHost = config.federation.domain.split(':')[0];
@@ -544,26 +537,7 @@ export class AuthHandlers {
                                     const actor = await ActorModel.getActor(username);
                                     displayName = actor?.name;
                                 } catch {
-                                    // ignore errors
-                                }
-                            } else {
-                                try {
-                                    const resp = await fetch(followUri, {
-                                        headers: {
-                                            'Accept': 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
-                                        }
-                                    });
-                                    if (resp.ok) {
-                                        const actorData = await resp.json();
-                                        if (!username && actorData.preferredUsername) {
-                                            username = actorData.preferredUsername;
-                                        }
-                                        if (actorData.name) {
-                                            displayName = actorData.name;
-                                        }
-                                    }
-                                } catch {
-                                    // ignore remote fetch errors
+                                    // Ignore resolution errors; leave displayName undefined
                                 }
                             }
                         } catch {
@@ -698,7 +672,7 @@ export class AuthHandlers {
                         uid: userData.uid,
                         email: userData.email,
                         displayName: userData.display_name,
-                        url:  userData.id,
+                        url: userData.id,
                         username: userData.username,
                         photoURL: userData.profile_image_url,
                         bio: userData.bio,
@@ -874,7 +848,15 @@ export class AuthHandlers {
      */
     static async handleLikePost(request: Request, postId: string): Promise<Response> {
         try {
-            const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
+           const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
+           if (!postItem) {
+               return new Response(JSON.stringify({ error: 'Post not found' }), {
+                   status: 404,
+                   headers: { 'Content-Type': 'application/json' }
+               });
+            }
+
+            const postUri = postItem.id;
             // Parse request body
             const body = await request.json().catch(() => null);
             const actor = body && typeof body === 'object' ? (body as any).actor : undefined;
@@ -909,14 +891,7 @@ export class AuthHandlers {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            // Ensure the target post exists
-            const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
-            if (!postItem) {
-                return new Response(JSON.stringify({ error: 'Post not found' }), {
-                    status: 404,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
+
             const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
             const likeId = randomUUID();
             const activityId = `${actorUri}/activities/${likeId}`;
@@ -941,7 +916,16 @@ export class AuthHandlers {
      */
     static async handleUnlikePost(request: Request, postId: string): Promise<Response> {
         try {
-            const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
+
+            const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
+            if (!postItem) {
+                return new Response(JSON.stringify({ error: 'Post not found' }), {
+                    status: 404,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            
+            const postUri = postItem.id;
             const body = await request.json().catch(() => null);
             const actor = body && typeof body === 'object' ? (body as any).actor : undefined;
             if (!actor) {
@@ -974,13 +958,7 @@ export class AuthHandlers {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
-            if (!postItem) {
-                return new Response(JSON.stringify({ error: 'Post not found' }), {
-                    status: 404,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
+            
             const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
             const undoId = randomUUID();
             const activityId = `${actorUri}/activities/${undoId}`;
@@ -1172,6 +1150,11 @@ export class AuthHandlers {
                                 entry.inReplyTo = (activity.additionalData as any).inReplyTo;
                             }
                         }
+                        // Add likes information if available
+                        if (activity.likes && Array.isArray(activity.likes)) {
+                            entry.likes = activity.likes;
+                            entry.likesCount = activity.likesCount || activity.likes.length;
+                        }
                         items.push(entry);
                     }
                 }
@@ -1220,8 +1203,9 @@ export class AuthHandlers {
             } else {
                 followerId = actor;
             }
-            let targetId: string = '';
-            let targetUri: string = '';
+            // Resolve target identifier and target URI. If target is a full URI, use it; otherwise construct local URI.
+            let targetId: string;
+            let targetUri: string;
             if (target.startsWith('http://') || target.startsWith('https://')) {
                 targetUri = target;
                 try {
@@ -1231,19 +1215,6 @@ export class AuthHandlers {
                     targetId = idx !== -1 && parts[idx + 1] ? parts[idx + 1] : '';
                 } catch {
                     targetId = '';
-                }
-            } else if (target.includes('@')) {
-                const cleaned = target.startsWith('@') ? target.slice(1) : target;
-                const parts = cleaned.split('@');
-                if (parts.length === 2) {
-                    const [username, domain] = parts;
-                    targetId = username;
-                    const usesLocalScheme = domain.includes('localhost') || domain.includes(':');
-                    const scheme = usesLocalScheme ? config.federation.protocol : 'https';
-                    targetUri = `${scheme}://${domain}/users/${username}`;
-                } else {
-                    targetId = target;
-                    targetUri = `${config.federation.protocol}://${config.federation.domain}/users/${target}`;
                 }
             } else {
                 targetId = target;
@@ -1285,68 +1256,6 @@ export class AuthHandlers {
             if (request.method === 'POST') {
                 await activityPub.saveFollower(activityId, followerUri, targetUri);
                 await activityPub.saveActivity(activityId, 'Follow', followerUri, targetUri);
-
-                try {
-                    const targetHost = new URL(targetUri).hostname;
-                    const localHost = config.federation.domain.split(':')[0];
-                    if (targetHost !== localHost) {
-                        const actorResp = await fetch(targetUri, {
-                            headers: {
-                                'Accept': 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
-                            }
-                        });
-                        if (actorResp.ok) {
-                            const actorData = await actorResp.json();
-                            const inbox: string | undefined = actorData.inbox;
-                            if (inbox) {
-                                const followActivity = {
-                                    '@context': 'https://www.w3.org/ns/activitystreams',
-                                    id: activityId,
-                                    type: 'Follow',
-                                    actor: followerUri,
-                                    object: targetUri
-                                };
-                                const bodyString = JSON.stringify(followActivity);
-                                const digestHash = createHash('sha256').update(bodyString).digest('base64');
-                                const digestHeader = `SHA-256=${digestHash}`;
-                                const dateHeader = new Date().toUTCString();
-                                const inboxUrl = new URL(inbox);
-                                const requestTarget = `post ${inboxUrl.pathname}`;
-                                const signingString = [
-                                    `(request-target): ${requestTarget}`,
-                                    `host: ${inboxUrl.host}`,
-                                    `date: ${dateHeader}`,
-                                    `digest: ${digestHeader}`
-                                ].join('\n');
-                                const keyPairs = await crypto.getOrGenerateKeyPairs(followerId);
-                                const privateKey = keyPairs[0].privateKey;
-                                const enc = new TextEncoder();
-                                const signatureBuf = await webcrypto.subtle.sign(
-                                    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-                                    privateKey as any,
-                                    enc.encode(signingString)
-                                );
-                                const signatureB64 = Buffer.from(signatureBuf).toString('base64');
-                                const keyId = `${followerUri}#main-key`;
-                                const signatureHeader =
-                                    `keyId="${keyId}",headers="(request-target) host date digest",signature="${signatureB64}"`;
-                                await fetch(inbox, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Date': dateHeader,
-                                        'Digest': digestHeader,
-                                        'Content-Type': 'application/activity+json',
-                                        'Signature': signatureHeader
-                                    },
-                                    body: bodyString
-                                });
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error sending follow request to remote inbox:', error);
-                }
-
                 return new Response(
                     JSON.stringify({
                         success: true,
