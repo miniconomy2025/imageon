@@ -135,7 +135,7 @@ export class ActivityPubService {
     async getLikesForObject(objectId: string) {
         try {
             console.log(`👍 Fetching likes for object: ${objectId}`);
-            const likes = await db.queryItems(`OBJECT#${objectId}`, {
+            const likes = await db.queryItems(`ACTIVITY#${objectId}`, {
                 sortKeyExpression: 'SK = :sk',
                 attributeValues: { ':sk': 'LIKE' }
             });
