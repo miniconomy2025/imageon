@@ -50,7 +50,6 @@ class AuthService {
     // Verify token with backend
     async verifyToken(idToken: string): Promise<UserProfile> {
         try {
-            console.log(config);
             const response = await fetch(`${config.API_BASE_URL}/auth/verify`, {
                 method: 'POST',
                 headers: {
