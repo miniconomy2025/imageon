@@ -848,7 +848,15 @@ export class AuthHandlers {
      */
     static async handleLikePost(request: Request, postId: string): Promise<Response> {
         try {
-            const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
+           const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
+           if (!postItem) {
+               return new Response(JSON.stringify({ error: 'Post not found' }), {
+                   status: 404,
+                   headers: { 'Content-Type': 'application/json' }
+               });
+            }
+
+            const postUri = postItem.id;
             // Parse request body
             const body = await request.json().catch(() => null);
             const actor = body && typeof body === 'object' ? (body as any).actor : undefined;
@@ -883,14 +891,7 @@ export class AuthHandlers {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            // Ensure the target post exists
-            const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
-            if (!postItem) {
-                return new Response(JSON.stringify({ error: 'Post not found' }), {
-                    status: 404,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
+
             const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
             const likeId = randomUUID();
             const activityId = `${actorUri}/activities/${likeId}`;
@@ -915,7 +916,16 @@ export class AuthHandlers {
      */
     static async handleUnlikePost(request: Request, postId: string): Promise<Response> {
         try {
-            const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
+
+            const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
+            if (!postItem) {
+                return new Response(JSON.stringify({ error: 'Post not found' }), {
+                    status: 404,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            
+            const postUri = postItem.id;
             const body = await request.json().catch(() => null);
             const actor = body && typeof body === 'object' ? (body as any).actor : undefined;
             if (!actor) {
@@ -948,13 +958,7 @@ export class AuthHandlers {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
-            if (!postItem) {
-                return new Response(JSON.stringify({ error: 'Post not found' }), {
-                    status: 404,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
+            
             const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
             const undoId = randomUUID();
             const activityId = `${actorUri}/activities/${undoId}`;
