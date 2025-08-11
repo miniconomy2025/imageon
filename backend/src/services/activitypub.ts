@@ -138,7 +138,10 @@ export class ActivityPubService {
             const params = {
                 TableName: config.dynamodb.tableName,
                 IndexName: 'GSI2',
-                KeyConditionExpression: 'object = :objectId AND GSI2PK = :sk',
+                KeyConditionExpression: '#object = :objectId AND GSI2PK = :sk',
+                ExpressionAttributeNames: {
+                    '#object': 'object'
+                },
                 ExpressionAttributeValues: {
                     ':objectId': objectId,
                     ':sk': 'LIKE_ACTIVITIES'
