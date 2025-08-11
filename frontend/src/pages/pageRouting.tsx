@@ -7,8 +7,8 @@ import { ProtectedRoute } from '../components/ProtectedRoute/ProtectedRoute';
 
 export const Pages = {
     mainPage: '/',
-    profilePage: '/:domain/:username',
-    postPage: '/:domain/:username/posts/:postId',
+    profilePage: '/:username',
+    postPage: '/post/:postId',
     createPostPage: '/create-post',
     login: '/login',
     completeProfile: '/complete-profile'
@@ -36,7 +36,7 @@ export const router = createBrowserRouter([
                 )
             },
             {
-                path: '/:domain/:username',
+                path: '/:username',
                 element: (
                     <ProtectedRoute>
                         <ProfilePage />
@@ -44,7 +44,7 @@ export const router = createBrowserRouter([
                 )
             },
             {
-                path: '/:domain/:username/posts/:postId',
+                path: '/post/:postId',
                 element: (
                     <ProtectedRoute>
                         <PostPage />

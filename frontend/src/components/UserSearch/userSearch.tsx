@@ -5,20 +5,18 @@ import { User } from '../../types/user';
 import './userSearch.css';
 import { useNavigate } from 'react-router-dom';
 import { Pages } from '../../pages/pageRouting';
-import { useGetFollowers } from '../../hooks/useGetFollowers';
 
 export const UserSearch = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [showResults, setShowResults] = useState(false);
-    const [optimisticFollows, setOptimisticFollows] = useState<Set<number>>(new Set());
+    const [followingUsers, setFollowingUsers] = useState<Set<number>>(new Set());
     const searchRef = useRef<HTMLDivElement>(null);
     const debounceTimeoutRef = useRef<number | null>(null);
 
     const navigate = useNavigate();
 
-    const { followers } = useGetFollowers();
-    const { data: searchResults, isLoading } = useSearchUser(debouncedSearchTerm, followers ?? []);
+    const { users, isLoading } = useSearchUser(debouncedSearchTerm);
     const { followUser, isLoading: isFollowLoading } = useFollowUser();
 
     useEffect(() => {
@@ -55,48 +53,29 @@ export const UserSearch = () => {
         setShowResults(value.length > 0);
     };
 
-    const handleFollowClick = (user: User, isFollowing: boolean) => {
-        // Optimistically update the follow state
-        if (!isFollowing) {
-            setOptimisticFollows(prev => new Set(prev).add(user.id));
-        }
+    const handleFollowClick = (user: User) => {
+        const isCurrentlyFollowing = followingUsers.has(user.id);
 
-        followUser(
-            {
-                userId: user.id,
-                isFollowing: isFollowing,
-                targetUsername: user.url || user.username
-            },
-            {
-                onError: () => {
-                    // Revert optimistic update on error
-                    if (!isFollowing) {
-                        setOptimisticFollows(prev => {
-                            const newSet = new Set(prev);
-                            newSet.delete(user.id);
-                            return newSet;
-                        });
-                    }
-                }
+        followUser({
+            userId: user.id,
+            isFollowing: isCurrentlyFollowing,
+            targetUsername: user.url || user.username
+        });
+
+        // Optimistically update the UI
+        setFollowingUsers(prev => {
+            const newSet = new Set(prev);
+            if (isCurrentlyFollowing) {
+                newSet.delete(user.id);
+            } else {
+                newSet.add(user.id);
             }
-        );
+            return newSet;
+        });
     };
 
     const handleResultClick = (user: User) => {
-        // Extract domain from user handle or URL
-        let domain = 'unknown';
-        if (user.handle) {
-            const parts = user.handle.split('@');
-            domain = parts.length > 1 ? parts[parts.length - 1] : 'unknown';
-        } else if (user.url) {
-            try {
-                domain = new URL(user.url).hostname;
-            } catch {
-                domain = 'unknown';
-            }
-        }
-
-        navigate(Pages.profilePage.replace(':domain', domain).replace(':username', user?.username));
+        navigate(Pages.profilePage.replace(':username', user.username));
     };
 
     return (
@@ -114,18 +93,15 @@ export const UserSearch = () => {
                 <div className='user-search__results'>
                     {isLoading ? (
                         <div className='user-search__loading'>Searching...</div>
-                    ) : searchResults.length > 0 ? (
-                        searchResults.map(({ user, isFollowing }) => {
-                            // Check if user is optimistically followed
-                            const isOptimisticallyFollowed = optimisticFollows.has(user.id);
-                            const effectivelyFollowing = isFollowing || isOptimisticallyFollowed;
-
+                    ) : users.length > 0 ? (
+                        users.map(user => {
+                            const isFollowing = followingUsers.has(user.id);
                             return (
                                 <div key={user.id} className='user-search__result-item' onClick={() => handleResultClick(user)}>
                                     <div className='user-search__user-info'>
                                         <img
                                             src={user.icon?.url}
-                                            alt={`${user.username}'s avatar`}
+                                            alt={`${user.username}'s .icon?.url`}
                                             className='user-search__avatar'
                                             onError={e => {
                                                 (e.target as HTMLImageElement).src = 'https://via.placeholder.com/40x40/e9ecef/6c757d?text=U';
@@ -137,15 +113,13 @@ export const UserSearch = () => {
                                         </div>
                                     </div>
                                     <button
-                                        className={`user-search__follow-btn ${effectivelyFollowing ? 'user-search__follow-btn--following' : ''}`}
+                                        className={`user-search__follow-btn ${isFollowing ? 'user-search__follow-btn--following' : ''}`}
                                         onClick={e => {
-                                            if (!effectivelyFollowing) {
-                                                e.stopPropagation();
-                                                handleFollowClick(user, isFollowing);
-                                            }
+                                            e.stopPropagation();
+                                            handleFollowClick(user);
                                         }}
                                         disabled={isFollowLoading}>
-                                        {isFollowLoading ? '...' : effectivelyFollowing ? 'Following' : 'Follow'}
+                                        {isFollowLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
                                     </button>
                                 </div>
                             );

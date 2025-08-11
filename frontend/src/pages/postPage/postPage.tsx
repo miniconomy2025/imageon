@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGetPost } from '../../hooks/useGetPost';
 import { useUserFeed } from '../../hooks/useUserFeed';
 import { useGetCurrentUser } from '../../hooks/useGetCurrentUser';
@@ -13,6 +13,7 @@ import LoaderDots from '../../components/LoaderDots';
 
 export const PostPage = () => {
     const params = useParams();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { user: currentUser } = useGetCurrentUser();
     const [newComment, setNewComment] = useState('');
@@ -22,11 +23,14 @@ export const PostPage = () => {
     const [likeCount, setLikeCount] = useState<number>(0);
     const { likePost, isLoading: isLikingPost } = useLikePost();
 
-    // Extract parameters from the URL path
-    const { domain, username: postUsername, postId } = params;
-
-    // Construct the full post URL from path parameters
-    const postUrl = domain && postUsername && postId ? `https://${domain}/users/${postUsername}/posts/${postId}` : '';
+    let postId = params.postId || '';
+    if (postId.startsWith('http')) {
+        const match = postId.match(/users\/(.*?)\//);
+        if (match && match[1]) {
+            postId = match[1];
+        }
+    }
+    const postUrl = searchParams.get('url') || '';
 
     const getAuthorUrlFromPostUrl = (postUrl: string) => {
         if (!postUrl) return '';
@@ -60,12 +64,12 @@ export const PostPage = () => {
         }
     }, [isSuccess]);
 
-    if (!domain || !postUsername || !postId) {
-        return <div>Error: Domain, username, and post ID are required</div>;
+    if (!postId) {
+        return <div>Error: Post ID is required</div>;
     }
 
     if (!postUrl) {
-        return <div>Error: Unable to construct post URL</div>;
+        return <div>Error: Post URL is required</div>;
     }
 
     if (isPostError) {

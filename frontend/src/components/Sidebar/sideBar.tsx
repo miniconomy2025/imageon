@@ -23,22 +23,6 @@ export const SideBar = () => {
     const { following, isFetching } = useGetFollowing();
     const { followers, isFetching: isFetchingFollowers } = useGetFollowers();
 
-    // Helper to extract domain from user
-    const getUserDomain = (user: any) => {
-        if (user.handle) {
-            const parts = user.handle.split('@');
-            return parts.length > 1 ? parts[parts.length - 1] : 'unknown';
-        }
-        if (user.url) {
-            try {
-                return new URL(user.url).hostname;
-            } catch {
-                return 'unknown';
-            }
-        }
-        return 'unknown';
-    };
-
     useEffect(() => {
         setIsCollapsed(isMobile);
     }, [isMobile]);
@@ -65,21 +49,8 @@ export const SideBar = () => {
             label: 'My Profile',
             onClick: () => {
                 handleUserClick();
-                if (currentUser?.user?.username) {
-                    // Extract domain from current user
-                    let domain = 'unknown';
-                    if (currentUser.user.handle) {
-                        const parts = currentUser.user.handle.split('@');
-                        domain = parts.length > 1 ? parts[parts.length - 1] : 'unknown';
-                    } else if (currentUser.user.url) {
-                        try {
-                            domain = new URL(currentUser.user.url).hostname;
-                        } catch {
-                            domain = 'unknown';
-                        }
-                    }
-                    navigate(Pages.profilePage.replace(':domain', domain).replace(':username', currentUser.user.username));
-                }
+                currentUser?.user?.username &&
+                    navigate(Pages.profilePage.replace(':username', currentUser?.user.username) + `?url=${encodeURIComponent(currentUser?.user.url || '')}`);
             }
         },
         {
@@ -125,8 +96,9 @@ export const SideBar = () => {
                                                 user={user}
                                                 onClick={() => {
                                                     handleUserClick();
-                                                    const domain = getUserDomain(user);
-                                                    navigate(Pages.profilePage.replace(':domain', domain).replace(':username', user.username));
+                                                    navigate(
+                                                        Pages.profilePage.replace(':username', user.username) + `?url=${encodeURIComponent(user.url || '')}`
+                                                    );
                                                 }}
                                             />
                                         ))}
@@ -146,8 +118,9 @@ export const SideBar = () => {
                                                 user={user}
                                                 onClick={() => {
                                                     handleUserClick();
-                                                    const domain = getUserDomain(user);
-                                                    navigate(Pages.profilePage.replace(':domain', domain).replace(':username', user.username));
+                                                    navigate(
+                                                        Pages.profilePage.replace(':username', user.username) + `?url=${encodeURIComponent(user.url || '')}`
+                                                    );
                                                 }}
                                             />
                                         ))}

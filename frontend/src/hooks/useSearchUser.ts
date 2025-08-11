@@ -4,26 +4,30 @@ import { User } from '../types/user';
 import { config } from '../config/config';
 import { useAuth } from '../contexts/AuthContext';
 
-export const useSearchUser = (searchTerm: string, followers: User[]) => {
+export const useSearchUser = (searchTerm: string) => {
     const { currentUser } = useAuth();
 
     const { data, isError, isSuccess, isFetching } = useQuery({
         queryKey: ['searchUsers', searchTerm],
-        queryFn: async (): Promise<Array<{ user: User; isFollowing: boolean }>> => {
+        queryFn: async (): Promise<User[]> => {
             // Format the handle properly for the discovery endpoint
             const formatHandle = (term: string) => {
+                // Remove @ prefix if present
                 const cleanTerm = term.replace(/^@/, '');
 
+                // If it already contains @domain, use as is
                 if (cleanTerm.includes('@')) {
                     return cleanTerm;
                 }
 
+                // Otherwise, append the local domain
                 const domain = new URL(config.API_URL).hostname;
                 return `${cleanTerm}@${domain}`;
             };
 
             const formattedHandle = formatHandle(searchTerm);
 
+            // Use the /api/users/discover endpoint
             const url = `${config.API_URL}/api/users/discover`;
             const response = await fetch(url, {
                 method: 'POST',
@@ -36,6 +40,7 @@ export const useSearchUser = (searchTerm: string, followers: User[]) => {
 
             if (!response.ok) {
                 if (response.status === 404) {
+                    // User not found, return empty array
                     return [];
                 }
                 throw new Error('Network response was not ok');
@@ -49,35 +54,25 @@ export const useSearchUser = (searchTerm: string, followers: User[]) => {
 
             const user = discoveryData.user;
 
+            // Transform the discovered user to your User format
             const transformedUser: User = {
-                id: typeof user.id === 'string' ? user.id.hashCode() : Date.now(),
+                id: typeof user.id === 'string' ? user.id.hashCode() : Date.now(), // Convert string ID to number
                 username: user.preferredUsername || user.name || searchTerm,
-                name: user.name,
-                preferredUsername: user.preferredUsername,
-                summary: user.summary,
-                icon: user.icon ? { url: user.icon.url, type: user.icon.type.toLowerCase() } : { url: config.MOCK_IMAGE_URL, type: 'image' },
+                preferredUsername: user.name || user.preferredUsername || searchTerm,
+                icon: { url: user.icon?.url || config.MOCK_IMAGE_URL, type: 'image' },
                 bio: user.summary || 'No bio available',
                 handle: user.handle,
-                url: user.id,
-                type: user.type
+                url: user.url
             };
 
-            // Check if the user is already being followed
-            const isFollowing = followers.some(follower => follower.handle === user.handle || follower.id === transformedUser.id || follower.url === user.id);
-
-            return [
-                {
-                    user: transformedUser,
-                    isFollowing
-                }
-            ];
+            return [transformedUser];
         },
         enabled: searchTerm.length > 0,
         staleTime: 30000
     });
 
     return {
-        data: data || [],
+        users: data || [],
         isLoading: isFetching,
         isError,
         isSuccess
