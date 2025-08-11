@@ -5,7 +5,7 @@ import { User } from '../../types/user';
 import './userSearch.css';
 import { useNavigate } from 'react-router-dom';
 import { Pages } from '../../pages/pageRouting';
-import { useGetFollowers } from '../../hooks/useGetFollowers';
+import { useGetFollowing } from '../../hooks/useGetFollowing';
 
 export const UserSearch = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,8 +17,8 @@ export const UserSearch = () => {
 
     const navigate = useNavigate();
 
-    const { followers } = useGetFollowers();
-    const { data: searchResults, isLoading } = useSearchUser(debouncedSearchTerm, followers ?? []);
+    const { following } = useGetFollowing();
+    const { data: searchResults, isLoading } = useSearchUser(debouncedSearchTerm, following ?? []);
     const { followUser, isLoading: isFollowLoading } = useFollowUser();
 
     useEffect(() => {
