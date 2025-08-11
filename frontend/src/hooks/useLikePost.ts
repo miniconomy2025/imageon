@@ -40,8 +40,6 @@ export const useLikePost = () => {
             queryClient.invalidateQueries({ queryKey: ['posts'] });
             queryClient.invalidateQueries({ queryKey: ['feed'] });
             queryClient.invalidateQueries({ queryKey: ['user'] });
-            queryClient.invalidateQueries({ queryKey: ['userFeed'] });
-            queryClient.invalidateQueries({ queryKey: ['userPosts'] });
             queryClient.invalidateQueries({ queryKey: ['post'] });
         },
         onError: error => {
