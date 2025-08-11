@@ -1000,8 +1000,16 @@ export class AuthHandlers {
      * Returns a Create activity for the comment.
      */
     static async handleCreateComment(request: Request, parentPostId: string): Promise<Response> {
-        // Determine parent post URI
-        const parentPostUri = `${config.federation.protocol}://${config.federation.domain}/posts/${parentPostId}`;
+        const postItem = await db.getItem(`POST#${parentPostId}`, 'OBJECT');
+
+        if (!postItem) {
+            return new Response(JSON.stringify({ error: 'Post not found' }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        const parentPostUri = postItem.id;
         try {
             const body = await request.json().catch(() => null);
             const actorParam = body && typeof body === 'object' ? (body as any).actor : undefined;
@@ -1037,14 +1045,7 @@ export class AuthHandlers {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            // Ensure parent post exists
-            const postItem = await db.getItem(`POST#${parentPostId}`, 'OBJECT');
-            if (!postItem) {
-                return new Response(JSON.stringify({ error: 'Post not found' }), {
-                    status: 404,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
+            
             const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
             const commentId = randomUUID();
             const commentObjectId = `${config.federation.protocol}://${config.federation.domain}/comments/${commentId}`;
