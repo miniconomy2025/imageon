@@ -976,11 +976,30 @@ export class AuthHandlers {
                 });
             }
 
+            // Query for all activities by this actor, then filter for likes on this post
+            const activities = await db.queryItemsByGSI1(`ACTOR#${identifier}`);
+            
+            // Filter for Like activities that target this specific post
+            const likeActivity = activities.find((activity: any) => 
+                activity.type === 'Like' && activity.object === postUri
+            );
+            
+            if (!likeActivity) {
+                return new Response(JSON.stringify({ error: 'Like not found' }), {
+                    status: 404,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
             const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
             const undoId = randomUUID();
             const activityId = `${actorUri}/activities/${undoId}`;
+            
+            // Save the Undo activity
             await activityPub.saveActivity(activityId, 'Undo', actorUri, postUri);
-            await db.deleteItem(`ACTIVITY#${activityId}`, 'LIKE')
+            
+            // Delete the original Like activity
+            await db.deleteItem(likeActivity.PK, likeActivity.SK);
 
             return new Response(
                 JSON.stringify({
