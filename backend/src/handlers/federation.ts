@@ -468,8 +468,11 @@ export class FederationHandlers {
                                         published: Temporal.Instant.from(activity.published || new Date().toISOString()),
                                         attachments,
                                         likes: new Collection({
-                                          items: activity.likes || [],
-                                          totalItems: activity.likesCount || 0,
+                                          items: Array.isArray(activity.likes) && activity.likes.map((like : any) => (new Like({
+                                            url: new URL(like.id),
+                                            actor: new URL(like.actor),
+                                          }))) || [],
+                                          totalItems: activity.likesCount || activity?.likes?.lenght || 0,
                                         })                 
                                     })
                                 });
@@ -832,8 +835,8 @@ export class FederationHandlers {
         ] || [],
         likes: new Collection({
           items: likes.map((like : any) => (new Like({
-            url: like.id,
-            actor: like.actor,
+            url: new URL(like.id),
+            actor: new URL(like.actor),
           }))),
           totalItems: likes.length || 0,
         })
