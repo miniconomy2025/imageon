@@ -107,6 +107,132 @@ export class ActivityPubService {
     }
   }
 
+  async deliverCreateActivity(
+    identifier: string,
+    activityId: string,
+    objectId: string,
+    content: string,
+    additionalData: any,
+    timestamp: string
+  ): Promise<void> {
+    try {
+      const followers = await this.getFollowers(identifier);
+      if (!followers || followers.length === 0) {
+        return;
+      }
+
+      const { crypto: cryptoService } = await import('./cryptography.js');
+
+      const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
+      const keyPairs = await cryptoService.getOrGenerateKeyPairs(identifier);
+      const privateKey = keyPairs[0].privateKey;
+
+      const fedifyModule = await import('@fedify/fedify');
+      const privateJwk = await fedifyModule.exportJwk(privateKey);
+      const { createPrivateKey, createSign, createHash } = await import('crypto');
+      const nodePrivateKey = createPrivateKey({ key: privateJwk, format: 'jwk' } as any);
+
+      const attachments: any[] = [];
+      if (additionalData?.attachment && Array.isArray(additionalData.attachment)) {
+        for (const att of additionalData.attachment) {
+          attachments.push({
+            type: att.mediaType && att.mediaType.startsWith('image/') ? 'Image' : 'Document',
+            mediaType: att.mediaType,
+            url: att.url,
+          });
+        }
+      }
+
+      const activityBodyTemplate: any = {
+        '@context': 'https://www.w3.org/ns/activitystreams',
+        id: activityId,
+        type: 'Create',
+        actor: actorUri,
+        object: {
+          id: objectId,
+          type: attachments.length > 0 ? 'Document' : 'Note',
+          content,
+          published: timestamp,
+          attributedTo: actorUri,
+          url: objectId,
+          attachment: attachments,
+        },
+        to: [],
+      };
+
+      for (const followerUriObj of followers) {
+        const followerUri = followerUriObj.toString();
+
+        if (this.isLocalActor(followerUri)) {
+          continue;
+        }
+
+        let inboxUrl: string | null = null;
+        try {
+          const res = await fetch(followerUri, {
+            headers: { Accept: 'application/activity+json' },
+          });
+          if (res.ok) {
+            const actorJson = await res.json().catch(() => null);
+            if (actorJson && typeof actorJson.inbox === 'string') {
+              inboxUrl = actorJson.inbox;
+            }
+          }
+        } catch {
+          /* ignore resolution errors */
+        }
+
+        if (!inboxUrl) {
+          try {
+            const followerUrl = new URL(followerUri);
+            inboxUrl = `${followerUrl.origin}/inbox`;
+          } catch {
+            continue;
+          }
+        }
+        if (!inboxUrl) {
+          continue;
+        }
+
+        const body = { ...activityBodyTemplate, to: [followerUri, 'https://www.w3.org/ns/activitystreams#Public'] };
+        const bodyString = JSON.stringify(body);
+
+        const digest = createHash('sha256').update(bodyString).digest('base64');
+        const now = new Date().toUTCString();
+
+        const inboxUrlObj = new URL(inboxUrl);
+        const inboxPath = inboxUrlObj.pathname;
+        const hostHeader = inboxUrlObj.host;
+
+        const signingString = `(request-target): post ${inboxPath}\nhost: ${hostHeader}\ndate: ${now}\ndigest: SHA-256=${digest}`;
+        const signer = createSign('sha256');
+        signer.update(signingString);
+        signer.end();
+        const signature = signer.sign(nodePrivateKey).toString('base64');
+        const signatureHeader = `keyId="${actorUri}#main-key",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="${signature}"`;
+
+        try {
+          await fetch(inboxUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/activity+json',
+              Accept: 'application/activity+json',
+              Host: hostHeader,
+              Date: now,
+              Digest: `SHA-256=${digest}`,
+              Signature: signatureHeader,
+            } as any,
+            body: bodyString,
+          });
+        } catch (err) {
+          console.warn(`Failed to deliver Create activity to follower ${followerUri}:`, err);
+        }
+      }
+    } catch (err) {
+      console.error('Error delivering Create activity:', err);
+    }
+  }
+
   /**
    * Remove a follower relationship (used when processing an Undo of Follow)
    */

@@ -852,6 +852,12 @@ export class AuthHandlers {
             }
             await activityPub.saveActivity(activityId, 'Create', actorUri, objectId, extra);
 
+            try {
+                await activityPub.deliverCreateActivity(identifier, activityId, objectId, content, extra, timestamp);
+            } catch (deliverErr) {
+                console.warn('Delivery of Create activity failed:', deliverErr);
+            }
+
             return new Response(
                 JSON.stringify({
                     success: true,
