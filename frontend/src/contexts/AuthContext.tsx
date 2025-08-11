@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     username: '',
                     photoURL: user.photoURL || '',
                     needsProfile: true,
-                    url: authResponse.user.url || '',
+                    url: authResponse.user.url || ''
                 });
             } else {
                 // User profile is complete
@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     username: '',
                     photoURL: user.photoURL || '',
                     needsProfile: true,
-                    url: '', 
+                    url: ''
                 });
             } else {
                 // For other errors, still assume user needs to complete profile
@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     username: '',
                     photoURL: user.photoURL || '',
                     needsProfile: true,
-                    url: '',
+                    url: ''
                 });
             }
         }
@@ -85,7 +85,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const signInWithGoogle = async () => {
         try {
             const result = await signInWithPopup(auth, googleProvider);
-            console.log('Google sign-in successful:', result.user);
 
             // Verify token with backend
             await verifyTokenWithBackend(result.user);
@@ -99,9 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             await signOut(auth);
             setUserProfile(null);
-            console.log('Logout successful');
         } catch (error) {
-            console.error('Logout error:', error);
             throw error;
         }
     };

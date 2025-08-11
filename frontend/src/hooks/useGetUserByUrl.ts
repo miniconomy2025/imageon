@@ -39,7 +39,6 @@ export const useGetUserByUrl = (url: string) => {
                 following: backendUser.following || ''
             } as User;
 
-            console.log('useGetUserByUrl mapped user:', mappedUser);
             return mappedUser;
         },
         enabled: !!url,

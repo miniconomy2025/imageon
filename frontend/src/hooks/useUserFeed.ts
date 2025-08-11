@@ -40,9 +40,16 @@ export const useUserFeed = (username: string) => {
             posts.forEach((item: any) => {
                 let postId = item.id;
 
-                if (item.object) {
-                    const urlParts = item.object.split('/');
-                    postId = urlParts[urlParts.length - 1];
+                // Extract the actual post ID from the full URL
+                // Handle both item.object and item.id formats
+                const urlToProcess = item.object || item.id;
+                if (urlToProcess && typeof urlToProcess === 'string') {
+                    const urlParts = urlToProcess.split('/');
+                    const extractedId = urlParts[urlParts.length - 1];
+                    // Only use the extracted ID if it looks like a UUID (has dashes)
+                    if (extractedId && extractedId.includes('-')) {
+                        postId = extractedId;
+                    }
                 }
 
                 const user = item.actor
@@ -66,15 +73,38 @@ export const useUserFeed = (username: string) => {
                       }
                     : undefined;
 
+                // Handle likes - support both array format and collection format
+                let likeCount = 0;
+                let userLiked = false;
+
+                // Check for collection format (like in outbox response)
+                if (item.likes && typeof item.likes === 'object' && item.likes.totalItems !== undefined) {
+                    likeCount = item.likes.totalItems;
+
+                    if (item.likes.items) {
+                        const likesArray = Array.isArray(item.likes.items) ? item.likes.items : [item.likes.items];
+                        userLiked = likesArray.some((like: any) => like.actor === userProfile?.url);
+                    }
+                }
+                // Check for array format (existing feed format)
+                else if (item.likes && Array.isArray(item.likes)) {
+                    likeCount = item.likes.length;
+                    userLiked = item.likes.some((like: any) => like.actor === userProfile?.url);
+                }
+                // Fallback to likesCount property
+                else if (item.likesCount) {
+                    likeCount = item.likesCount;
+                }
+
                 const post: Post = {
                     id: postId,
                     content: item.content,
                     postedAt: item.published,
                     attachments: item.attachment || [],
                     author: user,
-                    likes: 0,
-                    likeCount: item.likesCount || 0,
-                    userLiked: item.likes && Array.isArray(item.likes) ? item.likes.some((like: any) => like.actor === userProfile?.url) : false,
+                    likes: likeCount,
+                    likeCount: likeCount,
+                    userLiked: userLiked,
                     comments: [],
                     url: item.object
                 };
@@ -85,25 +115,16 @@ export const useUserFeed = (username: string) => {
                 if (item.id !== postId) {
                     postsMap.set(item.id, post);
                 }
-
-                console.log('Stored post with keys:', [item.object, postId, item.id].filter(Boolean));
             });
 
             // Add comments to their parent posts
             comments.forEach((commentItem: any) => {
-                console.log('Processing comment:', {
-                    commentId: commentItem.id,
-                    inReplyTo: commentItem.inReplyTo,
-                    availablePostKeys: Array.from(postsMap.keys())
-                });
-
                 let parentPost = postsMap.get(commentItem.inReplyTo);
 
                 if (!parentPost && commentItem.inReplyTo) {
                     const urlParts = commentItem.inReplyTo.split('/');
                     const postIdFromUrl = urlParts[urlParts.length - 1];
                     parentPost = postsMap.get(postIdFromUrl);
-                    console.log('Trying to find post by ID:', postIdFromUrl, 'found:', !!parentPost);
                 }
 
                 if (parentPost) {
