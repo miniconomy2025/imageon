@@ -29,8 +29,6 @@ const OBJECT_CONSTRUCTORS = {
     Article: Article
 } as const;
 
-const OUTBOX_PAGE_SIZE = 10;
-
 export class FederationHandlers {
     static async isRateLimitExceeded(ctx: RequestContext<ContextData>, key: string, limit: number, period: number) {
         const clientIp = ctx.request?.headers?.get?.('x-forwarded-for') || ctx.request?.headers?.get?.('x-real-ip') || 'unknown';
@@ -410,18 +408,9 @@ export class FederationHandlers {
                 return bTime - aTime;
             });
 
-            let offset = 0;
-            if (typeof cursor === 'string' && cursor.trim() !== '') {
-                const parsed = parseInt(cursor, 10);
-                if (!isNaN(parsed) && parsed >= 0 && parsed < sortedActivities.length) {
-                    offset = parsed;
-                }
-            }
+            
 
-            const endIndex = Math.min(offset + OUTBOX_PAGE_SIZE, sortedActivities.length);
-            const pageActivities = sortedActivities.slice(offset, endIndex);
-
-            const postActivities = pageActivities
+            const postActivities = sortedActivities
                 .map((activity: any) => {
                     try {
                         const ActivityClass = ACTIVITY_CONSTRUCTORS[activity.type as keyof typeof ACTIVITY_CONSTRUCTORS];
@@ -514,11 +503,8 @@ export class FederationHandlers {
                 })
                 .filter(Boolean);
 
-            const nextCursor = endIndex < sortedActivities.length ? String(endIndex) : null;
-
             return {
                 items: [...postActivities],
-                next: nextCursor
             };
         } catch (error) {
             console.error(`❌ Error in handleOutboxRequest for ${identifier}:`, error);

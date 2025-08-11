@@ -91,6 +91,33 @@ export class ActivityPubService {
     return await db.putItem(item);
   }
 
+  async getLikesForObject(objectId: string) {
+    try {
+      console.log(`👍 Fetching likes for object: ${objectId}`);
+      const params = {
+          TableName: config.dynamodb.tableName,
+          IndexName: 'GSI2',
+          KeyConditionExpression: 'GSI2PK = :pk AND GSI2SK > :minTime',
+          FilterExpression: '#object = :objectId',
+          ExpressionAttributeNames: {
+              '#object': 'object'
+          },
+          ExpressionAttributeValues: {
+              ':pk': 'LIKE_ACTIVITIES',
+              ':minTime': '2020-01-01T00:00:00.000Z', // Get all likes from 2020 onwards
+              ':objectId': objectId
+          }
+      };
+      const result = await docClient.send(new QueryCommand(params));
+      const likes = result.Items ?? [];
+      console.log(`✅ Found ${likes.length} likes for object: ${objectId}`);
+      return likes;
+    } catch (error) {
+        console.error(`Error getting likes for object ${objectId}:`, error);
+        return [];
+    }
+  }
+
   /**
    * Get activities for a specific actor (no caching - let handlers handle caching)
    */
@@ -99,6 +126,24 @@ export class ActivityPubService {
       console.log(`� Fetching activities for actor: ${identifier}`);
       const activities = await db.queryItemsByGSI1(`ACTOR#${identifier}`);
       const result = activities || [];
+      for (const activity of result) {
+        if (activity.type === 'Create' && activity.object) {
+            // Get likes for this post/object
+            const likes = await this.getLikesForObject(activity.object);
+            const likesCount = likes.length;
+
+            // Add likes information to the activity
+            activity.likes = likes.map((like: any) => ({
+                id: like.id,
+                actor: like.actor,
+                object: like.object,
+                published: like.published
+            }));
+            activity.likesCount = likesCount;
+
+            console.log(`👍 Activity ${activity.id} has ${likesCount} likes`);
+        }
+      }
       console.log(`✅ Found ${result.length} activities for: ${identifier}`);
       return result;
     } catch (error) {

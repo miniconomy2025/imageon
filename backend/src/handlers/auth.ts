@@ -5,14 +5,6 @@ import { ActorModel } from '../models/Actor.js';
 import { db } from '../services/database.js';
 import { getFirestore } from 'firebase-admin/firestore';
 import { crypto } from '../services/cryptography.js';
-
-// Additional imports to support post, like, comment, feed and follow operations
-// Import Node.js crypto utilities. In addition to randomUUID we need
-// createHash for computing the Digest header and the webcrypto API for
-// generating an HTTP signature. The webcrypto API exposes SubtleCrypto
-// methods that operate on CryptoKey objects created by the Fedify
-// cryptography service. We avoid importing the full `crypto` namespace to
-// prevent clashing with the local cryptography service named `crypto`.
 import { randomUUID, createHash, webcrypto } from 'crypto';
 import { S3Service } from '../services/s3Service.js';
 import { activityPub } from '../services/activitypub.js';
@@ -54,7 +46,7 @@ export class AuthHandlers {
                         headers: { 'Content-Type': 'application/json' }
                     }
                 );
-            }            
+            }
 
             const username = user?.username;
 
@@ -698,7 +690,7 @@ export class AuthHandlers {
                         uid: userData.uid,
                         email: userData.email,
                         displayName: userData.display_name,
-                        url:  userData.id,
+                        url: userData.id,
                         username: userData.username,
                         photoURL: userData.profile_image_url,
                         bio: userData.bio,
@@ -874,7 +866,15 @@ export class AuthHandlers {
      */
     static async handleLikePost(request: Request, postId: string): Promise<Response> {
         try {
-            const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
+            const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
+            if (!postItem) {
+                return new Response(JSON.stringify({ error: 'Post not found' }), {
+                    status: 404,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+              }
+
+            const postUri = postItem.id;
             // Parse request body
             const body = await request.json().catch(() => null);
             const actor = body && typeof body === 'object' ? (body as any).actor : undefined;
@@ -909,14 +909,7 @@ export class AuthHandlers {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            // Ensure the target post exists
-            const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
-            if (!postItem) {
-                return new Response(JSON.stringify({ error: 'Post not found' }), {
-                    status: 404,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
+
             const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
             const likeId = randomUUID();
             const activityId = `${actorUri}/activities/${likeId}`;
@@ -941,7 +934,15 @@ export class AuthHandlers {
      */
     static async handleUnlikePost(request: Request, postId: string): Promise<Response> {
         try {
-            const postUri = `${config.federation.protocol}://${config.federation.domain}/posts/${postId}`;
+            const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
+            if (!postItem) {
+                return new Response(JSON.stringify({ error: 'Post not found' }), {
+                    status: 404,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            const postUri = postItem.id;
             const body = await request.json().catch(() => null);
             const actor = body && typeof body === 'object' ? (body as any).actor : undefined;
             if (!actor) {
@@ -974,13 +975,7 @@ export class AuthHandlers {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            const postItem = await db.getItem(`POST#${postId}`, 'OBJECT');
-            if (!postItem) {
-                return new Response(JSON.stringify({ error: 'Post not found' }), {
-                    status: 404,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
+
             const actorUri = `${config.federation.protocol}://${config.federation.domain}/users/${identifier}`;
             const undoId = randomUUID();
             const activityId = `${actorUri}/activities/${undoId}`;
@@ -1171,6 +1166,11 @@ export class AuthHandlers {
                             if ('inReplyTo' in activity.additionalData) {
                                 entry.inReplyTo = (activity.additionalData as any).inReplyTo;
                             }
+                        }
+                        
+                        if (activity.likes && Array.isArray(activity.likes)) {
+                            entry.likes = activity.likes;
+                            entry.likesCount = activity.likesCount || activity.likes.length;
                         }
                         items.push(entry);
                     }
