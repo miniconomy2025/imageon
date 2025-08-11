@@ -135,10 +135,17 @@ export class ActivityPubService {
     async getLikesForObject(objectId: string) {
         try {
             console.log(`👍 Fetching likes for object: ${objectId}`);
-            const likes = await db.queryItems(`ACTIVITY#${objectId}`, {
-                sortKeyExpression: 'SK = :sk',
-                attributeValues: { ':sk': 'LIKE' }
-            });
+            const params = {
+                TableName: config.dynamodb.tableName,
+                IndexName: 'GSI2',
+                KeyConditionExpression: 'object = :objectId AND GSI2PK = :sk',
+                ExpressionAttributeValues: {
+                    ':objectId': objectId,
+                    ':sk': 'LIKE_ACTIVITIES'
+                }
+            };
+            const result = await docClient.send(new QueryCommand(params));
+            const likes = result.Items ?? [];
             console.log(`✅ Found ${likes.length} likes for object: ${objectId}`);
             return likes;
         } catch (error) {
